@@ -1,0 +1,7 @@
+test/
+build/
+doc/
+test.*
+a.out
+toygb
+toygb.exe
