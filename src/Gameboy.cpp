@@ -39,24 +39,19 @@ namespace toygb {
 		//std::cout << oh8(m_memory.get(0x0144)) << " " << oh8(m_memory.get(0xFF40)) << " " << oh8(m_memory.get(0x0180)) << std::endl;
 	}
 
-	void runCPU(CPU* cpu, MemoryMap* memory, clocktime_t startTime){
-		(*cpu)(memory, startTime);
-	}
-
-	void runLCD(LCDController* lcd, clocktime_t startTime){
-		(*lcd)(startTime);
-	}
-
 	void Gameboy::main() {
-		clocktime_t startTime = std::chrono::steady_clock::now();
-		// m_interface = Interface();
-		std::thread cputhread(&runCPU, &m_cpu, &m_memory, startTime);
-		std::thread lcdthread(&runLCD, &m_lcd, startTime);
-		//std::thread audiothread(m_audio, m_startTime);
+		GBComponent cpuComponent = m_cpu.run(&m_memory);
+		GBComponent lcdComponent = m_lcd.run();
 
-		lcdthread.join();
-		cputhread.join();
-		//audiothread.join();
-		//m_cpu(&m_memory);
+		clocktime_t startTime = std::chrono::steady_clock::now();
+		int64_t lastCycle = 0;
+		while (true){
+			cpuComponent.onCycle();
+			lcdComponent.onCycle();
+
+			int64_t target = lastCycle + CLOCK_CYCLE_NS;
+			while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime).count() < target);
+			lastCycle = target;
+		}
 	}
 }

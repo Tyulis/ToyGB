@@ -1,20 +1,28 @@
+#ifndef _UTIL_COMPONENT_HPP
+#define _UTIL_COMPONENT_HPP
+
 #include <coroutine>
 
 
 namespace toygb {
-	struct GBComponent {
-		struct promise_type {
-			GBComponent get_return_object() noexcept;
-			std::suspend_never initial_suspend() noexcept;
-			std::suspend_always final_suspend() noexcept;
-			void unhandled_exception() noexcept;
-		};
+	class GBComponent {
+		public:
+			struct promise_type {
+				GBComponent get_return_object() noexcept;
+				std::suspend_never initial_suspend() noexcept;
+				std::suspend_always final_suspend() noexcept;
+				void unhandled_exception() noexcept;
+			};
 
-		GBComponent(promise_type* p);
-		~GBComponent();
-		std::coroutine_handle<promise_type> m_handle;
+			GBComponent(promise_type* p);
+			~GBComponent();
 
-		bool hasNext();
-		void next();
+			bool done();
+			void onCycle();
+
+		protected:
+			std::coroutine_handle<promise_type> m_handle;
 	};
 }
+
+#endif

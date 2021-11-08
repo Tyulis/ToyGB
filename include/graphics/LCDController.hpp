@@ -5,6 +5,7 @@
 #include <deque>
 #include <algorithm>
 
+#include "util/component.hpp"
 #include "core/timing.hpp"
 #include "core/OperationMode.hpp"
 #include "core/InterruptVector.hpp"
@@ -29,13 +30,9 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 
 			void init(OperationMode mode, InterruptVector* interrupt);
-			void operator()(clocktime_t startTime);
+			GBComponent run();
 
 		private:
-			void run();
-			void dot();
-			void dot(int num);
-
 			OperationMode m_mode;
 			InterruptVector* m_interrupt;
 
@@ -49,9 +46,6 @@ namespace toygb {
 			uint8_t* m_vram;
 			uint8_t* m_oam;
 			uint8_t m_vramBank;
-
-			clocktime_t m_startTime;
-			int64_t m_lastCycle;
 
 			uint16_t* m_frontBuffer;
 			uint16_t* m_backBuffer;

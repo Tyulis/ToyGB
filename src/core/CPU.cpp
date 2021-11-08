@@ -81,51 +81,13 @@ namespace toygb {
 		memory->add(IO_TIMER_DIVIDER, IO_TIMER_CONTROL, m_timer);
 	}
 
-	void CPU::operator()(MemoryMap* memory, clocktime_t startTime){
+#define cycle() co_await std::suspend_always(); co_await std::suspend_always(); co_await std::suspend_always(); co_await std::suspend_always();
+
+	GBComponent CPU::run(MemoryMap* memory){
 		m_memory = memory;
-		m_startTime = startTime;
 		initRegisters();
 
-		m_lastCycle = 0;
-		run();
-	}
-
-	void CPU::initRegisters(){
-		switch (m_mode){
-			case OperationMode::DMG:
-				reg_a = 0x01; reg_f = 0xB0;
-				reg_b = 0x00; reg_c = 0x13;
-				reg_d = 0x00; reg_e = 0xD8;
-				reg_h = 0x01; reg_l = 0x4D;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
-				break;
-			case OperationMode::SGB:
-				reg_a = 0x01; reg_f = 0x00;
-				reg_b = 0x00; reg_c = 0x14;
-				reg_d = 0x00; reg_e = 0x00;
-				reg_h = 0xC0; reg_l = 0x60;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
-				break;
-			case OperationMode::CGB:
-				reg_a = 0x11; reg_f = 0x80;
-				reg_b = 0x00; reg_c = 0x00;
-				reg_d = 0xFF; reg_e = 0x56;
-				reg_h = 0x00; reg_l = 0x0D;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
-				break;
-			case OperationMode::Auto:
-				throw EmulationError("OperationMode::Auto given to CPU");
-		}
-		m_ei_scheduled = false;
-		m_haltBug = false;
-		m_halted = false;
-		m_instructionCount = 0;
-	}
-
-	void CPU::run(){
+		// Start CPU operation
 		uint8_t opcode = m_memory->get(m_pc++);  // Start with first opcode already fetched
 
 		while (true){
@@ -138,7 +100,7 @@ namespace toygb {
 			if (interrupt != Interrupt::None){
 				if (m_halted){
 					m_halted = false;
-					opcode = cycleRead(m_pc++);
+					opcode = memoryRead(m_pc++); cycle();
 				}
 
 				// Jump to interrupt vector only when IME is set
@@ -147,8 +109,8 @@ namespace toygb {
 					m_interrupt->resetRequest(interrupt);
 					m_interrupt->setMaster(false);
 					m_sp -= 1;
-					cycleWrite(m_sp--, m_pc >> 8);
-					cycleWrite(m_sp, m_pc & 0xFF);
+					memoryWrite(m_sp--, m_pc >> 8); cycle();
+					memoryWrite(m_sp, m_pc & 0xFF); cycle();
 
 					switch (interrupt){
 						case Interrupt::VBlank:  m_pc = 0x0040; break;
@@ -158,54 +120,54 @@ namespace toygb {
 						case Interrupt::Joypad:  m_pc = 0x0060; break;
 						case Interrupt::None: break;
 					}
-					opcode = cycleRead(m_pc++);
+					opcode = memoryRead(m_pc++); cycle();
 				}
 				continue;
 			}
 
-			//logDisassembly(m_pc - 1);
+			logDisassembly(m_pc - 1);
 			m_instructionCount += 1;
 
 			// 00 opcodes
 			if (opcode == 0b00000000){  // 00 000000 = nop
 				// nop
 			} else if (opcode == 0b00010000){  // 00 01 0000 = stop
-				/*uint8_t value =*/ cycleRead(m_pc++);  // TODO : Invalid stop values ?
+				/*uint8_t value =*/ memoryRead(m_pc++); cycle(); // TODO : Invalid stop values ?
 				// TODO
 			} else if ((opcode & 0b11100111) == 0b00100000){  // 001 cc 000 = jr cc, e
 				uint8_t condition = (opcode >> 3) & 3;
-				int8_t diff = int8_t(cycleRead(m_pc++));
+				int8_t diff = int8_t(memoryRead(m_pc++)); cycle();
 				if (checkCondition(condition)){
 					m_pc += diff;
 					cycle();
 				}
 			} else if (opcode == 0b00000001){  // 00 00 0001 = ld bc, nn
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				reg_b = high; reg_c = low;
 			} else if (opcode == 0b00010001){  // 00 01 0001 = ld de, nn
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				reg_d = high; reg_e = low;
 			} else if (opcode == 0b00100001){  // 00 10 0001 = ld hl, nn
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				reg_h = high; reg_l = low;
 			} else if (opcode == 0b00110001){  // 00 11 0001 = ld sp, nn
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
-				uint16_t value = (high << 8) | low;
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
+				uint16_t value = (high << 8) | low; cycle();
 				m_sp = value;
 			} else if (opcode == 0b00000010){  // 00 00 0010 = ld (bc), a
-				cycleWrite(reg_bc, reg_a);
+				memoryWrite(reg_bc, reg_a); cycle();
 			} else if (opcode == 0b00010010){  // 00 01 0010 = ld (de), a
-				cycleWrite(reg_de, reg_a);
+				memoryWrite(reg_de, reg_a); cycle();
 			} else if (opcode == 0b00100010){  // 00 10 0010 = ldi (hl), a
-				cycleWrite(reg_hl, reg_a);
-				increment16(&reg_h, &reg_l);
+				memoryWrite(reg_hl, reg_a); cycle();
+				increment16(&reg_h, &reg_l); cycle();
 			} else if (opcode == 0b00110010){  // 00 11 0010 = ldd (hl), a
-				cycleWrite(reg_hl, reg_a);
-				decrement16(&reg_h, &reg_l);
+				memoryWrite(reg_hl, reg_a); cycle();
+				decrement16(&reg_h, &reg_l); cycle();
 			} else if (opcode == 0b00000011){  // 00 00 0011 = inc bc
 				cycle();
 				increment16(&reg_b, &reg_c);
@@ -219,9 +181,9 @@ namespace toygb {
 				cycle();
 				m_sp += 1;
 			} else if (opcode == 0b00110100){  // 00 110 100 = inc (hl)
-				uint8_t value = cycleRead(reg_hl);
+				uint8_t value = memoryRead(reg_hl); cycle();
 				uint8_t result = value + 1;
-				cycleWrite(reg_hl, result);
+				memoryWrite(reg_hl, result); cycle();
 				setFlags(result == 0, 0, (result & 0x0F) < (value & 0x0F), UNAFFECTED);
 			} else if ((opcode & 0b11000111) == 0b00000100){  // 00 rrr 100 = inc r
 				uint8_t reg = (opcode >> 3) & 7;
@@ -230,9 +192,9 @@ namespace toygb {
 				m_registers[reg] = result;
 				setFlags(result == 0, 0, (result & 0x0F) < (value & 0x0F), UNAFFECTED);
 			} else if (opcode == 0b00110101){  // 00 110 101 = dec (hl)
-				uint8_t value = cycleRead(reg_hl);
+				uint8_t value = memoryRead(reg_hl); cycle();
 				uint8_t result = value - 1;
-				cycleWrite(reg_hl, result);
+				memoryWrite(reg_hl, result); cycle();
 				setFlags(result == 0, 1, (result & 0x0F) > (value & 0x0F), UNAFFECTED);
 			} else if ((opcode & 0b11000111) == 0b00000101){  // 00 rrr 101 = dec r
 				uint8_t reg = (opcode >> 3) & 7;
@@ -241,10 +203,10 @@ namespace toygb {
 				m_registers[reg] = result;
 				setFlags(result == 0, 1, (result & 0x0F) > (value & 0x0F), UNAFFECTED);
 			} else if (opcode == 0b00110110){  // 00 110 110 = ld (hl), n
-				uint8_t value = cycleRead(m_pc++);
-				cycleWrite(reg_hl, value);
+				uint8_t value = memoryRead(m_pc++); cycle();
+				memoryWrite(reg_hl, value); cycle();
 			} else if ((opcode & 0b11000111) == 0b00000110){  // 00 rrr 110 = ld r, n
-				uint8_t value = cycleRead(m_pc++);
+				uint8_t value = memoryRead(m_pc++); cycle();
 				uint8_t destreg = (opcode >> 3) & 7;
 				m_registers[destreg] = value;
 			} else if (opcode == 0b00000111){  // 00 00 0111 = rlca
@@ -260,13 +222,13 @@ namespace toygb {
 				reg_f |= mask_flag_c;  // set carry
 				reg_f &= ~(mask_flag_n | mask_flag_h);  // clear n and h flags
 			} else if (opcode == 0b00001000){  // 00 00 1000 = ld (nn), sp
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				uint16_t address = (high << 8) | low;
-				cycleWrite(address, m_sp & 0xFF);
-				cycleWrite(address + 1, m_sp >> 8);
+				memoryWrite(address, m_sp & 0xFF); cycle();
+				memoryWrite(address + 1, m_sp >> 8); cycle();
 			} else if (opcode == 0b00011000){  // 00 01 1000 = jr e
-				int8_t diff = int8_t(cycleRead(m_pc++));
+				int8_t diff = int8_t(memoryRead(m_pc++)); cycle();
 				m_pc += diff;
 				cycle();
 			} else if (opcode == 0b00001001){  // 00 00 1001 = add hl, bc
@@ -290,17 +252,17 @@ namespace toygb {
 				reg_h = result >> 8;
 				reg_l = result & 0xFF;
 			} else if (opcode == 0b00001010){  // 00 00 1010 = ld a, (bc)
-				uint8_t value = cycleRead(reg_bc);
+				uint8_t value = memoryRead(reg_bc); cycle();
 				reg_a = value;
 			} else if (opcode == 0b00011010){  // 00 01 1010 = ld a, (de)
-				uint8_t value = cycleRead(reg_de);
+				uint8_t value = memoryRead(reg_de); cycle();
 				reg_a = value;
 			} else if (opcode == 0b00101010){  // 00 10 1010 = ldi a, (hl)
-				uint8_t value = cycleRead(reg_hl);
+				uint8_t value = memoryRead(reg_hl); cycle();
 				increment16(&reg_h, &reg_l);
 				reg_a = value;
 			} else if (opcode == 0b00111010){  // 00 11 1010 = ldd a, (hl)
-				uint8_t value = cycleRead(reg_hl);
+				uint8_t value = memoryRead(reg_hl); cycle();
 				decrement16(&reg_h, &reg_l);
 				reg_a = value;
 			} else if (opcode == 0b00001011){  // 00 00 1011 = dec bc
@@ -341,12 +303,12 @@ namespace toygb {
 					m_haltBug = true;
 				}
 			} else if ((opcode & 0b11000111) == 0b01000110){  // 01 xxx 110 = ld x, (hl)
-				uint8_t value = cycleRead(reg_hl);
+				uint8_t value = memoryRead(reg_hl); cycle();
 				uint8_t destreg = (opcode >> 3) & 7;
 				m_registers[destreg] = value;
 			} else if ((opcode & 0b11111000) == 0b01110000){  // 01 110 xxx = ld (hl), x
 				uint8_t sourcereg = opcode & 7;
-				cycleWrite(reg_hl, m_registers[sourcereg]);
+				memoryWrite(reg_hl, m_registers[sourcereg]); cycle();
 			} else if ((opcode & 0b11000000) == 0b01000000){  // 01 xxx yyy = ld x, y
 				uint8_t sourcereg = opcode & 7;
 				uint8_t destreg = (opcode >> 3) & 7;
@@ -356,7 +318,7 @@ namespace toygb {
 			// 10 opcodes
 			} else if ((opcode & 0b11000111) == 0b10000110){  // 10 ooo 110 = <op> a, (hl)
 				uint8_t operation = (opcode >> 3) & 7;
-				uint8_t operand = cycleRead(reg_hl);
+				uint8_t operand = memoryRead(reg_hl); cycle();
 				accumulatorOperation(operation, operand);
 			} else if ((opcode & 0b11000000) == 0b10000000){  // 10 ooo rrr = <op> a, r
 				uint8_t operation = (opcode >> 3) & 7;
@@ -368,35 +330,35 @@ namespace toygb {
 			} else if ((opcode & 0b11100111) == 0b11000000){  // 110 cc 000 = ret cc
 				uint8_t condition = (opcode >> 3) & 3; cycle();
 				if (checkCondition(condition)){
-					uint16_t low = cycleRead(m_sp++);
-					uint16_t high = cycleRead(m_sp++);
+					uint16_t low = memoryRead(m_sp++); cycle();
+					uint16_t high = memoryRead(m_sp++); cycle();
 					uint16_t address = (high << 8) | low; cycle();
 					m_pc = address;
 				}
 			} else if (opcode == 0b11110000){  // 11 11 0000 = ldh a, (n)
-				uint16_t low = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
 				uint16_t address = 0xFF00 | low;
-				reg_a = cycleRead(address);
+				reg_a = memoryRead(address); cycle();
 			} else if (opcode == 0b11100000){  // 11 10 0000 = ldh (n), a
-				uint16_t low = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
 				uint16_t address = 0xFF00 | low;
-				cycleWrite(address, reg_a);
+				memoryWrite(address, reg_a); cycle();
 			} else if (opcode == 0b11000001){  // 11 00 0001 = pop bc
-				reg_c = cycleRead(m_sp++);
-				reg_b = cycleRead(m_sp++);
+				reg_c = memoryRead(m_sp++); cycle();
+				reg_b = memoryRead(m_sp++); cycle();
 			} else if (opcode == 0b11010001){  // 11 01 0001 = pop de
-				reg_e = cycleRead(m_sp++);
-				reg_d = cycleRead(m_sp++);
+				reg_e = memoryRead(m_sp++); cycle();
+				reg_d = memoryRead(m_sp++); cycle();
 			} else if (opcode == 0b11100001){  // 11 10 0001 = pop hl
-				reg_l = cycleRead(m_sp++);
-				reg_h = cycleRead(m_sp++);
+				reg_l = memoryRead(m_sp++); cycle();
+				reg_h = memoryRead(m_sp++); cycle();
 			} else if (opcode == 0b11110001){  // 11 11 0001 = pop af
-				reg_f = cycleRead(m_sp++);
-				reg_a = cycleRead(m_sp++);
+				reg_f = memoryRead(m_sp++); cycle();
+				reg_a = memoryRead(m_sp++); cycle();
 			} else if ((opcode & 0b11100111) == 0b11000010){  // 110 cc 010 = jp cc, nn
 				uint8_t condition = (opcode >> 3) & 3;
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				uint16_t address = (high << 8) | low;
 				if (checkCondition(condition)){
 					cycle();
@@ -404,13 +366,13 @@ namespace toygb {
 				}
 			} else if (opcode == 0b11100010){  // 11 10 0010 = ldh (c), a
 				uint16_t address = 0xFF00 | reg_c;
-				cycleWrite(address, reg_a);
+				memoryWrite(address, reg_a); cycle();
 			} else if (opcode == 0b11110010){  // 11 11 0010 = ldh a, (c)
 				uint16_t address = 0xFF00 | reg_c;
-				reg_a = cycleRead(address);
+				reg_a = memoryRead(address); cycle();
 			} else if (opcode == 0b11000011){  // 11 00 0011 = jp nn
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				uint16_t address = (high << 8) | low;
 				cycle();
 				m_pc = address;
@@ -419,66 +381,66 @@ namespace toygb {
 				m_interrupt->setMaster(false);
 			} else if ((opcode & 0b11100111) == 0b11000100){  // 110 cc 100 = call cc, nn
 				uint8_t condition = (opcode >> 3) & 3;
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				if (checkCondition(condition)){
 					uint16_t address = (high << 8) | low;
 					m_sp -= 1; cycle();
-					cycleWrite(m_sp--, m_pc >> 8);
-					cycleWrite(m_sp, m_pc & 0xFF);
+					memoryWrite(m_sp--, m_pc >> 8); cycle();
+					memoryWrite(m_sp, m_pc & 0xFF); cycle();
 					m_pc = address;
 				}
 			} else if (opcode == 0b11000101){  // 11 00 0101 = push bc
 				m_sp -= 1;
 				cycle();
-				cycleWrite(m_sp--, reg_b);
-				cycleWrite(m_sp, reg_c);
+				memoryWrite(m_sp--, reg_b); cycle();
+				memoryWrite(m_sp, reg_c); cycle();
 			} else if (opcode == 0b11010101){  // 11 01 0101 = push de
 				m_sp -= 1;
 				cycle();
-				cycleWrite(m_sp--, reg_d);
-				cycleWrite(m_sp, reg_e);
+				memoryWrite(m_sp--, reg_d); cycle();
+				memoryWrite(m_sp, reg_e); cycle();
 			} else if (opcode == 0b11100101){  // 11 10 0101 = push hl
 				m_sp -= 1;
 				cycle();
-				cycleWrite(m_sp--, reg_h);
-				cycleWrite(m_sp, reg_l);
+				memoryWrite(m_sp--, reg_h); cycle();
+				memoryWrite(m_sp, reg_l); cycle();
 			} else if (opcode == 0b11110101){  // 11 11 0101 = push af
 				m_sp -= 1;
 				cycle();
-				cycleWrite(m_sp--, reg_a);
-				cycleWrite(m_sp, reg_f);
+				memoryWrite(m_sp--, reg_a); cycle();
+				memoryWrite(m_sp, reg_f); cycle();
 			} else if ((opcode & 0b11000111) == 0b11000110){  // 11 ooo 110 = <op> a, n
 				uint8_t operation = (opcode >> 3) & 7;
-				uint8_t operand = cycleRead(m_pc++);
+				uint8_t operand = memoryRead(m_pc++); cycle();
 				accumulatorOperation(operation, operand);
 			} else if ((opcode & 0b11000111) == 0b11000111){  // 11 xxx 111 = rst xxx000
 				uint16_t address = opcode & 0b00111000;
 				m_sp -= 1; cycle();
-				cycleWrite(m_sp--, m_pc >> 8);
-				cycleWrite(m_sp, m_pc & 0xFF);
+				memoryWrite(m_sp--, m_pc >> 8); cycle();
+				memoryWrite(m_sp, m_pc & 0xFF); cycle();
 				m_pc = address;
 			} else if (opcode == 0b11101000){  // 11 10 1000 = add sp, e = add sp, e
-				uint8_t operand = int8_t(cycleRead(m_pc++));
+				uint8_t operand = int8_t(memoryRead(m_pc++)); cycle();
 				uint16_t result = m_sp + operand; cycle();
 				// FIXME : carry and half-carry flags for add sp, e ?
 				setFlags(0, 0, (result & 0x0F00) != (m_sp & 0x0F00), (result & 0xF000) != (m_sp & 0xF000));
 				m_sp = result; cycle();
 			} else if (opcode == 0b11111000){  // 11 11 1000 = ld hl, sp+e
-				uint8_t operand = int8_t(cycleRead(m_pc++));
+				uint8_t operand = int8_t(memoryRead(m_pc++)); cycle();
 				uint16_t result = m_sp + operand; cycle();
 				// FIXME : carry and half-carry flags for ld hl, sp+e ?
 				setFlags(0, 0, (result & 0x0F00) != (m_sp & 0x0F00), (result & 0xF000) != (m_sp & 0xF000));
 				reg_h = result >> 8;
 				reg_l = result & 0xFF;
 			} else if (opcode == 0b11001001){  // 11 00 1001 = ret
-				uint16_t low = cycleRead(m_sp++);
-				uint16_t high = cycleRead(m_sp++);
+				uint16_t low = memoryRead(m_sp++); cycle();
+				uint16_t high = memoryRead(m_sp++); cycle();
 				uint16_t address = (high << 8) | low;
 				m_pc = address; cycle();
 			} else if (opcode == 0b11011001){  // 11 01 1001 = reti
-				uint16_t low = cycleRead(m_sp++);
-				uint16_t high = cycleRead(m_sp++);
+				uint16_t low = memoryRead(m_sp++); cycle();
+				uint16_t high = memoryRead(m_sp++); cycle();
 				uint16_t address = (high << 8) | low;
 				m_pc = address; cycle();
 				m_interrupt->setMaster(true);
@@ -488,51 +450,130 @@ namespace toygb {
 				cycle();
 				m_sp = (reg_h << 8) | reg_l;
 			} else if (opcode == 0b11101010){  // 11 10 1010 = ld (nn), a
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				uint16_t address = (high << 8) | low;
-				cycleWrite(address, reg_a);
+				memoryWrite(address, reg_a); cycle();
 			} else if (opcode == 0b11111010){  // 11 11 1010 = ld a, (nn)
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				uint16_t address = (high << 8) | low;
-				uint8_t value = cycleRead(address);
+				uint8_t value = memoryRead(address); cycle();
 				reg_a = value;
 			} else if (opcode == 0b11001011){  // 11 00 1011 = prefix CB
-				uint8_t opcode2 = cycleRead(m_pc++);
+				uint8_t opcode2 = memoryRead(m_pc++); cycle();
 				uint8_t reg = opcode2 & 7;
 				uint8_t operation = opcode2 >> 3;
-				cbOpcode(operation, reg);
+
+				uint8_t operand;
+				if (reg == 0b110){
+					operand = memoryRead(reg_hl); cycle();
+				} else {
+					operand = m_registers[reg];
+				}
+
+				uint8_t result = operand;
+				uint8_t block = (operation >> 4) & 3;
+				uint8_t subop = operation & 7;
+				if (block == 0b00){  // 00 xxx : Bitwise operations
+					if (subop == 0b000){  // 00 000 : rlc
+						result = (operand << 1) | (operand >> 7);
+						setFlags(result == 0, 0, 0, operand >> 7);
+					} else if (subop == 0b001){  // 00 001 : rrc
+						result = (operand >> 1) | (operand << 7);
+						setFlags(result == 0, 0, 0, operand & 1);
+					} else if (subop == 0b001){  // 00 010 : rl
+						result = (operand << 1) | flag_c;
+						setFlags(result == 0, 0, 0, operand >> 7);
+					} else if (subop == 0b001){  // 00 011 : rr
+						result = (operand >> 1) | (flag_c << 7);
+						setFlags(result == 0, 0, 0, operand & 1);
+					} else if (subop == 0b001){  // 00 100 : sla
+						result = operand << 1;
+						setFlags(result == 0, 0, 0, operand >> 7);
+					} else if (subop == 0b001){  // 00 101 : sra
+						result = (operand >> 1) | (operand & 0b1000000);
+						setFlags(result == 0, 0, 0, operand & 1);
+					} else if (subop == 0b001){  // 00 110 : swap
+						result = ((operand & 0x0F) << 4) | ((operand & 0xF0) >> 4);
+						setFlags(result == 0, 0, 0, 0);
+					} else if (subop == 0b001){  // 00 111 : srl
+						result = operand >> 1;
+						setFlags(result == 0, 0, 0, operand & 1);
+					}
+				} else if (block == 0b01){  // 01 iii : bit i, r
+					setFlags(((operand >> subop) & 1) == 0, 0, 1, UNAFFECTED);
+				} else if (block == 0b10){  // 10 iii : res i, r
+					result = operand & ~(1 << subop);
+				} else if (block == 0b11){  // 11 iii : set i, r
+					result = operand | (1 << subop);
+				}
+
+
+				if (reg == 0b110){
+					memoryWrite(reg_hl, result); cycle();
+				} else {
+					m_registers[reg] = result;
+				}
 			} else if (opcode == 0b11111011){  // 11 11 1011 = ei
 				m_ei_scheduled = true;
 			} else if (opcode == 0b11001101){  // 11 00 1101 = call nn
-				uint16_t low = cycleRead(m_pc++);
-				uint16_t high = cycleRead(m_pc++);
+				uint16_t low = memoryRead(m_pc++); cycle();
+				uint16_t high = memoryRead(m_pc++); cycle();
 				uint16_t address = (high << 8) | low;
 				m_sp -= 1; cycle();
-				cycleWrite(m_sp--, m_pc >> 8);
-				cycleWrite(m_sp, m_pc & 0xFF);
+				memoryWrite(m_sp--, m_pc >> 8); cycle();
+				memoryWrite(m_sp, m_pc & 0xFF); cycle();
 				m_pc = address;
 			}
 
-			opcode = cycleRead(m_pc);  // Fetch the next opcode during the last cycle of the current instruction
+			opcode = memoryRead(m_pc); cycle();  // Fetch the next opcode during the last cycle of the current instruction
 			if (!m_haltBug) m_pc += 1;
 		}
 	}
 
-	void CPU::cycle(){
-		int64_t target = m_lastCycle + MACHINE_CYCLE_NS;
-		while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - m_startTime).count() < target);
-		m_lastCycle = target;
+	void CPU::initRegisters(){
+		switch (m_mode){
+			case OperationMode::DMG:
+				reg_a = 0x01; reg_f = 0xB0;
+				reg_b = 0x00; reg_c = 0x13;
+				reg_d = 0x00; reg_e = 0xD8;
+				reg_h = 0x01; reg_l = 0x4D;
+				reg_sp = 0xFFFE;
+				m_pc = 0x0100;
+				break;
+			case OperationMode::SGB:
+				reg_a = 0x01; reg_f = 0x00;
+				reg_b = 0x00; reg_c = 0x14;
+				reg_d = 0x00; reg_e = 0x00;
+				reg_h = 0xC0; reg_l = 0x60;
+				reg_sp = 0xFFFE;
+				m_pc = 0x0100;
+				break;
+			case OperationMode::CGB:
+				reg_a = 0x11; reg_f = 0x80;
+				reg_b = 0x00; reg_c = 0x00;
+				reg_d = 0xFF; reg_e = 0x56;
+				reg_h = 0x00; reg_l = 0x0D;
+				reg_sp = 0xFFFE;
+				m_pc = 0x0100;
+				break;
+			case OperationMode::Auto:
+				throw EmulationError("OperationMode::Auto given to CPU");
+		}
+		m_ei_scheduled = false;
+		m_haltBug = false;
+		m_halted = false;
+		m_instructionCount = 0;
 	}
 
-	uint8_t CPU::cycleRead(uint16_t address){
-		uint8_t value = m_memory->get(address); cycle();
+	uint8_t CPU::memoryRead(uint16_t address){
+		uint8_t value = m_memory->get(address);
 		return value;
 	}
 
-	void CPU::cycleWrite(uint16_t address, uint8_t value){
-		m_memory->set(address, value); cycle();
+	void CPU::memoryWrite(uint16_t address, uint8_t value){
+		m_memory->set(address, value);
 	}
 
 	bool CPU::checkCondition(uint8_t condition){
@@ -609,56 +650,7 @@ namespace toygb {
 	}
 
 	void CPU::cbOpcode(uint8_t operation, uint8_t reg){
-		uint8_t operand;
-		if (reg == 0b110){
-			operand = cycleRead(reg_hl);
-		} else {
-			operand = m_registers[reg];
-		}
 
-		uint8_t result = operand;
-		uint8_t block = (operation >> 4) & 3;
-		uint8_t subop = operation & 7;
-		if (block == 0b00){  // 00 xxx : Bitwise operations
-			if (subop == 0b000){  // 00 000 : rlc
-				result = (operand << 1) | (operand >> 7);
-				setFlags(result == 0, 0, 0, operand >> 7);
-			} else if (subop == 0b001){  // 00 001 : rrc
-				result = (operand >> 1) | (operand << 7);
-				setFlags(result == 0, 0, 0, operand & 1);
-			} else if (subop == 0b001){  // 00 010 : rl
-				result = (operand << 1) | flag_c;
-				setFlags(result == 0, 0, 0, operand >> 7);
-			} else if (subop == 0b001){  // 00 011 : rr
-				result = (operand >> 1) | (flag_c << 7);
-				setFlags(result == 0, 0, 0, operand & 1);
-			} else if (subop == 0b001){  // 00 100 : sla
-				result = operand << 1;
-				setFlags(result == 0, 0, 0, operand >> 7);
-			} else if (subop == 0b001){  // 00 101 : sra
-				result = (operand >> 1) | (operand & 0b1000000);
-				setFlags(result == 0, 0, 0, operand & 1);
-			} else if (subop == 0b001){  // 00 110 : swap
-				result = ((operand & 0x0F) << 4) | ((operand & 0xF0) >> 4);
-				setFlags(result == 0, 0, 0, 0);
-			} else if (subop == 0b001){  // 00 111 : srl
-				result = operand >> 1;
-				setFlags(result == 0, 0, 0, operand & 1);
-			}
-		} else if (block == 0b01){  // 01 iii : bit i, r
-			setFlags(((operand >> subop) & 1) == 0, 0, 1, UNAFFECTED);
-		} else if (block == 0b10){  // 10 iii : res i, r
-			result = operand & ~(1 << subop);
-		} else if (block == 0b11){  // 11 iii : set i, r
-			result = operand | (1 << subop);
-		}
-
-
-		if (reg == 0b110){
-			cycleWrite(reg_hl, result);
-		} else {
-			m_registers[reg] = result;
-		}
 	}
 
 	// TODO : OAM glitch

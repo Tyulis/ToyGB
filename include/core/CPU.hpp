@@ -1,8 +1,7 @@
 #ifndef _CORE_CPU_HPP
 #define _CORE_CPU_HPP
 
-#include <chrono>
-
+#include "util/component.hpp"
 #include "core/timing.hpp"
 #include "core/InterruptVector.hpp"
 #include "core/OperationMode.hpp"
@@ -23,16 +22,14 @@ namespace toygb {
 			~CPU();
 
 			void configureMemory(MemoryMap* memory);
-
 			void init(OperationMode mode, InterruptVector* interrupt);
-			void operator()(MemoryMap* memory, clocktime_t startTime);
+
+			GBComponent run(MemoryMap* memory);
 
 		private:
 			void initRegisters();
-			void run();
-			void cycle();
-			uint8_t cycleRead(uint16_t address);
-			void cycleWrite(uint16_t address, uint8_t value);
+			uint8_t memoryRead(uint16_t address);
+			void memoryWrite(uint16_t address, uint8_t value);
 			bool checkCondition(uint8_t condition);
 			void setFlags(uint8_t z, uint8_t n, uint8_t h, uint8_t c);
 			void accumulatorOperation(uint8_t operation, uint8_t operand);
@@ -41,6 +38,8 @@ namespace toygb {
 			void decrement16(uint8_t* high, uint8_t* low);
 
 			void logDisassembly(uint16_t position);
+
+			int cycleState;
 
 			MemoryMap* m_memory;
 			InterruptVector* m_interrupt;
@@ -60,9 +59,6 @@ namespace toygb {
 			uint16_t m_sp;
 			uint16_t m_pc;
 			bool m_ei_scheduled;
-
-			clocktime_t m_startTime;
-			int64_t m_lastCycle;
 			int64_t m_instructionCount;
 
 			bool m_halted;

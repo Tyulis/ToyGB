@@ -2,7 +2,6 @@
 #define _GAMEBOY_HPP
 
 #include <string>
-#include <thread>
 #include <chrono>
 
 #include "GameboyConfig.hpp"

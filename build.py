@@ -2,7 +2,7 @@ import os
 
 
 LDFLAGS = "-lm -pthread"
-CFLAGS = "-Wall -Wextra -Wno-unused-parameter -g -I./include"
+CFLAGS = "-Wall -Wextra -Wno-unused-parameter -g -fcoroutines -I./include"
 
 objects = []
 for path, dirs, files in os.walk("src"):

@@ -87,15 +87,12 @@ namespace toygb {
 		memory->add(VRAM_OFFSET, VRAM_OFFSET + VRAM_SIZE - 1, m_vramMapping);
 	}
 
-	void LCDController::operator()(clocktime_t startTime){
-		m_startTime = startTime;
-		m_lastCycle = 0;
+#define dot(num) co_await std::suspend_always()
+
+	GBComponent LCDController::run(){
 		m_frontBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
 		m_backBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
-		run();
-	}
 
-	void LCDController::run(){
 		std::deque<uint16_t> selectedSprites;
 		LCDController::ObjectSelectionComparator objComparator(m_mode, m_oamMapping);
 		while (true){
@@ -129,7 +126,7 @@ namespace toygb {
 						if (yposition <= line && line < yposition + OBJECT_HEIGHTS[m_lcdControl->objectSize] && selectedSprites.size() < 10){
 							selectedSprites.push_back(oamAddress);
 						}
-						dot(2);
+						dot(); dot();
 					}
 					std::sort(selectedSprites.begin(), selectedSprites.end(), objComparator);
 
@@ -169,7 +166,7 @@ namespace toygb {
 							}
 
 							uint8_t tileIndex = m_vramMapping->get(tileMapAddress + 256 * tileY + tileX);  // ?
-							dot(2);
+							dot(); dot();
 
 							uint16_t tileAddress;
 							if (m_lcdControl->backgroundDataSelect){
@@ -181,7 +178,7 @@ namespace toygb {
 							}
 							uint8_t tileLow = m_vramMapping->get(tileAddress + indexY * 2);
 							uint8_t tileHigh = m_vramMapping->get(tileAddress + indexY * 2 + 1);
-							dot(6);
+							dot(); dot(); dot(); dot(); dot(); dot();
 
 							for (int i = 7; i >= 0; i--){
 								uint8_t color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
@@ -219,7 +216,8 @@ namespace toygb {
 
 									uint8_t scrollOffset = m_lcdControl->scrollX % 8;
 									if (scrollOffset > 0 && x == 0){
-										dot(scrollOffset + 4); hblankDuration -= (scrollOffset + 4);
+										for (int i = 0; i < scrollOffset + 4; i++) dot();
+										hblankDuration -= (scrollOffset + 4);
 									}
 
 									uint8_t tileIndex = m_oamMapping->get(spriteToPush + 2);
@@ -344,19 +342,6 @@ namespace toygb {
 			}
 		}
 	}
-
-	void LCDController::dot(){
-		int64_t target = m_lastCycle + CLOCK_CYCLE_NS;
-		while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - m_startTime).count() < target);
-		m_lastCycle = target;
-	}
-
-	void LCDController::dot(int num){
-		int64_t target = m_lastCycle + CLOCK_CYCLE_NS * num;
-		while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - m_startTime).count() < target);
-		m_lastCycle = target;
-	}
-
 
 
 	// LCDController::ObjectSelectionComparator
