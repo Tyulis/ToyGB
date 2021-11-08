@@ -1,7 +1,7 @@
 import os
 
 
-LDFLAGS = "-lm -pthread"
+LDFLAGS = "-lm"
 CFLAGS = "-Wall -Wextra -Wno-unused-parameter -g -fcoroutines -I./include"
 
 objects = []

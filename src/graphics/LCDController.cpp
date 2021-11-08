@@ -339,6 +339,8 @@ namespace toygb {
 						dot();  // TODO
 					}
 				}
+			} else {
+				dot();
 			}
 		}
 	}

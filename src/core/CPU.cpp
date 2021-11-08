@@ -109,8 +109,8 @@ namespace toygb {
 					m_interrupt->resetRequest(interrupt);
 					m_interrupt->setMaster(false);
 					m_sp -= 1;
-					memoryWrite(m_sp--, m_pc >> 8); cycle();
-					memoryWrite(m_sp, m_pc & 0xFF); cycle();
+					memoryWrite(m_sp--, (m_pc - 1) >> 8); cycle();
+					memoryWrite(m_sp, (m_pc - 1) & 0xFF); cycle();
 
 					switch (interrupt){
 						case Interrupt::VBlank:  m_pc = 0x0040; break;
@@ -125,7 +125,7 @@ namespace toygb {
 				continue;
 			}
 
-			logDisassembly(m_pc - 1);
+			uint16_t basePC = m_pc - 1;
 			m_instructionCount += 1;
 
 			// 00 opcodes
@@ -526,6 +526,8 @@ namespace toygb {
 				memoryWrite(m_sp, m_pc & 0xFF); cycle();
 				m_pc = address;
 			}
+
+			logDisassembly(basePC);
 
 			opcode = memoryRead(m_pc); cycle();  // Fetch the next opcode during the last cycle of the current instruction
 			if (!m_haltBug) m_pc += 1;
@@ -1281,6 +1283,15 @@ namespace toygb {
 			case 0xFF: std::cout << "\t\t" << "rst $38"; break;
 		}
 
+		std::cout << "\t\taf: " << oh16(reg_af) << ", bc: " << oh16(reg_bc) << ", de: " << oh16(reg_de) << ", hl: " << oh16(reg_hl) << ", sp: " << oh16(reg_sp);
+
+		std::cout << "\t\tstack: ";
+		for (uint16_t pointer = m_sp; pointer < 0xFFF4; pointer += 2){
+			uint16_t low = m_memory->get(pointer);
+			uint16_t high = m_memory->get(pointer + 1);
+			uint16_t value = (high << 8) | low;
+			std::cout << oh16(value) << " ";
+		}
 		std::cout << std::endl;
 	}
 }
