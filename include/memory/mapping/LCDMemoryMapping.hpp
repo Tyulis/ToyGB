@@ -10,6 +10,8 @@ namespace toygb {
 
 			virtual uint8_t get(uint16_t address);
 			virtual void set(uint16_t address, uint8_t value);
+			virtual uint8_t lcdGet(uint16_t address);
+			virtual void lcdSet(uint16_t address, uint8_t value);
 
 			bool accessible;
 

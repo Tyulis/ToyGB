@@ -32,6 +32,8 @@ namespace toygb {
 			void init(OperationMode mode, InterruptVector* interrupt);
 			GBComponent run();
 
+			uint16_t* pixels();
+
 		private:
 			OperationMode m_mode;
 			InterruptVector* m_interrupt;

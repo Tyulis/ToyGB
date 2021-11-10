@@ -1,6 +1,8 @@
 #ifndef _UI_INTERFACE_HPP
 #define _UI_INTERFACE_HPP
 
+#include <SFML/Graphics.hpp>
+
 #include "graphics/LCDController.hpp"
 #include "control/JoypadController.hpp"
 
@@ -9,7 +11,7 @@ namespace toygb {
 		public:
 			Interface();
 
-			void operator()(LCDController* lcd, JoypadController* joypad);
+			void run(LCDController* lcd, JoypadController* joypad);
 
 		private:
 			LCDController* m_lcd;

@@ -13,8 +13,17 @@ namespace toygb {
 	}
 
 	void LCDMemoryMapping::set(uint16_t address, uint8_t value){
-		if (accessible) {
+		if (accessible)
 			m_array[address] = value;
-		}
+	}
+
+	uint8_t LCDMemoryMapping::lcdGet(uint16_t address){
+		if (accessible) return 0xFF;
+		return m_array[address];
+	}
+
+	void LCDMemoryMapping::lcdSet(uint16_t address, uint8_t value){
+		if (!accessible)
+			m_array[address] = value;
 	}
 }

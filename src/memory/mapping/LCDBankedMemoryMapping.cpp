@@ -10,13 +10,21 @@ namespace toygb {
 
 	uint8_t LCDBankedMemoryMapping::get(uint16_t address){
 		if (!accessible) return 0xFF;
-
 		return m_array[address + (*m_bankSelect * m_bankSize)];
 	}
 
 	void LCDBankedMemoryMapping::set(uint16_t address, uint8_t value){
-		if (accessible) {
+		if (accessible)
 			m_array[address + (*m_bankSelect * m_bankSize)] = value;
-		}
+	}
+
+	uint8_t LCDBankedMemoryMapping::lcdGet(uint16_t address){
+		if (accessible) return 0xFF;
+		return m_array[address + (*m_bankSelect * m_bankSize)];
+	}
+
+	void LCDBankedMemoryMapping::lcdSet(uint16_t address, uint8_t value){
+		if (!accessible) 
+			m_array[address + (*m_bankSelect * m_bankSize)] = value;
 	}
 }

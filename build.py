@@ -1,7 +1,7 @@
 import os
 
 
-LDFLAGS = "-lm"
+LDFLAGS = "-lm -pthread -lsfml-graphics -lsfml-window -lsfml-system"
 CFLAGS = "-Wall -Wextra -Wno-unused-parameter -g -fcoroutines -I./include"
 
 objects = []

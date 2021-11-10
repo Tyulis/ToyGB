@@ -90,7 +90,7 @@ namespace toygb {
 			case OFFSET_SCROLLX: return scrollX;
 			case OFFSET_COORDY: return coordY;
 			case OFFSET_COMPARE: return coordYCompare;
-			case OFFSET_OAMDMA: return 0x00;  // FIXME : read write-only
+			case OFFSET_OAMDMA: return 0xFF;
 			case OFFSET_BGPALETTE:
 				return (
 					(backgroundPalette[3] << 6) |

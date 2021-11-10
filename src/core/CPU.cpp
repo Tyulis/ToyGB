@@ -527,7 +527,7 @@ namespace toygb {
 				m_pc = address;
 			}
 
-			logDisassembly(basePC);
+			//logDisassembly(basePC);
 
 			opcode = memoryRead(m_pc); cycle();  // Fetch the next opcode during the last cycle of the current instruction
 			if (!m_haltBug) m_pc += 1;

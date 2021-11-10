@@ -40,6 +40,8 @@ namespace toygb {
 	}
 
 	void Gameboy::main() {
+		std::thread uiThread(&runInterface, &m_interface, &m_lcd, &m_joypad);
+
 		GBComponent cpuComponent = m_cpu.run(&m_memory);
 		GBComponent lcdComponent = m_lcd.run();
 
@@ -53,5 +55,11 @@ namespace toygb {
 			while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime).count() < target);
 			lastCycle = target;
 		}
+
+		uiThread.join();
+	}
+
+	void runInterface(Interface* interface, LCDController* lcd, JoypadController* joypad){
+		interface->run(lcd, joypad);
 	}
 }

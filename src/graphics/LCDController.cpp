@@ -3,12 +3,12 @@
 #define COLORVALUE_BLANK 0xFF
 #define BACKGROUND_PALETTE 0xFF
 #define BACKGROUND_INDEX 0xFFFF
-#define COLOR_BLANK 0xFFFE;
+#define COLOR_BLANK 0x7FFF;
 #define clearQueue(q) while (!q.empty()) q.pop()
 
 namespace toygb {
 	const uint8_t OBJECT_HEIGHTS[] = {8, 16};
-	const uint16_t DMG_PALETTE[] = {0xC630, 0x94A4, 0x4210, 0x318C};
+	const uint16_t DMG_PALETTE[] = {0x6318, 0x4A52, 0x2108, 0x18C6};
 
 	LCDController::LCDController(){
 		m_vram = nullptr;
@@ -92,8 +92,8 @@ namespace toygb {
 	GBComponent LCDController::run(){
 		m_frontBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
 		m_backBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
-
 		std::deque<uint16_t> selectedSprites;
+
 		LCDController::ObjectSelectionComparator objComparator(m_mode, m_oamMapping);
 		while (true){
 			if (m_lcdControl->displayEnable){
@@ -122,7 +122,7 @@ namespace toygb {
 
 					for (int obj = 0; obj < 40; obj++){
 						uint16_t oamAddress = 4 * obj;
-						uint8_t yposition = m_oamMapping->get(oamAddress);
+						uint8_t yposition = m_oamMapping->lcdGet(oamAddress) - 16;
 						if (yposition <= line && line < yposition + OBJECT_HEIGHTS[m_lcdControl->objectSize] && selectedSprites.size() < 10){
 							selectedSprites.push_back(oamAddress);
 						}
@@ -130,8 +130,8 @@ namespace toygb {
 					}
 					std::sort(selectedSprites.begin(), selectedSprites.end(), objComparator);
 
-					if (selectedSprites.size() > 10)
-						selectedSprites.erase(selectedSprites.begin() + 10, selectedSprites.end());
+					//if (selectedSprites.size() > 10)
+					//	selectedSprites.erase(selectedSprites.begin() + 10, selectedSprites.end());
 
 					// Mode 3 = Drawing pixels
 					m_lcdControl->modeFlag = 3;
@@ -142,10 +142,9 @@ namespace toygb {
 					std::queue<LCDController::Pixel> backgroundQueue;
 					std::queue<LCDController::Pixel> objectQueue;
 
-					int x = 0;
 					bool wasInsideWindow = false;
 					int hblankDuration = 204;
-					while (x < LCD_WIDTH){
+					for (int x = 0; x < LCD_WIDTH; x++){
 						bool insideWindow = (x >= m_lcdControl->windowX && line >= m_lcdControl->windowY);
 						if (insideWindow != wasInsideWindow)
 							clearQueue(backgroundQueue);
@@ -156,16 +155,16 @@ namespace toygb {
 
 							uint8_t tileX, tileY, indexY;
 							if (insideWindow){  // FIXME
-								tileX = ((x - m_lcdControl->windowX) / 8) & 0x1F;
-								tileY = ((line - m_lcdControl->windowY) / 8) & 0x1F;
-								indexY = (line - m_lcdControl->windowY) % 8;
+								tileX = ((x - m_lcdControl->windowX) >> 3) & 0x1F;
+								tileY = ((line - m_lcdControl->windowY) >> 3) & 0x1F;
+								indexY = (line - m_lcdControl->windowY) & 7;
 							} else {  // FIXME
-								tileX = ((m_lcdControl->scrollX + x) / 8) & 0x1F;
-								tileY = ((m_lcdControl->scrollY + line) / 8) & 0x1F;
-								indexY = (m_lcdControl->scrollY + 1) % 8;
+								tileX = ((m_lcdControl->scrollX + x) >> 3) & 0x1F;
+								tileY = ((m_lcdControl->scrollY + line) >> 3) & 0x1F;
+								indexY = (m_lcdControl->scrollY + 1) & 7;
 							}
 
-							uint8_t tileIndex = m_vramMapping->get(tileMapAddress + 256 * tileY + tileX);  // ?
+							uint8_t tileIndex = m_vram[tileMapAddress + 32 * tileY + tileX];  // ?
 							dot(); dot();
 
 							uint16_t tileAddress;
@@ -176,8 +175,8 @@ namespace toygb {
 							} else {
 								tileAddress = 0x1000 + tileIndex * 16;
 							}
-							uint8_t tileLow = m_vramMapping->get(tileAddress + indexY * 2);
-							uint8_t tileHigh = m_vramMapping->get(tileAddress + indexY * 2 + 1);
+							uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + indexY * 2);
+							uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + indexY * 2 + 1);
 							dot(); dot(); dot(); dot(); dot(); dot();
 
 							for (int i = 7; i >= 0; i--){
@@ -195,21 +194,20 @@ namespace toygb {
 								clearQueue(objectQueue);
 								uint16_t spriteToPush;
 
-								while (!selectedSprites.empty() && m_oam[selectedSprites.front() + 1] + 8 < x) {
-									std::cout << selectedSprites.size() << " " << oh16(selectedSprites.front()) << " " << m_oam[selectedSprites.front() + 1] + 8 << " " << x << std::endl;
+								while (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 < x) {
+									//std::cout << selectedSprites.size() << " " << oh16(selectedSprites.front()) << " " << m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 << " " << x << std::endl;
 									selectedSprites.pop_front();
 								}
 
-								if (!selectedSprites.empty() && m_oam[selectedSprites.front() + 1] >= x){
+								if (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 >= x){
 									if (m_mode == OperationMode::DMG){
 										spriteToPush = selectedSprites.front();
 										selectedSprites.pop_front();
 									} else if (m_mode == OperationMode::CGB) {
 										spriteToPush = selectedSprites.front();
-										for (std::deque<uint16_t>::iterator it = selectedSprites.begin() + 1; it != selectedSprites.end() && m_oamMapping->get(*it + 1) < x + 8; it++){
-											if (*it < spriteToPush){
+										for (std::deque<uint16_t>::iterator it = selectedSprites.begin() + 1; it != selectedSprites.end() && m_oamMapping->lcdGet(*it + 1) - 8 < x + 8; it++){
+											if (*it < spriteToPush)
 												spriteToPush = *it;
-											}
 										}
 									}
 									dot(); hblankDuration -= 1;
@@ -220,17 +218,18 @@ namespace toygb {
 										hblankDuration -= (scrollOffset + 4);
 									}
 
-									uint8_t tileIndex = m_oamMapping->get(spriteToPush + 2);
-									uint8_t xoffset = x - m_oamMapping->get(spriteToPush + 1);
-									uint8_t yoffset = line - m_oamMapping->get(spriteToPush);
-									uint8_t control = m_oamMapping->get(spriteToPush + 3);
+									uint8_t tileIndex = m_oamMapping->lcdGet(spriteToPush + 2);
+									int xoffset = x - (m_oamMapping->lcdGet(spriteToPush + 1) - 8);
+									int yoffset = line - (m_oamMapping->lcdGet(spriteToPush) - 16);
+									uint8_t control = m_oamMapping->lcdGet(spriteToPush + 3);
 
 									uint16_t tileAddress = tileIndex * 16;
 									if (m_lcdControl->objectSize)
 										tileAddress &= 0xFFFE;
 
-									uint8_t tileLow = m_vramMapping->get(tileAddress + 2*yoffset);
-									uint8_t tileHigh = m_vramMapping->get(tileAddress + 2*yoffset + 1);
+									uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + 2*yoffset);
+									uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + 2*yoffset + 1);
+									//std::cout << oh16(tileAddress) << " " << xoffset << " " << yoffset << " " << oh8(tileLow) << " " << oh8(tileHigh);
 									dot(); hblankDuration -= 1;
 
 									for (int i = 7 - xoffset; i >= 0; i--){
@@ -306,7 +305,6 @@ namespace toygb {
 						m_backBuffer[line * LCD_WIDTH + x] = colorResult;
 
 						wasInsideWindow = insideWindow;
-						x += 1;
 					}
 
 					// Mode 0 = HBlank
@@ -345,6 +343,10 @@ namespace toygb {
 		}
 	}
 
+	uint16_t* LCDController::pixels(){
+		return m_frontBuffer;
+	}
+
 
 	// LCDController::ObjectSelectionComparator
 
@@ -353,9 +355,8 @@ namespace toygb {
 		m_oamMapping = oam;
 	}
 
-	// Reversed to get the lowest priority first
 	bool LCDController::ObjectSelectionComparator::operator()(const uint16_t& address1, const uint16_t& address2){
-		return m_oamMapping->get(address1 + 1) > m_oamMapping->get(address2 + 1);
+		return m_oamMapping->lcdGet(address1 + 1) < m_oamMapping->lcdGet(address2 + 1);
 	}
 
 

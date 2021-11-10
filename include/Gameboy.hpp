@@ -3,6 +3,7 @@
 
 #include <string>
 #include <chrono>
+#include <thread>
 
 #include "GameboyConfig.hpp"
 #include "core/CPU.hpp"
@@ -37,6 +38,8 @@ namespace toygb {
 			MemoryMap m_memory;
 			Interface m_interface;
 	};
+
+	void runInterface(Interface* interface, LCDController* lcd, JoypadController* joypad);
 }
 
 #endif
