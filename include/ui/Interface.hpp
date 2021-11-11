@@ -11,10 +11,11 @@ namespace toygb {
 		public:
 			Interface();
 
-			void run(LCDController* lcd, JoypadController* joypad);
+			void run(LCDController* lcd, AudioController* audio, JoypadController* joypad);
 
 		private:
 			LCDController* m_lcd;
+			AudioController* m_audio;
 			JoypadController* m_joypad;
 	};
 }

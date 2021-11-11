@@ -194,14 +194,15 @@ namespace toygb {
 								clearQueue(objectQueue);
 								uint16_t spriteToPush;
 
-								while (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 < x) {
-									//std::cout << selectedSprites.size() << " " << oh16(selectedSprites.front()) << " " << m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 << " " << x << std::endl;
+								while (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 < x - 8) {
+									//std::cout << "pop " << oh16(selectedSprites.front()) << " at (" << x << ", " << line << "), OAM " << "(" << m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 << ", " << m_oamMapping->lcdGet(selectedSprites.front()) - 16 << ")"  << std::endl;
 									selectedSprites.pop_front();
 								}
 
-								if (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 >= x){
+								if (!selectedSprites.empty() && x >= m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 && x < m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 + 8){
 									if (m_mode == OperationMode::DMG){
 										spriteToPush = selectedSprites.front();
+										//std::cout << "pop " << oh16(selectedSprites.front()) << " at (" << x << ", " << line << "), OAM " << "(" << m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 << ", " << m_oamMapping->lcdGet(selectedSprites.front()) - 16 << ")"  << std::endl;
 										selectedSprites.pop_front();
 									} else if (m_mode == OperationMode::CGB) {
 										spriteToPush = selectedSprites.front();

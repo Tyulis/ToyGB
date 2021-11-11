@@ -1,4 +1,6 @@
 #include "memory/mapping/JoypadMapping.hpp"
+#include <iostream>
+#include "util/error.hpp"
 
 
 namespace toygb {
@@ -6,29 +8,27 @@ namespace toygb {
 		selectButtons = false;
 		selectDirections = false;
 
-		pressDown = false;
-		pressUp = false;
-		pressLeft = false;
-		pressRight = false;
-
-		pressStart = false;
-		pressSelect = false;
-		pressA = false;
-		pressB = false;
+		for (int i = 0; i < 8; i++) status[i] = false;
 	}
 
 	uint8_t JoypadMapping::get(uint16_t address) {
 		uint8_t result = 0xC0 | (!selectButtons << 5) | (!selectDirections << 4);
 		if (selectButtons) {
-			result |= (!pressStart << 3) | (!pressSelect << 2) | (!pressB << 1) | (!pressA);
+			result |= (!status[enumval(JoypadButton::Start)] << 3) | (!status[enumval(JoypadButton::Select)] << 2) | (!status[enumval(JoypadButton::B)] << 1) | (!status[enumval(JoypadButton::A)]);
 		} else if (selectDirections) {
-			result |= (!pressDown << 3) | (!pressUp << 2) | (!pressLeft << 1) | (!pressRight);
+			result |= (!status[enumval(JoypadButton::Down)] << 3) | (!status[enumval(JoypadButton::Up)] << 2) | (!status[enumval(JoypadButton::Left)] << 1) | (!status[enumval(JoypadButton::Right)]);
 		}
+		//std::cout << "Joypad get : " << oh8(result) << std::endl;
 		return result;
 	}
 
 	void JoypadMapping::set(uint16_t address, uint8_t value){
+		//std::cout << "Joypad set : " << oh8(value) << std::endl;
 		selectButtons = !((value >> 5) & 1);
 		selectDirections = !((value >> 4) & 1);
+	}
+
+	void JoypadMapping::setButton(JoypadButton button, bool pressed){
+		status[enumval(button)] = pressed;
 	}
 }

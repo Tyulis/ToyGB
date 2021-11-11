@@ -1,21 +1,25 @@
 #include "ui/Interface.hpp"
 
+#define PIXEL_SIZE 4
+#define WINDOW_WIDTH LCD_WIDTH*PIXEL_SIZE
+#define WINDOW_HEIGHT LCD_HEIGHT*PIXEL_SIZE
 
 namespace toygb {
 	Interface::Interface(){
 
 	}
 
-	void Interface::run(LCDController* lcd, JoypadController* joypad){
+	void Interface::run(LCDController* lcd, AudioController* audio, JoypadController* joypad){
 		m_lcd = lcd;
+		m_audio = audio;
 		m_joypad = joypad;
 
-		sf::RenderWindow window(sf::VideoMode(LCD_WIDTH, LCD_HEIGHT), "ToyGB");
+		sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "ToyGB");
 		sf::Texture display;
-		if (!display.create(LCD_WIDTH, LCD_HEIGHT))
+		if (!display.create(WINDOW_WIDTH, WINDOW_HEIGHT))
 			window.close();
 
-		sf::Uint8* pixels = new sf::Uint8[LCD_WIDTH * LCD_HEIGHT * 4];
+		sf::Uint8* pixels = new sf::Uint8[WINDOW_WIDTH * WINDOW_HEIGHT * 4];
 		sf::Sprite screen;
 		screen.setTexture(display);
 		screen.setPosition(sf::Vector2f(0.0f, 0.0f));
@@ -27,14 +31,32 @@ namespace toygb {
 					window.close();
 			}
 
+			m_joypad->setButton(JoypadButton::Up, sf::Keyboard::isKeyPressed(sf::Keyboard::Up));
+			m_joypad->setButton(JoypadButton::Down, sf::Keyboard::isKeyPressed(sf::Keyboard::Down));
+			m_joypad->setButton(JoypadButton::Left, sf::Keyboard::isKeyPressed(sf::Keyboard::Left));
+			m_joypad->setButton(JoypadButton::Right, sf::Keyboard::isKeyPressed(sf::Keyboard::Right));
+			m_joypad->setButton(JoypadButton::A, sf::Keyboard::isKeyPressed(sf::Keyboard::K));
+			m_joypad->setButton(JoypadButton::B, sf::Keyboard::isKeyPressed(sf::Keyboard::L));
+			m_joypad->setButton(JoypadButton::Start, sf::Keyboard::isKeyPressed(sf::Keyboard::O));
+			m_joypad->setButton(JoypadButton::Select, sf::Keyboard::isKeyPressed(sf::Keyboard::M));
+
 			uint16_t* gbValues = m_lcd->pixels();
 			for (int x = 0; x < LCD_WIDTH; x++){
 				for (int y = 0; y < LCD_HEIGHT; y++){
 					uint16_t gbValue = gbValues[y*LCD_WIDTH + x];
-					pixels[4*(y*LCD_WIDTH + x)] = ((gbValue & 0x1F) << 3) + 0b101;
-					pixels[4*(y*LCD_WIDTH + x) + 1] = (((gbValue >> 5) & 0x1F) << 3) + 0b101;
-					pixels[4*(y*LCD_WIDTH + x) + 2] = (((gbValue >> 10) & 0x1F) << 3) + 0b101;
-					pixels[4*(y*LCD_WIDTH + x) + 3] = 255;
+					uint8_t red = ((gbValue & 0x1F) << 3) + 0b101;
+					uint8_t green = (((gbValue >> 5) & 0x1F) << 3) + 0b101;
+					uint8_t blue = (((gbValue >> 10) & 0x1F) << 3) + 0b101;
+					uint8_t alpha = 255;
+					for (int xpix = 0; xpix < PIXEL_SIZE; xpix++){
+						for (int ypix = 0; ypix < PIXEL_SIZE; ypix++){
+							int index = 4*((y*PIXEL_SIZE + ypix)*WINDOW_WIDTH + (x*PIXEL_SIZE + xpix));
+							pixels[index] = red;
+							pixels[index + 1] = green;
+							pixels[index + 2] = blue;
+							pixels[index + 3] = alpha;
+						}
+					}
 				}
 			}
 

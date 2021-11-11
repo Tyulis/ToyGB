@@ -17,6 +17,8 @@ namespace toygb {
 			void init(OperationMode mode, InterruptVector* interrupt);
 			void configureMemory(MemoryMap* memory);
 
+			void setButton(JoypadButton button, bool pressed);
+
 		private:
 			OperationMode m_mode;
 			InterruptVector* m_interrupt;

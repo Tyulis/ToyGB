@@ -20,4 +20,8 @@ namespace toygb {
 	void JoypadController::configureMemory(MemoryMap* memory){
 		memory->add(IO_JOYPAD, IO_JOYPAD, m_register);
 	}
+
+	void JoypadController::setButton(JoypadButton button, bool pressed){
+		m_register->setButton(button, pressed);
+	}
 }

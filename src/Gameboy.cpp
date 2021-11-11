@@ -40,7 +40,7 @@ namespace toygb {
 	}
 
 	void Gameboy::main() {
-		std::thread uiThread(&runInterface, &m_interface, &m_lcd, &m_joypad);
+		std::thread uiThread(&runInterface, &m_interface, &m_lcd, &m_audio, &m_joypad);
 
 		GBComponent cpuComponent = m_cpu.run(&m_memory);
 		GBComponent lcdComponent = m_lcd.run();
@@ -59,7 +59,7 @@ namespace toygb {
 		uiThread.join();
 	}
 
-	void runInterface(Interface* interface, LCDController* lcd, JoypadController* joypad){
-		interface->run(lcd, joypad);
+	void runInterface(Interface* interface, LCDController* lcd, AudioController* audio, JoypadController* joypad){
+		interface->run(lcd, audio, joypad);
 	}
 }

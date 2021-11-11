@@ -461,9 +461,8 @@ namespace toygb {
 				uint8_t value = memoryRead(address); cycle();
 				reg_a = value;
 			} else if (opcode == 0b11001011){  // 11 00 1011 = prefix CB
-				uint8_t opcode2 = memoryRead(m_pc++); cycle();
-				uint8_t reg = opcode2 & 7;
-				uint8_t operation = opcode2 >> 3;
+				uint8_t operation = memoryRead(m_pc++); cycle();
+				uint8_t reg = operation & 7;
 
 				uint8_t operand;
 				if (reg == 0b110){
@@ -473,8 +472,8 @@ namespace toygb {
 				}
 
 				uint8_t result = operand;
-				uint8_t block = (operation >> 4) & 3;
-				uint8_t subop = operation & 7;
+				uint8_t block = (operation >> 6) & 3;
+				uint8_t subop = (operation >> 3) & 7;
 				if (block == 0b00){  // 00 xxx : Bitwise operations
 					if (subop == 0b000){  // 00 000 : rlc
 						result = (operand << 1) | (operand >> 7);
