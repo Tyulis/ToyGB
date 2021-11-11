@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "audio/AudioController.hpp"
 #include "graphics/LCDController.hpp"
 #include "control/JoypadController.hpp"
 
@@ -14,6 +15,9 @@ namespace toygb {
 			void run(LCDController* lcd, AudioController* audio, JoypadController* joypad);
 
 		private:
+			void updateJoypad();
+			void updateGraphics(sf::Uint8* pixels);
+
 			LCDController* m_lcd;
 			AudioController* m_audio;
 			JoypadController* m_joypad;

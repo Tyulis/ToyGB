@@ -4,7 +4,7 @@
 namespace toygb {
 	CartController::CartController(){
 		m_romMapping = nullptr;
-		m_sramMapping = nullptr;
+		m_ramMapping = nullptr;
 	}
 
 	CartController::~CartController(){
@@ -13,6 +13,12 @@ namespace toygb {
 
 	void CartController::init(std::string romfile, std::string ramfile){
 		std::ifstream rom(romfile, std::ifstream::in | std::ifstream::binary);
+		if (!rom.is_open()){
+			std::stringstream errstream;
+			errstream << "ROM file " << romfile << " not found";
+			throw EmulationError(errstream.str());
+		}
+
 		uint8_t carttype;
 
 		rom.seekg(0x0147);
@@ -66,13 +72,13 @@ namespace toygb {
 				m_romMapping = new MBC5CartMapping(carttype, romfile, ramfile);
 				break;
 		}
-		m_sramMapping = m_romMapping->getSRAM();
+		m_ramMapping = m_romMapping->getRAM();
 	}
 
 	void CartController::configureMemory(MemoryMap* memory){
 		memory->add(ROM0_OFFSET, ROM0_OFFSET + ROM_SIZE - 1, m_romMapping);
-		if (m_sramMapping != nullptr){
-			memory->add(SRAM_OFFSET, SRAM_OFFSET + SRAM_SIZE - 1, m_sramMapping);
+		if (m_ramMapping != nullptr){
+			memory->add(SRAM_OFFSET, SRAM_OFFSET + SRAM_SIZE - 1, m_ramMapping);
 		}
 	}
 

@@ -14,6 +14,7 @@
 #include "graphics/LCDController.hpp"
 #include "audio/AudioController.hpp"
 #include "control/JoypadController.hpp"
+#include "communication/SerialController.hpp"
 #include "ui/Interface.hpp"
 #include "util/error.hpp"
 
@@ -34,12 +35,13 @@ namespace toygb {
 			AudioController m_audio;
 			JoypadController m_joypad;
 			CartController m_cart;
+			SerialController m_serial;
 			OperationMode m_mode;
 			MemoryMap m_memory;
 			Interface m_interface;
 	};
 
-	void runInterface(Interface* interface, LCDController* lcd, JoypadController* joypad);
+	void runInterface(Interface* interface, LCDController* lcd, AudioController* audio, JoypadController* joypad);
 }
 
 #endif

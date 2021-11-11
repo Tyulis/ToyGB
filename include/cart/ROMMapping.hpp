@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 
+#include "util/error.hpp"
 #include "core/OperationMode.hpp"
 #include "memory/MemoryMapping.hpp"
 
@@ -17,15 +18,22 @@ namespace toygb {
 			virtual uint8_t get(uint16_t address) = 0;
 			virtual void set(uint16_t address, uint8_t value) = 0;
 
-			virtual MemoryMapping* getSRAM() = 0;
+			virtual MemoryMapping* getRAM() = 0;
 			OperationMode getAutoOperationMode();
 
 		protected:
-			std::string m_romfile;
-			std::string m_sramfile;
-			uint8_t* m_romdata;
-			uint8_t* m_sramdata;
-			uint8_t m_carttype;
+			void setCartFeatures(bool hasRAM, bool hasBattery);
+			void loadCartData();
+
+			std::string m_romFile;
+			std::string m_ramFile;
+			int m_romSize;
+			int m_ramSize;
+			uint8_t* m_romData;
+			uint8_t* m_ramData;
+			uint8_t m_cartType;
+			bool m_hasRAM;
+			bool m_hasBattery;
 	};
 }
 

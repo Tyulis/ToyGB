@@ -4,5 +4,6 @@ namespace toygb {
 	GameboyConfig::GameboyConfig(){
 		romfile = "";
 		ramfile = "";
+		disassemble = false;
 	}
 }

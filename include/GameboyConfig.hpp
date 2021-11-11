@@ -10,6 +10,7 @@ namespace toygb {
 
 			std::string romfile;
 			std::string ramfile;
+			bool disassemble;
 	};
 }
 

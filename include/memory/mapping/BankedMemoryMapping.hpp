@@ -5,12 +5,14 @@
 
 
 namespace toygb {
-	class BankedWRAMMapping : public MemoryMapping {
+	class BankedMemoryMapping : public MemoryMapping {
 		public:
-			BankedWRAMMapping(uint8_t* bankSelect, uint16_t bankSize, uint8_t* array);
+			BankedMemoryMapping(uint8_t* bankSelect, uint16_t bankSize, uint8_t* array, bool accessible);
 
 			virtual uint8_t get(uint16_t address);
 			virtual void set(uint16_t address, uint8_t value);
+
+			bool accessible;
 
 		private:
 			uint8_t* m_bankSelect;

@@ -14,10 +14,10 @@ namespace toygb {
 			virtual uint8_t get(uint16_t address);
 			virtual void set(uint16_t address, uint8_t value);
 
-			virtual MemoryMapping* getSRAM();
+			virtual MemoryMapping* getRAM();
 
 		protected:
-			ArrayMemoryMapping* m_sramMapping;
+			ArrayMemoryMapping* m_ramMapping;
 	};
 }
 

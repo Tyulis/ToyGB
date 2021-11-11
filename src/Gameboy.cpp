@@ -2,13 +2,9 @@
 #include <iostream>
 
 namespace toygb {
-	Gameboy::Gameboy(GameboyConfig& config){
-		m_config = config;
-		m_interrupt = InterruptVector();
-		m_cpu = CPU();
-		m_lcd = LCDController();
-		m_audio = AudioController();
-		m_cart = CartController();
+	Gameboy::Gameboy(GameboyConfig& config):
+		m_config(config), m_cpu(config.disassemble), m_lcd(),
+		m_interrupt(), m_audio(), m_cart(), m_serial(){
 	}
 
 	void Gameboy::init(OperationMode mode){
@@ -25,6 +21,7 @@ namespace toygb {
 		m_lcd.init(mode, &m_interrupt);
 		m_audio.init(mode);
 		m_joypad.init(mode, &m_interrupt);
+		m_serial.init(mode, &m_interrupt);
 
 		// Build the memory map
 		m_memory = MemoryMap();
@@ -34,6 +31,7 @@ namespace toygb {
 		m_audio.configureMemory(&m_memory);
 		m_joypad.configureMemory(&m_memory);
 		m_cart.configureMemory(&m_memory);
+		m_serial.configureMemory(&m_memory);
 		m_memory.build();
 
 		//std::cout << oh8(m_memory.get(0x0144)) << " " << oh8(m_memory.get(0xFF40)) << " " << oh8(m_memory.get(0x0180)) << std::endl;

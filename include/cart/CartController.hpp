@@ -29,7 +29,7 @@ namespace toygb {
 
 		private:
 			ROMMapping* m_romMapping;
-			MemoryMapping* m_sramMapping;
+			MemoryMapping* m_ramMapping;
 	};
 }
 

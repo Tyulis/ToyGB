@@ -7,8 +7,13 @@
 #define OFFSET_CONTROL IO_TIMER_CONTROL - OFFSET_START
 
 namespace toygb {
-	TimerMapping::TimerMapping() {
-		divider = 0x00;  // ?
+	const int TIMA_CYCLE_COUNTS[] = {1024, 16, 64, 256};
+
+	TimerMapping::TimerMapping(OperationMode mode, InterruptVector* interrupt) {
+		m_mode = mode;
+		m_interrupt = interrupt;
+
+		divider = 0x00;  // FIXME
 		counter = 0x00;
 		modulo = 0x00;
 		enable = false;
@@ -36,6 +41,35 @@ namespace toygb {
 				enable = (value >> 2) & 1;
 				clockSelect = value & 3;
 				break;
+		}
+	}
+
+	void TimerMapping::resetDivider(){
+		divider = 0x00;
+		m_dividerCounter = 0;
+	}
+
+	void TimerMapping::incrementCounter(int cycles, bool stopped){
+		if (!stopped){
+			m_dividerCounter += cycles;
+
+			if (m_dividerCounter >= 0x100){
+				m_dividerCounter %= 0x100;
+				divider += 1;
+			}
+		}
+
+		if (enable){
+			m_timaCounter += cycles;
+			if (m_timaCounter >= TIMA_CYCLE_COUNTS[clockSelect]){
+				m_timaCounter %= TIMA_CYCLE_COUNTS[clockSelect];
+				if (counter == 0xFF){
+					m_interrupt->setRequest(Interrupt::Timer);
+					counter = modulo;
+				} else {
+					counter += 1;
+				}
+			}
 		}
 	}
 }

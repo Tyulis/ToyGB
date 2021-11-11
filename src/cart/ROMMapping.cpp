@@ -3,34 +3,14 @@
 
 namespace toygb {
 	ROMMapping::ROMMapping(uint8_t carttype, std::string romfile, std::string ramfile) {
-		m_carttype = carttype;
-		m_romfile = romfile;
-		m_sramfile = ramfile;
-
-		std::ifstream rom(romfile, std::ifstream::in | std::ifstream::binary);
-		rom.seekg(0, std::ifstream::end);
-		int romsize = rom.tellg();
-		m_romdata = new uint8_t[romsize];
-		rom.seekg(0);
-		rom.read(reinterpret_cast<char*>(m_romdata), romsize);
-		rom.close();
-
-		if (ramfile != ""){
-			std::ifstream sram(ramfile, std::ifstream::in | std::ifstream::binary);
-			sram.seekg(0, std::ifstream::end);
-			int sramsize = sram.tellg();
-			m_sramdata = new uint8_t[sramsize];
-			sram.seekg(0);
-			sram.read(reinterpret_cast<char*>(m_sramdata), sramsize);
-			sram.close();
-		} else {
-			m_sramdata = nullptr;
-		}
+		m_cartType = carttype;
+		m_romFile = romfile;
+		m_ramFile = ramfile;
 	}
 
 	ROMMapping::~ROMMapping(){
-		if (m_romdata != nullptr) delete[] m_romdata;
-		if (m_sramdata != nullptr) delete[] m_sramdata;
+		if (m_romData != nullptr) delete[] m_romData;
+		if (m_ramData != nullptr) delete[] m_ramData;
 	}
 
 	OperationMode ROMMapping::getAutoOperationMode(){
@@ -40,5 +20,55 @@ namespace toygb {
 		} else {
 			return OperationMode::DMG;
 		}*/
+	}
+
+	void ROMMapping::setCartFeatures(bool hasRAM, bool hasBattery){
+		m_hasRAM = hasRAM;
+		m_hasBattery = hasBattery;
+	}
+
+	void ROMMapping::loadCartData(){
+		std::ifstream rom(m_romFile, std::ifstream::in | std::ifstream::binary);
+		if (!rom.is_open()){
+			std::stringstream errstream;
+			errstream << "ROM file " << m_romFile << " not found";
+			throw EmulationError(errstream.str());
+		}
+
+		rom.seekg(0x0148);
+		uint8_t sizeExponents[2];
+		rom.read(reinterpret_cast<char*>(sizeExponents), 2*sizeof(uint8_t));
+
+		m_romSize = 0x8000 << sizeExponents[0];
+		switch (sizeExponents[1]){
+			case 0x00: m_ramSize = 0; break;
+			case 0x02: m_ramSize = 0x2000; break;
+			case 0x03: m_ramSize = 0x8000; break;
+			case 0x04: m_ramSize = 0x20000; break;
+			case 0x05: m_ramSize = 0x10000; break;
+			default: m_ramSize = 0; break;
+		}
+
+		m_romData = new uint8_t[m_romSize];
+		rom.seekg(0);
+		rom.read(reinterpret_cast<char*>(m_romData), m_romSize);
+		rom.close();
+
+		if (m_hasRAM){
+			if (m_hasBattery){
+				std::ifstream ram(m_ramFile, std::ifstream::in | std::ifstream::binary);
+				if (ram.is_open()){
+					m_ramData = new uint8_t[m_ramSize];
+					ram.read(reinterpret_cast<char*>(m_ramData), m_ramSize);
+					ram.close();
+				} else {
+					m_ramData = new uint8_t[m_ramSize];
+				}
+			} else {
+				m_ramData = new uint8_t[m_ramSize];
+			}
+		} else {
+			m_ramData = nullptr;
+		}
 	}
 }

@@ -85,10 +85,13 @@ namespace toygb {
 
 
 	uint8_t MemoryMap::get(uint16_t address){
+		//std::cout << "Read from " << oh16(address);
 		MemoryMap::Node* node = getNode(address);
 		if (node != nullptr){
+			//std::cout << " OK" << std::endl;
 			return node->mapping->get(address - node->start);
 		} else {
+			//std::cout << " Fail" << std::endl;
 			std::stringstream errstream;
 			errstream << "Read from unmapped memory address " << oh16(address);
 			throw EmulationError(errstream.str());
@@ -96,10 +99,13 @@ namespace toygb {
 	}
 
 	void MemoryMap::set(uint16_t address, uint8_t value){
+		//std::cout << "Write " << oh8(value) << " to " << oh16(address);
 		MemoryMap::Node* node = getNode(address);
 		if (node != nullptr){
+			//std::cout << " OK" << std::endl;
 			return node->mapping->set(address - node->start, value);
 		} else {
+			//std::cout << " Fail" << std::endl;
 			std::stringstream errstream;
 			errstream << "Write to unmapped memory address : " << oh16(address);
 			throw EmulationError(errstream.str());

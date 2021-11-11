@@ -11,7 +11,7 @@
 
 #include "memory/mapping/ArrayMemoryMapping.hpp"
 #include "memory/mapping/TimerMapping.hpp"
-#include "memory/mapping/BankedWRAMMapping.hpp"
+#include "memory/mapping/BankedMemoryMapping.hpp"
 #include "memory/mapping/WRAMBankSelectMapping.hpp"
 
 
@@ -19,6 +19,7 @@ namespace toygb {
 	class CPU {
 		public:
 			CPU();
+			CPU(bool disassemble);
 			~CPU();
 
 			void configureMemory(MemoryMap* memory);
@@ -33,9 +34,9 @@ namespace toygb {
 			bool checkCondition(uint8_t condition);
 			void setFlags(uint8_t z, uint8_t n, uint8_t h, uint8_t c);
 			void accumulatorOperation(uint8_t operation, uint8_t operand);
-			void cbOpcode(uint8_t operation, uint8_t reg);
 			void increment16(uint8_t* high, uint8_t* low);
 			void decrement16(uint8_t* high, uint8_t* low);
+			void incrementTimer(int cycles);
 
 			void logDisassembly(uint16_t position);
 
@@ -64,6 +65,11 @@ namespace toygb {
 			bool m_halted;
 			bool m_stopped;
 			bool m_haltBug;
+
+			int m_timaCounter;
+			int m_dividerCounter;
+
+			bool m_logDisassembly;
 	};
 }
 
