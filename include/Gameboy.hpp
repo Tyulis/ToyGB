@@ -14,6 +14,8 @@
 #include "graphics/LCDController.hpp"
 #include "audio/AudioController.hpp"
 #include "control/JoypadController.hpp"
+#include "memory/MemoryMap.hpp"
+#include "memory/DMAController.hpp"
 #include "communication/SerialController.hpp"
 #include "ui/Interface.hpp"
 #include "util/error.hpp"
@@ -36,6 +38,8 @@ namespace toygb {
 			JoypadController m_joypad;
 			CartController m_cart;
 			SerialController m_serial;
+			DMAController m_dma;
+
 			OperationMode m_mode;
 			MemoryMap m_memory;
 			Interface m_interface;

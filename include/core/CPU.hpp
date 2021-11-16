@@ -8,10 +8,11 @@
 #include "memory/MemoryMapping.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/Constants.hpp"
+#include "memory/DMAController.hpp"
 
 #include "memory/mapping/ArrayMemoryMapping.hpp"
 #include "memory/mapping/TimerMapping.hpp"
-#include "memory/mapping/BankedMemoryMapping.hpp"
+#include "memory/mapping/FixBankedMemoryMapping.hpp"
 #include "memory/mapping/WRAMBankSelectMapping.hpp"
 
 
@@ -25,7 +26,7 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 			void init(OperationMode mode, InterruptVector* interrupt);
 
-			GBComponent run(MemoryMap* memory);
+			GBComponent run(MemoryMap* memory, DMAController* dma);
 
 		private:
 			void initRegisters();
@@ -37,12 +38,14 @@ namespace toygb {
 			void increment16(uint8_t* high, uint8_t* low);
 			void decrement16(uint8_t* high, uint8_t* low);
 			void incrementTimer(int cycles);
+			void applyDAA();
 
 			void logDisassembly(uint16_t position);
+			void logStatus();
 
-			int cycleState;
 
 			MemoryMap* m_memory;
+			DMAController* m_dma;
 			InterruptVector* m_interrupt;
 			OperationMode m_mode;
 

@@ -15,6 +15,7 @@ namespace toygb {
 		m_oam = nullptr;
 
 		m_hdma = nullptr;
+		m_dmgPalette = nullptr;
 		m_cgbPalette = nullptr;
 		m_lcdControl = nullptr;
 		m_vramBankMapping = nullptr;
@@ -29,6 +30,7 @@ namespace toygb {
 		if (m_oam != nullptr) delete[] m_oam;
 
 		if (m_hdma != nullptr) delete m_hdma;
+		if (m_dmgPalette != nullptr) delete m_dmgPalette;
 		if (m_cgbPalette != nullptr) delete m_cgbPalette;
 		if (m_lcdControl != nullptr) delete m_lcdControl;
 		if (m_vramBankMapping != nullptr) delete m_vramBankMapping;
@@ -41,6 +43,7 @@ namespace toygb {
 		m_oam = nullptr;
 
 		m_hdma = nullptr;
+		m_dmgPalette = nullptr;
 		m_cgbPalette = nullptr;
 		m_lcdControl = nullptr;
 		m_vramBankMapping = nullptr;
@@ -63,14 +66,16 @@ namespace toygb {
 			for (int i = 0; i < VRAM_BANK_SIZE * VRAM_BANK_NUM; i++) m_vram[i] = 0;
 		}
 		m_vramBank = 0;
+
+		m_oamMapping = new LCDMemoryMapping(m_oam);
+		m_lcdControl = new LCDControlMapping();
+		m_dmgPalette = new DMGPaletteMapping();
 	}
 
 	void LCDController::configureMemory(MemoryMap* memory){
-		m_oamMapping = new LCDMemoryMapping(m_oam);
-		m_lcdControl = new LCDControlMapping();
-
 		memory->add(OAM_OFFSET, OAM_END_OFFSET - 1, m_oamMapping);
-		memory->add(IO_LCD_CONTROL, IO_WINDOW_X, m_lcdControl);
+		memory->add(IO_LCD_CONTROL, IO_COORD_COMPARE, m_lcdControl);
+		memory->add(IO_BG_PALETTE, IO_WINDOW_X, m_dmgPalette);
 
 		if (m_mode == OperationMode::DMG){
 			m_vramMapping = new LCDMemoryMapping(m_vram);
@@ -87,7 +92,7 @@ namespace toygb {
 		memory->add(VRAM_OFFSET, VRAM_OFFSET + VRAM_SIZE - 1, m_vramMapping);
 	}
 
-#define dot(num) co_await std::suspend_always()
+#define dot(num) co_await std::suspend_always();
 
 	GBComponent LCDController::run(){
 		m_frontBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
@@ -145,7 +150,7 @@ namespace toygb {
 					bool wasInsideWindow = false;
 					int hblankDuration = 204;
 					for (int x = 0; x < LCD_WIDTH; x++){
-						bool insideWindow = (x >= m_lcdControl->windowX && line >= m_lcdControl->windowY);
+						bool insideWindow = (x >= m_dmgPalette->windowX && line >= m_dmgPalette->windowY);
 						if (insideWindow != wasInsideWindow)
 							clearQueue(backgroundQueue);
 
@@ -155,9 +160,9 @@ namespace toygb {
 
 							uint8_t tileX, tileY, indexY;
 							if (insideWindow){  // FIXME
-								tileX = ((x - m_lcdControl->windowX) >> 3) & 0x1F;
-								tileY = ((line - m_lcdControl->windowY) >> 3) & 0x1F;
-								indexY = (line - m_lcdControl->windowY) & 7;
+								tileX = ((x - m_dmgPalette->windowX) >> 3) & 0x1F;
+								tileY = ((line - m_dmgPalette->windowY) >> 3) & 0x1F;
+								indexY = (line - m_dmgPalette->windowY) & 7;
 							} else {  // FIXME
 								tileX = ((m_lcdControl->scrollX + x) >> 3) & 0x1F;
 								tileY = ((m_lcdControl->scrollY + line) >> 3) & 0x1F;
@@ -288,11 +293,11 @@ namespace toygb {
 							colorResult = COLOR_BLANK;
 						} else if (m_mode == OperationMode::DMG){
 							if (colorPalette == BACKGROUND_PALETTE){
-								colorResult = DMG_PALETTE[m_lcdControl->backgroundPalette[colorValue]];
+								colorResult = DMG_PALETTE[m_dmgPalette->backgroundPalette[colorValue]];
 							} else if (colorPalette == 0){
-								colorResult = DMG_PALETTE[m_lcdControl->objectPalette0[colorValue]];
+								colorResult = DMG_PALETTE[m_dmgPalette->objectPalette0[colorValue]];
 							} else if (colorPalette == 1){
-								colorResult = DMG_PALETTE[m_lcdControl->objectPalette1[colorValue]];
+								colorResult = DMG_PALETTE[m_dmgPalette->objectPalette1[colorValue]];
 							}
 						} else if (m_mode == OperationMode::CGB) {
 							int paletteIndex = colorPalette * 4 + colorValue;
@@ -329,6 +334,7 @@ namespace toygb {
 				if (m_cgbPalette != nullptr) m_cgbPalette->accessible = true;
 
 				m_interrupt->setRequest(Interrupt::VBlank);
+				//std::cout << "VBlank" << std::endl;
 
 				for (int line = 144; line < 153; line++){
 					m_lcdControl->coordY = line;
@@ -338,6 +344,8 @@ namespace toygb {
 						dot();  // TODO
 					}
 				}
+				
+				m_interrupt->resetRequest(Interrupt::VBlank);
 			} else {
 				dot();
 			}

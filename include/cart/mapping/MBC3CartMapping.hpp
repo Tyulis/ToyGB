@@ -3,7 +3,7 @@
 
 #include "cart/ROMMapping.hpp"
 #include "memory/Constants.hpp"
-#include "memory/mapping/BankedMemoryMapping.hpp"
+#include "memory/mapping/FullBankedMemoryMapping.hpp"
 
 
 namespace toygb {
@@ -20,7 +20,7 @@ namespace toygb {
 		protected:
 			uint8_t m_romBankSelect;
 			uint8_t m_ramBankSelect;
-			BankedMemoryMapping* m_ramMapping;
+			FullBankedMemoryMapping* m_ramMapping;
 	};
 }
 

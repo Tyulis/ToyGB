@@ -92,9 +92,11 @@ namespace toygb {
 			return node->mapping->get(address - node->start);
 		} else {
 			//std::cout << " Fail" << std::endl;
-			std::stringstream errstream;
-			errstream << "Read from unmapped memory address " << oh16(address);
-			throw EmulationError(errstream.str());
+			//std::stringstream errstream;
+			//errstream << "Read from unmapped memory address " << oh16(address);
+			//throw EmulationError(errstream.str());
+			std::cout << "Read from unmapped memory address " << oh16(address) << std::endl;
+			return 0xFF;
 		}
 	}
 

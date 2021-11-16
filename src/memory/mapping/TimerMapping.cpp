@@ -18,6 +18,9 @@ namespace toygb {
 		modulo = 0x00;
 		enable = false;
 		clockSelect = 0x00;
+
+		m_dividerCounter = 0;
+		m_timaCounter = 0;
 	}
 
 	uint8_t TimerMapping::get(uint16_t address) {

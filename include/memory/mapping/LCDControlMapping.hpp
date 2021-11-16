@@ -40,19 +40,6 @@ namespace toygb {
 			uint8_t coordY;
 			uint8_t coordYCompare;
 
-			// OAM DMA
-			uint16_t oamDMAAddress;
-			bool oamDMAActive;
-
-			// Monochrome palettes
-			uint8_t backgroundPalette[4];
-			uint8_t objectPalette0[4];
-			uint8_t objectPalette1[4];
-
-			// Window position
-			uint8_t windowY;
-			uint8_t windowX;
-
 	};
 }
 

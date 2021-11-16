@@ -12,6 +12,7 @@
 #include "memory/MemoryMap.hpp"
 #include "memory/mapping/HDMAMapping.hpp"
 #include "memory/mapping/LCDControlMapping.hpp"
+#include "memory/mapping/DMGPaletteMapping.hpp"
 #include "memory/mapping/CGBPaletteMapping.hpp"
 #include "memory/mapping/LCDMemoryMapping.hpp"
 #include "memory/mapping/LCDBankedMemoryMapping.hpp"
@@ -41,6 +42,7 @@ namespace toygb {
 			HDMAMapping* m_hdma;
 			CGBPaletteMapping* m_cgbPalette;
 			LCDControlMapping* m_lcdControl;
+			DMGPaletteMapping* m_dmgPalette;
 			LCDMemoryMapping* m_vramMapping;
 			LCDMemoryMapping* m_oamMapping;
 			VRAMBankSelectMapping* m_vramBankMapping;

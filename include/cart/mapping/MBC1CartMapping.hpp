@@ -2,7 +2,8 @@
 #define _CART_MAPPING_MBC1CARTMAPPING_HPP
 
 #include "cart/ROMMapping.hpp"
-#include "memory/mapping/ArrayMemoryMapping.hpp"
+#include "cart/mapping/MBC1RAMMapping.hpp"
+#include "memory/Constants.hpp"
 
 
 namespace toygb {
@@ -17,7 +18,13 @@ namespace toygb {
 			virtual MemoryMapping* getRAM();
 
 		protected:
-			ArrayMemoryMapping* m_ramMapping;
+			MBC1RAMMapping* m_ramMapping;
+			uint8_t m_romBankSelect;
+			uint8_t m_ramBankSelect;
+			uint8_t m_romBankMask;
+			bool m_modeSelect;
+			int m_romBanks;
+			int m_ramBanks;
 	};
 }
 

@@ -80,7 +80,9 @@
 #define IO_SCROLL_X          0xFF43
 #define IO_COORD_Y           0xFF44
 #define IO_COORD_COMPARE     0xFF45
+
 #define IO_OAM_DMA           0xFF46
+
 #define IO_BG_PALETTE        0xFF47
 #define IO_OBJ0_PALETTE      0xFF48
 #define IO_OBJ1_PALETTE      0xFF49

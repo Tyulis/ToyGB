@@ -21,7 +21,7 @@ namespace toygb {
 		m_ramBankSelect = 0;
 		m_romBankSelect = 1;
 		if (m_ramData != nullptr){
-			m_ramMapping = new BankedMemoryMapping(&m_ramBankSelect, SRAM_SIZE, m_ramData, false);
+			m_ramMapping = new FullBankedMemoryMapping(&m_ramBankSelect, SRAM_SIZE, m_ramData, false);
 		} else {
 			m_ramMapping = nullptr;
 		}
@@ -45,7 +45,7 @@ namespace toygb {
 
 	void MBC3CartMapping::set(uint16_t address, uint8_t value){
 		if (address < 0x2000 && m_ramMapping != nullptr){
-			m_ramMapping->accessible = (value == 0x0A);
+			m_ramMapping->accessible = ((value & 0x0F) == 0x0A);
 		} else if (0x2000 <= address && address < 0x4000){
 			m_romBankSelect = value & 0x7F;
 			if (m_romBankSelect == 0) m_romBankSelect = 1;

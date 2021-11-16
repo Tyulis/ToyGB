@@ -14,10 +14,22 @@ namespace toygb {
 
 		loadCartData();
 
+		m_ramBankSelect = 0;
+		m_romBankSelect = 1;
+		m_modeSelect = false;
 		if (m_ramData != nullptr){
-			m_ramMapping = new ArrayMemoryMapping(m_ramData);
+			m_ramMapping = new MBC1RAMMapping(&m_ramBankSelect, &m_modeSelect, SRAM_SIZE, m_ramData, false);
 		} else {
 			m_ramMapping = nullptr;
+		}
+		m_romBanks = m_romSize / ROM_BANK_SIZE;
+		m_ramBanks = m_ramSize / SRAM_SIZE;
+
+		m_romBankMask = 0;
+		uint8_t masktmp = m_romBanks;
+		while (masktmp > 0){
+			m_romBankMask = (masktmp << 1) | 1;
+			masktmp >>= 1;
 		}
 	}
 
@@ -30,10 +42,28 @@ namespace toygb {
 	}
 
 	uint8_t MBC1CartMapping::get(uint16_t address){
-		return m_romData[address];
+		if (address < 0x4000){
+			if (m_modeSelect){
+				return m_romData[address + ((m_ramBankSelect << 5) & m_romBankMask) * ROM_BANK_SIZE];
+			} else {
+				return m_romData[address];
+			}
+		} else {
+			int bank = ((m_ramBankSelect << 5) | m_romBankSelect) & m_romBankMask;
+			return m_romData[address + (bank - 1) * ROM_BANK_SIZE];
+		}
 	}
 
 	void MBC1CartMapping::set(uint16_t address, uint8_t value){
-		// nop
+		if (address < 0x2000 && m_ramMapping != nullptr){
+			m_ramMapping->accessible = ((value & 0x0F) == 0x0A);
+		} else if (0x2000 <= address && address < 0x4000){
+			m_romBankSelect = value;
+			if (m_romBankSelect == 0) m_romBankSelect = 1;
+		} else if (0x4000 <= address && address < 0x6000){
+			m_ramBankSelect = value & 0x03;
+		} else if (0x6000 <= address && address < 0x8000){
+			m_modeSelect = value & 1;
+		}
 	}
 }

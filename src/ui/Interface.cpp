@@ -26,6 +26,7 @@ namespace toygb {
 		screen.setTexture(display);
 		screen.setPosition(sf::Vector2f(0.0f, 0.0f));
 
+		window.setFramerateLimit(60);
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
