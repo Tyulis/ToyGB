@@ -65,6 +65,10 @@ namespace toygb {
 					m_ramData = new uint8_t[m_ramSize];
 				}
 			} else {
+				if (m_ramSize == 0) {
+					std::cerr << "Warning : cart type (" << oh8(m_cartType) << ") indicates cart RAM but with size zero." << std::endl;
+					m_ramSize = 0x2000;
+				}
 				m_ramData = new uint8_t[m_ramSize];
 			}
 		} else {

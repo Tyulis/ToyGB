@@ -22,6 +22,7 @@ namespace toygb {
 		} else {
 			m_ramMapping = nullptr;
 		}
+		//std::cout << m_ramMapping << std::endl;
 		m_romBanks = m_romSize / ROM_BANK_SIZE;
 		m_ramBanks = m_ramSize / SRAM_SIZE;
 

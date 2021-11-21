@@ -10,6 +10,7 @@
 #include "core/OperationMode.hpp"
 #include "core/InterruptVector.hpp"
 #include "memory/MemoryMap.hpp"
+#include "memory/mapping/OAMMapping.hpp"
 #include "memory/mapping/HDMAMapping.hpp"
 #include "memory/mapping/LCDControlMapping.hpp"
 #include "memory/mapping/DMGPaletteMapping.hpp"

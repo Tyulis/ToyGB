@@ -19,8 +19,7 @@ namespace toygb {
 		enable = false;
 		clockSelect = 0x00;
 
-		m_dividerCounter = 0;
-		m_timaCounter = 0;
+		m_internalCounter = 0;
 	}
 
 	uint8_t TimerMapping::get(uint16_t address) {
@@ -45,32 +44,32 @@ namespace toygb {
 				clockSelect = value & 3;
 				break;
 		}
+		//std::cout << oh8(value) << " " << oh8(divider) << " " << oh8(counter) << " " << oh8(modulo) << " " << enable << " " << oh8(clockSelect) << std::endl;
 	}
 
 	void TimerMapping::resetDivider(){
 		divider = 0x00;
-		m_dividerCounter = 0;
+		m_internalCounter = 0;
 	}
 
 	void TimerMapping::incrementCounter(int cycles, bool stopped){
 		if (!stopped){
-			m_dividerCounter += cycles;
+			for (int i = 0; i < cycles; i++){  // FIXME
+				m_internalCounter += 1;
 
-			if (m_dividerCounter >= 0x100){
-				m_dividerCounter %= 0x100;
-				divider += 1;
-			}
-		}
+				if (m_internalCounter % 0x100 == 0){
+					divider += 1;
+				}
 
-		if (enable){
-			m_timaCounter += cycles;
-			if (m_timaCounter >= TIMA_CYCLE_COUNTS[clockSelect]){
-				m_timaCounter %= TIMA_CYCLE_COUNTS[clockSelect];
-				if (counter == 0xFF){
-					m_interrupt->setRequest(Interrupt::Timer);
-					counter = modulo;
-				} else {
-					counter += 1;
+				if (enable){
+					if (m_internalCounter % TIMA_CYCLE_COUNTS[clockSelect] == 0){
+						if (counter == 0xFF){
+							m_interrupt->setRequest(Interrupt::Timer);
+							counter = modulo;
+						} else {
+							counter += 1;
+						}
+					}
 				}
 			}
 		}

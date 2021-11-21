@@ -21,7 +21,7 @@ namespace toygb {
 		for (int i = 0; i < 5; i++){
 			bool enableflag = m_enable->interrupts[i];
 			bool requestflag = m_request->interrupts[i];
-			if (m_master && enableflag && requestflag){
+			if (enableflag && requestflag){
 				return Interrupt(i);
 			}
 		}

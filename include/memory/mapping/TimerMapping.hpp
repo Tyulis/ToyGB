@@ -28,9 +28,8 @@ namespace toygb {
 		private:
 			OperationMode m_mode;
 			InterruptVector* m_interrupt;
-			
-			int m_dividerCounter;
-			int m_timaCounter;
+
+			uint64_t m_internalCounter;
 	};
 }
 

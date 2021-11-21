@@ -98,6 +98,7 @@ namespace toygb {
 				co_await std::suspend_always(); \
 				co_await std::suspend_always(); \
 				co_await std::suspend_always(); \
+				cycles += 1; \
 				incrementTimer(4);
 
 	GBComponent CPU::run(MemoryMap* memory, DMAController* dma){
@@ -110,6 +111,7 @@ namespace toygb {
 
 		try {
 			while (true){
+				int cycles = 0;
 				if (m_ei_scheduled){
 					m_ei_scheduled = false;
 					m_interrupt->setMaster(true);
@@ -140,8 +142,8 @@ namespace toygb {
 							case Interrupt::None: break;
 						}
 						opcode = memoryRead(m_pc++); cycle();
+						continue;
 					}
-					continue;
 				}
 
 				uint16_t basePC = m_pc - 1;
@@ -179,7 +181,7 @@ namespace toygb {
 					} else if (opcode == 0b00110001){  // 00 11 0001 = ld sp, nn
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
-						uint16_t value = (high << 8) | low; cycle();
+						uint16_t value = (high << 8) | low;
 						m_sp = value;
 					} else if (opcode == 0b00000010){  // 00 00 0010 = ld (bc), a
 						memoryWrite(reg_bc, reg_a); cycle();
@@ -187,10 +189,10 @@ namespace toygb {
 						memoryWrite(reg_de, reg_a); cycle();
 					} else if (opcode == 0b00100010){  // 00 10 0010 = ldi (hl), a
 						memoryWrite(reg_hl, reg_a); cycle();
-						increment16(&reg_h, &reg_l); cycle();
+						increment16(&reg_h, &reg_l);
 					} else if (opcode == 0b00110010){  // 00 11 0010 = ldd (hl), a
 						memoryWrite(reg_hl, reg_a); cycle();
-						decrement16(&reg_h, &reg_l); cycle();
+						decrement16(&reg_h, &reg_l);
 					} else if (opcode == 0b00000011){  // 00 00 0011 = inc bc
 						cycle();
 						increment16(&reg_b, &reg_c);
@@ -444,16 +446,14 @@ namespace toygb {
 						memoryWrite(m_sp, m_pc & 0xFF); cycle();
 						m_pc = address;
 					} else if (opcode == 0b11101000){  // 11 10 1000 = add sp, e = add sp, e
-						uint8_t operand = int8_t(memoryRead(m_pc++)); cycle();
+						uint16_t operand = uint16_t(int16_t(int8_t(memoryRead(m_pc++)))); cycle();
 						uint16_t result = m_sp + operand; cycle();
-						// FIXME : carry and half-carry flags for add sp, e ?
-						setFlags(0, 0, (result & 0x0F00) != (m_sp & 0x0F00), (result & 0xF000) != (m_sp & 0xF000));
+						setFlags(0, 0, (m_sp & 0x000F) + (operand & 0x000F) > 0x000F, (m_sp & 0x00FF) + (operand & 0x00FF) > 0x00FF);
 						m_sp = result; cycle();
 					} else if (opcode == 0b11111000){  // 11 11 1000 = ld hl, sp+e
-						uint8_t operand = int8_t(memoryRead(m_pc++)); cycle();
+						uint16_t operand = uint16_t(int16_t(int8_t(memoryRead(m_pc++)))); cycle();
 						uint16_t result = m_sp + operand; cycle();
-						// FIXME : carry and half-carry flags for ld hl, sp+e ?
-						setFlags(0, 0, (result & 0x0F00) != (m_sp & 0x0F00), (result & 0xF000) != (m_sp & 0xF000));
+						setFlags(0, 0, (m_sp & 0x000F) + (operand & 0x000F) > 0x000F, (m_sp & 0x00FF) + (operand & 0x00FF) > 0x00FF);
 						reg_h = result >> 8;
 						reg_l = result & 0xFF;
 					} else if (opcode == 0b11001001){  // 11 00 1001 = ret
@@ -532,7 +532,7 @@ namespace toygb {
 						}
 
 
-						if (reg == 0b110){
+						if (reg == 0b110 && block != 0b01){  // No rewrite for bit
 							memoryWrite(reg_hl, result); cycle();
 						} else {
 							m_registers[reg] = result;
@@ -584,6 +584,14 @@ namespace toygb {
 			case OperationMode::CGB:
 				reg_a = 0x11; reg_f = 0x80;
 				reg_b = 0x00; reg_c = 0x00;
+				reg_d = 0xFF; reg_e = 0x56;
+				reg_h = 0x00; reg_l = 0x0D;
+				reg_sp = 0xFFFE;
+				m_pc = 0x0100;
+				break;
+			case OperationMode::AGB:
+				reg_a = 0x11; reg_f = 0x00;
+				reg_b = 0x01; reg_c = 0x00;
 				reg_d = 0xFF; reg_e = 0x56;
 				reg_h = 0x00; reg_l = 0x0D;
 				reg_sp = 0xFFFE;
@@ -1358,7 +1366,7 @@ namespace toygb {
 	}
 
 	void CPU::logStatus(){
-		std::cout << "\t\taf: " << oh16(reg_af) << ", bc: " << oh16(reg_bc) << ", de: " << oh16(reg_de) << ", hl: " << oh16(reg_hl) << ", sp: " << oh16(reg_sp) << ", (bc): " << oh8(m_memory->get(reg_bc)) << ", (de): " << oh8(m_memory->get(reg_de)) << ", (hl): " << oh8(m_memory->get(reg_hl)) << ", (sp): " << oh8(m_memory->get(reg_sp));
+		std::cout << "\t\taf: " << oh16(reg_af) << ", bc: " << oh16(reg_bc) << ", de: " << oh16(reg_de) << ", hl: " << oh16(reg_hl) << ", sp: " << oh16(reg_sp);
 
 		/*std::cout << "\t\tstack: ";
 		for (uint16_t pointer = m_sp; pointer < 0xFFF4; pointer += 2){

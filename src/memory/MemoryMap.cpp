@@ -16,6 +16,7 @@ namespace toygb {
 	}
 
 	void MemoryMap::add(uint16_t start, uint16_t end, MemoryMapping* mapping){
+		//std::cout << oh16(start) << " " << oh16(end) << " " << mapping << std::endl;
 		MemoryMap::Node node(start, end, mapping);
 		m_array.push_back(node);
 		//std::cout << oh16(node.start) << " - " << oh16(node.end) << " : " << typeid(*(node.mapping)).name() << std::endl;
@@ -108,9 +109,10 @@ namespace toygb {
 			return node->mapping->set(address - node->start, value);
 		} else {
 			//std::cout << " Fail" << std::endl;
-			std::stringstream errstream;
-			errstream << "Write to unmapped memory address : " << oh16(address);
-			throw EmulationError(errstream.str());
+			//std::stringstream errstream;
+			//errstream << "Write to unmapped memory address : " << oh16(address);
+			//throw EmulationError(errstream.str());
+			std::cout << "Write to unmapped memory address : " << oh16(address) << std::endl;
 		}
 	}
 

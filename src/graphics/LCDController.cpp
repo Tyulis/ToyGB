@@ -67,13 +67,13 @@ namespace toygb {
 		}
 		m_vramBank = 0;
 
-		m_oamMapping = new LCDMemoryMapping(m_oam);
+		m_oamMapping = new OAMMapping(mode, m_oam);
 		m_lcdControl = new LCDControlMapping();
 		m_dmgPalette = new DMGPaletteMapping();
 	}
 
 	void LCDController::configureMemory(MemoryMap* memory){
-		memory->add(OAM_OFFSET, OAM_END_OFFSET - 1, m_oamMapping);
+		memory->add(OAM_OFFSET, IO_OFFSET - 1, m_oamMapping);
 		memory->add(IO_LCD_CONTROL, IO_COORD_COMPARE, m_lcdControl);
 		memory->add(IO_BG_PALETTE, IO_WINDOW_X, m_dmgPalette);
 
@@ -344,7 +344,7 @@ namespace toygb {
 						dot();  // TODO
 					}
 				}
-				
+
 				m_interrupt->resetRequest(Interrupt::VBlank);
 			} else {
 				dot();

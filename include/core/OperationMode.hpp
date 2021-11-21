@@ -3,7 +3,7 @@
 
 namespace toygb {
 	enum class OperationMode {
-		DMG, CGB, SGB /* Unsupported */,
+		DMG, CGB, AGB, SGB /* Unsupported */,
 		Auto, /* Set based on cartridge header */
 	};
 }
