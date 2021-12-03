@@ -6,6 +6,7 @@
 
 namespace toygb {
 	SerialTransferMapping::SerialTransferMapping(OperationMode mode) {
+		m_mode = mode;
 		transferData = 0x00;
 		transferStartFlag = false;
 		clockSpeed = true;
@@ -15,7 +16,7 @@ namespace toygb {
 	uint8_t SerialTransferMapping::get(uint16_t address) {
 		switch (address) {
 			case OFFSET_DATA: return transferData;
-			case OFFSET_CONTROL: return (transferStartFlag << 7) | (clockSpeed << 1) | shiftClock | 0x7C;
+			case OFFSET_CONTROL: return (transferStartFlag << 7) | (m_mode == OperationMode::CGB ? (clockSpeed << 1) : 1) | shiftClock | 0x7C;
 		}
 		std::stringstream errstream;
 		errstream << "Wrong memory mapping : " << oh16(address);
@@ -27,7 +28,7 @@ namespace toygb {
 			case OFFSET_DATA: transferData = value; break;
 			case OFFSET_CONTROL:
 				transferStartFlag = (value >> 7) & 1;
-				clockSpeed = (value >> 1) & 1;
+				if (m_mode == OperationMode::CGB) clockSpeed = (value >> 1) & 1;
 				shiftClock = value & 1;
 				break;
 		}

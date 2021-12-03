@@ -19,6 +19,9 @@ namespace toygb {
 			bool transferStartFlag;
 			bool clockSpeed;
 			bool shiftClock;
+
+		private:
+			OperationMode m_mode;
 	};
 }
 

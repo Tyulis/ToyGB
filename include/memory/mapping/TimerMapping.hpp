@@ -19,17 +19,19 @@ namespace toygb {
 			void resetDivider();
 			void incrementCounter(int cycles, bool stopped);
 
-			uint8_t divider;
 			uint8_t counter;
 			uint8_t modulo;
 			bool enable;
 			uint8_t clockSelect;
 
 		private:
+			void checkTimerIncrements(uint16_t previousValue, uint16_t newValue);
+
 			OperationMode m_mode;
 			InterruptVector* m_interrupt;
 
-			uint64_t m_internalCounter;
+			uint16_t m_internalCounter;
+			uint8_t m_timaReloadDelay;
 	};
 }
 

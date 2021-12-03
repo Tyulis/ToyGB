@@ -40,6 +40,8 @@ namespace toygb {
 			uint8_t coordY;
 			uint8_t coordYCompare;
 
+		private:
+			void shutdownPPU();
 	};
 }
 

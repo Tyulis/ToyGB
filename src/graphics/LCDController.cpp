@@ -3,8 +3,7 @@
 #define COLORVALUE_BLANK 0xFF
 #define BACKGROUND_PALETTE 0xFF
 #define BACKGROUND_INDEX 0xFFFF
-#define COLOR_BLANK 0x7FFF;
-#define clearQueue(q) while (!q.empty()) q.pop()
+#define COLOR_BLANK 0x6318;
 
 namespace toygb {
 	const uint8_t OBJECT_HEIGHTS[] = {8, 16};
@@ -92,7 +91,7 @@ namespace toygb {
 		memory->add(VRAM_OFFSET, VRAM_OFFSET + VRAM_SIZE - 1, m_vramMapping);
 	}
 
-#define dot(num) co_await std::suspend_always();
+#define dot(num) co_await std::suspend_always()
 
 	GBComponent LCDController::run(){
 		m_frontBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
@@ -106,8 +105,10 @@ namespace toygb {
 				m_frontBuffer = m_backBuffer;
 				m_backBuffer = tmp;
 
+				int windowLineCounter = 0;
 				for (int line = 0; line < 144; line++){
 					selectedSprites.clear();
+					bool hasWindow = false;
 
 					// Mode 2 = OAM scan
 					m_lcdControl->modeFlag = 2;
@@ -144,15 +145,16 @@ namespace toygb {
 					m_vramMapping->accessible = false;
 					if (m_cgbPalette != nullptr) m_cgbPalette->accessible = false;
 
-					std::queue<LCDController::Pixel> backgroundQueue;
-					std::queue<LCDController::Pixel> objectQueue;
+					std::deque<LCDController::Pixel> backgroundQueue;
+					std::deque<LCDController::Pixel> objectQueue;
 
 					bool wasInsideWindow = false;
 					int hblankDuration = 204;
 					for (int x = 0; x < LCD_WIDTH; x++){
-						bool insideWindow = (x >= m_dmgPalette->windowX && line >= m_dmgPalette->windowY);
+						bool insideWindow = m_lcdControl->windowEnable && (x >= m_dmgPalette->windowX - 7 && line >= m_dmgPalette->windowY);
 						if (insideWindow != wasInsideWindow)
-							clearQueue(backgroundQueue);
+							backgroundQueue.clear();
+						hasWindow |= insideWindow;
 
 						// Fetch pixels
 						if (backgroundQueue.empty()){
@@ -160,13 +162,13 @@ namespace toygb {
 
 							uint8_t tileX, tileY, indexY;
 							if (insideWindow){  // FIXME
-								tileX = ((x - m_dmgPalette->windowX) >> 3) & 0x1F;
-								tileY = ((line - m_dmgPalette->windowY) >> 3) & 0x1F;
-								indexY = (line - m_dmgPalette->windowY) & 7;
+								tileX = ((x - (m_dmgPalette->windowX - 7)) >> 3) & 0x1F;
+								tileY = ((windowLineCounter) >> 3) & 0x1F;
+								indexY = (windowLineCounter) & 7;
 							} else {  // FIXME
 								tileX = ((m_lcdControl->scrollX + x) >> 3) & 0x1F;
 								tileY = ((m_lcdControl->scrollY + line) >> 3) & 0x1F;
-								indexY = (m_lcdControl->scrollY + 1) & 7;
+								indexY = (m_lcdControl->scrollY + line) & 7;
 							}
 
 							uint8_t tileIndex = m_vram[tileMapAddress + 32 * tileY + tileX];  // ?
@@ -187,16 +189,17 @@ namespace toygb {
 							for (int i = 7; i >= 0; i--){
 								uint8_t color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
 								LCDController::Pixel pixelData(color, BACKGROUND_PALETTE, BACKGROUND_INDEX, false);
-								backgroundQueue.push(pixelData);
+								backgroundQueue.push_back(pixelData);
 							}
 							dot();
 						}
 
 						// Fetch sprites
+						// std::cout << m_lcdControl->objectEnable << std::endl;
 						if (m_lcdControl->objectEnable){
 							bool pushSprite = objectQueue.empty() || (m_mode == OperationMode::CGB && selectedSprites.front() < objectQueue.front().oamAddress);
 							if (pushSprite){
-								clearQueue(objectQueue);
+								objectQueue.clear();
 								uint16_t spriteToPush;
 
 								while (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 < x - 8) {
@@ -229,9 +232,16 @@ namespace toygb {
 									int yoffset = line - (m_oamMapping->lcdGet(spriteToPush) - 16);
 									uint8_t control = m_oamMapping->lcdGet(spriteToPush + 3);
 
+									if (m_lcdControl->objectSize){
+										tileIndex &= 0xFE;
+									}
 									uint16_t tileAddress = tileIndex * 16;
-									if (m_lcdControl->objectSize)
-										tileAddress &= 0xFFFE;
+
+									// Y flip
+									if ((control >> 6) & 1){
+										yoffset = OBJECT_HEIGHTS[m_lcdControl->objectSize] - yoffset - 1;
+									}
+
 
 									uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + 2*yoffset);
 									uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + 2*yoffset + 1);
@@ -239,7 +249,12 @@ namespace toygb {
 									dot(); hblankDuration -= 1;
 
 									for (int i = 7 - xoffset; i >= 0; i--){
-										uint8_t color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
+										uint8_t color;
+										if ((control >> 5) & 1){  // X flip
+											color = (((tileHigh >> (7 - i)) & 1) << 1) | ((tileLow >> (7 - i)) & 1);
+										} else {
+											color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
+										}
 										uint8_t palette;
 										if (m_mode == OperationMode::CGB){
 											palette = control & 7;
@@ -247,15 +262,20 @@ namespace toygb {
 											palette = (control >> 4) & 1;
 										}
 										LCDController::Pixel pixel(color, palette, spriteToPush, (control >> 7) & 1);
-										objectQueue.push(pixel);
+										objectQueue.push_back(pixel);
 									}
 								}
 							}
 						}
 
 						// Pixel rendering
+
+						if (x == 0) {
+							for (int i = 0; i < m_lcdControl->scrollX % 8; i++)
+								backgroundQueue.pop_front();
+						}
 						LCDController::Pixel backgroundPixel = backgroundQueue.front();
-						backgroundQueue.pop();
+						backgroundQueue.pop_front();
 
 						uint8_t colorValue;
 						if (m_mode == OperationMode::DMG && !m_lcdControl->backgroundDisplay){
@@ -268,7 +288,7 @@ namespace toygb {
 
 						if (!objectQueue.empty()){
 							LCDController::Pixel objectPixel = objectQueue.front();
-							objectQueue.pop();
+							objectQueue.pop_front();
 
 							bool objectHasPriority;
 							if (objectPixel.priority){  // Flag BG over OBJ
@@ -326,6 +346,9 @@ namespace toygb {
 					for (int i = 0; i < hblankDuration; i++){
 						dot();  // TODO
 					}
+
+					if (hasWindow)
+						windowLineCounter += 1;
 				}
 				// Mode 1 = VBlank
 				m_lcdControl->modeFlag = 1;
@@ -339,6 +362,9 @@ namespace toygb {
 				for (int line = 144; line < 153; line++){
 					m_lcdControl->coordY = line;
 					m_lcdControl->coincidenceFlag = (m_lcdControl->coordY == m_lcdControl->coordYCompare);
+					if (m_lcdControl->coincidenceFlag && m_lcdControl->lycInterrupt){
+						m_interrupt->setRequest(Interrupt::LCDStat);
+					}
 
 					for (int i = 0; i < 456; i++){
 						dot();  // TODO

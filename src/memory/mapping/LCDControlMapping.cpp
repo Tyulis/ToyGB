@@ -71,6 +71,8 @@ namespace toygb {
 		switch (address) {
 			case OFFSET_CONTROL:
 				displayEnable = (value >> 7) & 1;
+				if (!displayEnable)
+					shutdownPPU();
 				windowDisplaySelect = (value >> 6) & 1;
 				windowEnable = (value >> 5) & 1;
 				backgroundDataSelect = (value >> 4) & 1;
@@ -90,5 +92,11 @@ namespace toygb {
 			// case OFFSET_COORDY
 			case OFFSET_COMPARE: coordYCompare = value; break;
 		}
+	}
+
+	void LCDControlMapping::shutdownPPU(){
+		coordY = 0;
+		coincidenceFlag = false;
+		modeFlag = 0;
 	}
 }

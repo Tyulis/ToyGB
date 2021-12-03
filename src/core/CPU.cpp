@@ -121,7 +121,7 @@ namespace toygb {
 				if (interrupt != Interrupt::None){
 					if (m_halted){
 						m_halted = false;
-						opcode = memoryRead(m_pc++); cycle();
+						//opcode = memoryRead(m_pc++); cycle();
 					}
 
 					// Jump to interrupt vector only when IME is set
@@ -532,10 +532,12 @@ namespace toygb {
 						}
 
 
-						if (reg == 0b110 && block != 0b01){  // No rewrite for bit
-							memoryWrite(reg_hl, result); cycle();
-						} else {
-							m_registers[reg] = result;
+						if (block != 0b01){  // No rewrite for bit
+							if (reg == 0b110){
+								memoryWrite(reg_hl, result); cycle();
+							} else {
+								m_registers[reg] = result;
+							}
 						}
 					} else if (opcode == 0b11111011){  // 11 11 1011 = ei
 						m_ei_scheduled = true;
