@@ -1,5 +1,13 @@
 #include "audio/AudioController.hpp"
 
+#define CHANNEL_TONE_SWEEP 0
+#define CHANNEL_TONE 1
+#define CHANNEL_WAVE 2
+#define CHANNEL_NOISE 3
+
+
+#define SAMPLE_LOW (-2000)
+#define SAMPLE_HIGH (2000)
 
 namespace toygb {
 	AudioController::AudioController() {
@@ -27,11 +35,11 @@ namespace toygb {
 		m_wavePattern = new uint8_t[IO_WAVEPATTERN_SIZE];
 
 		m_wavePatternMapping = new ArrayMemoryMapping(m_wavePattern);
-		m_channel1 = new AudioToneSweepMapping();
-		m_channel2 = new AudioToneMapping();
-		m_channel3 = new AudioWaveMapping();
-		m_channel4 = new AudioNoiseMapping();
 		m_control = new AudioControlMapping();
+		m_channel1 = new AudioToneSweepMapping(0, m_control);
+		m_channel2 = new AudioToneMapping(1, m_control);
+		m_channel3 = new AudioWaveMapping(2, m_control);
+		m_channel4 = new AudioNoiseMapping(3, m_control);
 	}
 
 	void AudioController::configureMemory(MemoryMap* memory) {
@@ -43,7 +51,32 @@ namespace toygb {
 		memory->add(IO_WAVEPATTERN_START, IO_WAVEPATTERN_END, m_wavePatternMapping);
 	}
 
-	void AudioController::operator()() {
-		
+#define dot() co_await std::suspend_always()
+
+	GBComponent AudioController::run(){
+		while (true){
+			if (m_control->audioEnable){
+				m_channel1->update();
+				m_channel2->update();
+				m_channel3->update();
+				m_channel4->update();
+			} else {
+				m_channel1->started = false;
+				m_channel2->started = false;
+				m_channel3->started = false;
+				m_channel4->started = false;
+			}
+			dot();
+		}
+	}
+
+	int16_t* AudioController::getSamples(int channel){
+		switch (channel){
+			case CHANNEL_TONE_SWEEP: return m_channel1->getBuffer();
+			case CHANNEL_TONE:       return m_channel2->getBuffer();
+			case CHANNEL_WAVE:       return m_channel3->getBuffer();
+			case CHANNEL_NOISE:      return m_channel4->getBuffer();
+		}
+		return nullptr;
 	}
 }

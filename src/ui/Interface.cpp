@@ -11,6 +11,7 @@ namespace toygb {
 		m_joypad = nullptr;
 	}
 
+
 	void Interface::run(LCDController* lcd, AudioController* audio, JoypadController* joypad){
 		m_lcd = lcd;
 		m_audio = audio;
@@ -25,6 +26,8 @@ namespace toygb {
 		sf::Sprite screen;
 		screen.setTexture(display);
 		screen.setPosition(sf::Vector2f(0.0f, 0.0f));
+
+		setupAudio();
 
 		window.setFramerateLimit(60);
 		while (window.isOpen()) {
@@ -75,6 +78,13 @@ namespace toygb {
 					}
 				}
 			}
+		}
+	}
+
+	void Interface::setupAudio(){
+		for (int channel = 0; channel < 2; channel++){
+			m_channels[channel].init(m_audio, channel);
+			m_channels[channel].play();
 		}
 	}
 }

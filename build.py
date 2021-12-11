@@ -1,8 +1,9 @@
 import os
 
 
-LDFLAGS = "-lm -pthread -lsfml-graphics -lsfml-window -lsfml-system"
-CFLAGS = "-Wall -Wextra -Wno-unused-parameter -g -fcoroutines -I./include"
+CC = "g++"
+LDFLAGS = "-lm -pthread -L./lib -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio"
+CFLAGS = "-Wall -Wextra -Wno-unused-parameter -gdwarf-2 -fcoroutines -I./include"
 
 objects = []
 for path, dirs, files in os.walk("src"):
@@ -17,11 +18,11 @@ for path, dirs, files in os.walk("src"):
 	for filename in files:
 		srcpath = os.path.join(path, filename)
 		buildpath = os.path.join(outdir, filename.replace(".cpp", ".o").replace(".c", ".o"))
-		command = f"g++-10 {CFLAGS} -c -o {buildpath} {srcpath}"
+		command = f"{CC} {CFLAGS} -c -o {buildpath} {srcpath}"
 		print(command)
 		os.system(command)
 		objects.append(buildpath)
 
-command = f"g++-10 -o toygb {' '.join(objects)} {LDFLAGS}"
+command = f"{CC} -o toygb {' '.join(objects)} {LDFLAGS}"
 print(command)
 os.system(command)

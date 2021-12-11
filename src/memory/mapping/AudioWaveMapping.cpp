@@ -8,13 +8,18 @@
 #define OFFSET_CONTROL IO_CH3_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioWaveMapping::AudioWaveMapping() {
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control) {
+		m_channel = channel;
+		m_control = control;
+
 		enable = false;
 		length = 0xFF;
 		outputLevel = 0;
 		frequency = 0x07FF;
-		initialize = false;
 		stopSelect = false;
+
+		started = false;
+		dotCounter = 0;
 	}
 
 	uint8_t AudioWaveMapping::get(uint16_t address) {
@@ -40,10 +45,19 @@ namespace toygb {
 				frequency = (frequency & 0x0700) | value;
 				break;
 			case OFFSET_CONTROL:
-				initialize = (value >> 7) & 1;
+				started = (value >> 7) & 1;
+				dotCounter = 0;
 				stopSelect = (value >> 6) & 1;
-				frequency = (frequency & 0x00FF) | (value & 0x07);
+				frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
 				break;
 		}
+	}
+
+	void AudioWaveMapping::update(){
+		dotCounter += 1;
+	}
+
+	int16_t* AudioWaveMapping::getBuffer(){
+		return nullptr;
 	}
 }

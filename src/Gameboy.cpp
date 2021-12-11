@@ -45,6 +45,7 @@ namespace toygb {
 		GBComponent cpuComponent = m_cpu.run(&m_memory, &m_dma);
 		GBComponent lcdComponent = m_lcd.run();
 		GBComponent dmaComponent = m_dma.run(&m_memory);
+		GBComponent audioComponent = m_audio.run();
 
 		clocktime_t startTime = std::chrono::steady_clock::now();
 		int64_t lastCycle = 0;
@@ -63,6 +64,7 @@ namespace toygb {
 			cpuComponent.onCycle();
 			lcdComponent.onCycle();
 			dmaComponent.onCycle();
+			audioComponent.onCycle();
 
 			int64_t target = lastCycle + CLOCK_CYCLE_NS;
 			while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime).count() < target);

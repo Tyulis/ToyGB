@@ -52,7 +52,7 @@ namespace toygb {
 			return;
 		}
 
-		int depth = (int)std::floor(std::log2(size));
+		int depth = int(std::floor(std::log2(size)));
 		int base = (1 << depth) - 1;
 		int sidebase = (1 << (depth - 1)) - 1;
 		int lastrow = size - base;
