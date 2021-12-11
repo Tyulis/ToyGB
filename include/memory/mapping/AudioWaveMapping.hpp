@@ -3,15 +3,16 @@
 
 #include "audio/timing.hpp"
 #include "memory/Constants.hpp"
-#include "memory/MemoryMapping.hpp"
+#include "memory/mapping/AudioChannelMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
+#include "memory/mapping/ArrayMemoryMapping.hpp"
 #include "util/error.hpp"
 
 
 namespace toygb {
-	class AudioWaveMapping : public MemoryMapping {
+	class AudioWaveMapping : public AudioChannelMapping {
 		public:
-			AudioWaveMapping(int channel, AudioControlMapping* control);
+			AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -24,15 +25,18 @@ namespace toygb {
 			uint16_t frequency;
 			bool stopSelect;
 
-			bool started;
-			uint64_t dotCounter;
-
 			void update();
-			int16_t* getBuffer();
 
 		private:
-			int m_channel;
-			AudioControlMapping* m_control;
+			int16_t buildSample();
+			void reset();
+
+			ArrayMemoryMapping* m_wavePatternMapping;
+
+			int m_lengthTimerCounter;
+			int m_baseTimerCounter;
+			int m_outputTimerCounter;
+			int m_sampleIndex;
 	};
 }
 

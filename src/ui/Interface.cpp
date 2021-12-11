@@ -82,7 +82,7 @@ namespace toygb {
 	}
 
 	void Interface::setupAudio(){
-		for (int channel = 0; channel < 2; channel++){
+		for (int channel = 0; channel < 3; channel++){
 			m_channels[channel].init(m_audio, channel);
 			m_channels[channel].play();
 		}

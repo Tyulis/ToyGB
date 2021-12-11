@@ -3,13 +3,13 @@
 
 #include "audio/timing.hpp"
 #include "memory/Constants.hpp"
-#include "memory/MemoryMapping.hpp"
+#include "memory/mapping/AudioChannelMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
 #include "util/error.hpp"
 
 
 namespace toygb {
-	class AudioNoiseMapping : public MemoryMapping {
+	class AudioNoiseMapping : public AudioChannelMapping {
 		public:
 			AudioNoiseMapping(int channel, AudioControlMapping* control);
 
@@ -28,15 +28,11 @@ namespace toygb {
 
 			bool stopSelect;
 
-			bool started;
-			uint64_t dotCounter;
-
 			void update();
-			int16_t* getBuffer();
 
-		private:
-			int m_channel;
-			AudioControlMapping* m_control;
+		protected:
+			void reset();
+			int16_t buildSample();
 	};
 }
 

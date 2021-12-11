@@ -7,10 +7,7 @@
 #define OFFSET_CONTROL  IO_CH4_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control) {
-		m_channel = channel;
-		m_control = control;
-
+	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control) : AudioChannelMapping(channel, control) {
 		length = 0x3F;
 
 		initialEnvelopeVolume = 0;
@@ -21,9 +18,6 @@ namespace toygb {
 		counterStep = false;
 		dividingRatio = 0;
 		stopSelect = false;
-
-		started = false;
-		dotCounter = 0;
 	}
 
 	uint8_t AudioNoiseMapping::get(uint16_t address) {
@@ -61,20 +55,22 @@ namespace toygb {
 				dividingRatio = value & 7;
 				break;
 			case OFFSET_CONTROL:
-				if ((value >> 7) & 1){
-					started = true;
-					dotCounter = 0;
-				}
 				stopSelect = (value >> 6) & 1;
+				if ((value >> 7) & 1)
+					reset();
 				break;
 		}
 	}
 
 	void AudioNoiseMapping::update() {
-		dotCounter += 1;
+		
 	}
 
-	int16_t* AudioNoiseMapping::getBuffer(){
-		return nullptr;
+	int16_t AudioNoiseMapping::buildSample() {
+		return 0;
+	}
+
+	void AudioNoiseMapping::reset() {
+
 	}
 }

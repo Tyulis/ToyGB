@@ -5,6 +5,7 @@
 #include "core/OperationMode.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
+#include "memory/mapping/AudioChannelMapping.hpp"
 #include "memory/mapping/AudioToneSweepMapping.hpp"
 #include "memory/mapping/AudioToneMapping.hpp"
 #include "memory/mapping/AudioWaveMapping.hpp"
@@ -32,10 +33,7 @@ namespace toygb {
 
 			uint8_t* m_wavePattern;
 
-			AudioToneSweepMapping* m_channel1;
-			AudioToneMapping* m_channel2;
-			AudioWaveMapping* m_channel3;
-			AudioNoiseMapping* m_channel4;
+			AudioChannelMapping* m_channels[4];
 			AudioControlMapping* m_control;
 			ArrayMemoryMapping* m_wavePatternMapping;
 	};

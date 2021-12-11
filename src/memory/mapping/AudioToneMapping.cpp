@@ -7,10 +7,7 @@
 #define OFFSET_CONTROL  IO_CH2_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control) {
-		m_channel = channel;
-		m_control = control;
-
+	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control) : AudioChannelMapping(channel, control) {
 		wavePatternDuty = 0;
 		length = 0x3F;
 
@@ -21,16 +18,11 @@ namespace toygb {
 		frequency = 0x07FF;
 		stopSelect = false;
 
-		started = false;
-
 		m_baseTimer = 0;
 		m_baseTimerCounter = 0;
 		m_lengthTimerCounter = 0;
 		m_outputTimerCounter = 0;
-		m_outputBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
-		m_backBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
-		m_outputBufferIndex = 0;
-		m_bufferAvailable = false;
+		m_envelopeTimerCounter = 0;
 	}
 
 	uint8_t AudioToneMapping::get(uint16_t address) {
@@ -109,51 +101,19 @@ namespace toygb {
 		}
 	}
 
-	void AudioToneMapping::outputSample(){
-		if (started){
-			int periodSample = 7 - (m_baseTimer % 8);
-			bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
-			int16_t outputValue = (patternValue ? 2000 : -2000) * m_envelopeVolume / 15;
-
-			m_backBuffer[2*m_outputBufferIndex] = (m_control->output2Channels[m_channel]) ? (m_control->output2Level+1) * outputValue / 8 : 0;
-			m_backBuffer[2*m_outputBufferIndex+1] = (m_control->output1Channels[m_channel]) ? (m_control->output1Level+1) * outputValue / 8 : 0;
-		} else {
-			m_backBuffer[2*m_outputBufferIndex] = m_backBuffer[2*m_outputBufferIndex+1] = 0;
-		}
-
-		m_outputBufferIndex = (m_outputBufferIndex + 1) % OUTPUT_BUFFER_SAMPLES;
-		if (m_outputBufferIndex == 0){
-			int16_t* tmp = m_backBuffer;
-			m_backBuffer = m_outputBuffer;
-			m_outputBuffer = tmp;
-			m_bufferAvailable = true;
-		}
-	}
-
-	int16_t* AudioToneMapping::getBuffer() {
-		if (m_bufferAvailable){
-			m_bufferAvailable = false;
-			return m_outputBuffer;
-		} else {
-			return nullptr;
-		}
+	int16_t AudioToneMapping::buildSample(){
+		int periodSample = 7 - (m_baseTimer % 8);
+		bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
+		return (patternValue ? 2000 : -2000) * m_envelopeVolume / 15;
 	}
 
 	void AudioToneMapping::reset(){
-		started = true;
-		m_control->channelEnable[m_channel] = true;
+		start();
 		m_outputTimerCounter = 0;
 		m_baseTimerCounter = 0;
 		m_lengthTimerCounter = 0;
 		m_envelopeTimerCounter = 0;
 		m_baseTimer = 0;
 		m_envelopeVolume = initialEnvelopeVolume;
-		//std::cout << "Tone : pattern=" << oh8(wavePatternDuty) << ", length=" << oh8(length) << ", volume=" << oh8(initialEnvelopeVolume) << ", direction=" << envelopeDirection << ", sweep=" << oh8(envelopeSweep)
-		//          << ", frequency=" << oh16(frequency) << ", stop=" << stopSelect << ", started=" << started << std::endl;
-	}
-
-	void AudioToneMapping::disable(){
-		m_control->channelEnable[m_channel] = false;
-		started = false;
 	}
 }

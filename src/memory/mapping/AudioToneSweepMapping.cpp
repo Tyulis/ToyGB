@@ -8,10 +8,7 @@
 #define OFFSET_CONTROL  IO_CH1_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control) {
-		m_channel = channel;
-		m_control = control;
-
+	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control) : AudioChannelMapping(channel, control) {
 		sweepTime = 0;
 		sweepDirection = false;
 		sweepShift = 0;
@@ -26,16 +23,12 @@ namespace toygb {
 		frequency = 0x07FF;
 		stopSelect = false;
 
-		started = false;
-
 		m_baseTimer = 0;
 		m_baseTimerCounter = 0;
 		m_lengthTimerCounter = 0;
 		m_outputTimerCounter = 0;
-		m_outputBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
-		m_backBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
-		m_outputBufferIndex = 0;
-		m_bufferAvailable = false;
+		m_envelopeTimerCounter = 0;
+		m_sweepTimerCounter = 0;
 	}
 
 	uint8_t AudioToneSweepMapping::get(uint16_t address) {
@@ -132,25 +125,11 @@ namespace toygb {
 		}
 	}
 
-	void AudioToneSweepMapping::outputSample(){
-		if (started){
-			int periodSample = 7 - (m_baseTimer % 8);
-			bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
-			int16_t outputValue = (patternValue ? 2000 : -2000) * m_envelopeVolume / 15;
-
-			m_backBuffer[2*m_outputBufferIndex] = (m_control->output2Channels[m_channel]) ? (m_control->output2Level+1) * outputValue / 8 : 0;
-			m_backBuffer[2*m_outputBufferIndex+1] = (m_control->output1Channels[m_channel]) ? (m_control->output1Level+1) * outputValue / 8 : 0;
-		} else {
-			m_backBuffer[2*m_outputBufferIndex] = m_backBuffer[2*m_outputBufferIndex+1] = 0;
-		}
-
-		m_outputBufferIndex = (m_outputBufferIndex + 1) % OUTPUT_BUFFER_SAMPLES;
-		if (m_outputBufferIndex == 0){
-			int16_t* tmp = m_outputBuffer;
-			m_outputBuffer = m_backBuffer;
-			m_backBuffer = tmp;
-			m_bufferAvailable = true;
-		}
+	int16_t AudioToneSweepMapping::buildSample(){
+		int periodSample = 7 - (m_baseTimer % 8);
+		bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
+		int16_t outputValue = (patternValue ? 2000 : -2000) * m_envelopeVolume / 15;
+		return outputValue;
 	}
 
 	void AudioToneSweepMapping::updateFrequencySweep(){
@@ -179,33 +158,17 @@ namespace toygb {
 		}
 	}
 
-	int16_t* AudioToneSweepMapping::getBuffer() {
-		if (m_bufferAvailable){
-			m_bufferAvailable = false;
-			return m_outputBuffer;
-		} else {
-			return nullptr;
-		}
-	}
-
 	void AudioToneSweepMapping::reset(){
-		started = true;
+		start();
 		m_outputTimerCounter = 0;
 		m_baseTimerCounter = 0;
 		m_lengthTimerCounter = 0;
 		m_envelopeTimerCounter = 0;
+		m_sweepTimerCounter = 0;
 		m_baseTimer = 0;
 		m_envelopeVolume = initialEnvelopeVolume;
 		m_sweepFrequency = frequency;
 
 		updateFrequencySweep();
-
-		std::cout << "Tone sweep : pattern=" << oh8(wavePatternDuty) << ", length=" << oh8(length) << ", volume=" << oh8(initialEnvelopeVolume) << ", direction=" << envelopeDirection << ", envelopesweep=" << oh8(envelopeSweep)
-		          << ", frequency=" << oh16(frequency) << ", sweeptime=" << oh8(sweepTime) << ", sweepdirection=" << sweepDirection << ", sweepshift=" << oh8(sweepShift) << ", stop=" << stopSelect << ", started=" << started << std::endl;
-	}
-
-	void AudioToneSweepMapping::disable(){
-		m_control->channelEnable[m_channel] = false;
-		started = false;
 	}
 }

@@ -8,9 +8,8 @@
 #define OFFSET_CONTROL IO_CH3_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control) {
-		m_channel = channel;
-		m_control = control;
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping) : AudioChannelMapping(channel, control) {
+		m_wavePatternMapping = wavePatternMapping;
 
 		enable = false;
 		length = 0xFF;
@@ -18,14 +17,16 @@ namespace toygb {
 		frequency = 0x07FF;
 		stopSelect = false;
 
-		started = false;
-		dotCounter = 0;
+		m_lengthTimerCounter = 0;
+		m_baseTimerCounter = 0;
+		m_outputTimerCounter = 0;
+		m_sampleIndex = 0;
 	}
 
 	uint8_t AudioWaveMapping::get(uint16_t address) {
 		switch (address) {
 			case OFFSET_ENABLE: return (enable << 7) | 0x7F;
-			case OFFSET_LENGTH: return length;
+			case OFFSET_LENGTH: return 0xFF;
 			case OFFSET_LEVEL: return (outputLevel << 5) | 0x9F;
 			case OFFSET_FREQLOW: return 0xFF;
 			case OFFSET_CONTROL:
@@ -45,19 +46,51 @@ namespace toygb {
 				frequency = (frequency & 0x0700) | value;
 				break;
 			case OFFSET_CONTROL:
-				started = (value >> 7) & 1;
-				dotCounter = 0;
 				stopSelect = (value >> 6) & 1;
 				frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
+				if ((value >> 7) & 1)
+					reset();
 				break;
 		}
 	}
 
 	void AudioWaveMapping::update(){
-		dotCounter += 1;
+		m_lengthTimerCounter += 1;
+		if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
+			m_lengthTimerCounter = 0;
+			length -= 1;
+			if (stopSelect && length == 0)
+				disable();
+		}
+
+		m_baseTimerCounter += 1;
+		if (m_baseTimerCounter >= 2*(2048 - frequency)){
+			m_sampleIndex = (m_sampleIndex + 1) % 32;
+			m_baseTimerCounter = 0;
+		}
+
+		m_outputTimerCounter += 1;
+		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD && m_outputBufferIndex < OUTPUT_BUFFER_SAMPLES){
+			m_outputTimerCounter = 0;
+			outputSample();
+		}
 	}
 
-	int16_t* AudioWaveMapping::getBuffer(){
-		return nullptr;
+	int16_t AudioWaveMapping::buildSample(){
+		if (outputLevel > 0 && enable){
+			uint8_t sample = (m_wavePatternMapping->get(m_sampleIndex >> 1) >> ((m_sampleIndex & 1) ? 0 : 4)) & 0x0F;
+			int16_t sampleValue = sample * 4000 / 16 - 2000;
+			return sampleValue >> (outputLevel - 1);
+		} else {
+			return 0;
+		}
+	}
+
+	void AudioWaveMapping::reset(){
+		start();
+		m_sampleIndex = 0;
+		m_outputTimerCounter = 0;
+		m_baseTimerCounter = 0;
+		m_lengthTimerCounter = 0;
 	}
 }
