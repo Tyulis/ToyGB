@@ -13,14 +13,15 @@ namespace toygb {
 		public:
 			GBAudioStream();
 
-			void init(AudioController* controller, int channel);
+			void init(AudioController* controller);
 
 		protected:
 			bool onGetData(sf::SoundStream::Chunk& data);
 			void onSeek(sf::Time timeOffset);
 
 			AudioController* m_controller;
-			int m_channel;
+			int16_t* m_sampleBuffer;
+			bool m_started;
 	};
 }
 

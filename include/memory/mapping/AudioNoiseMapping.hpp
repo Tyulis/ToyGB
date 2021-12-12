@@ -32,7 +32,15 @@ namespace toygb {
 
 		protected:
 			void reset();
-			int16_t buildSample();
+			float buildSample();
+
+			uint16_t m_register;
+			int m_envelopeVolume;
+
+			int m_lengthTimerCounter;
+			int m_outputTimerCounter;
+			int m_envelopeTimerCounter;
+			int m_baseTimerCounter;
 	};
 }
 

@@ -18,6 +18,11 @@ namespace toygb {
 		counterStep = false;
 		dividingRatio = 0;
 		stopSelect = false;
+
+		m_lengthTimerCounter = 0;
+		m_outputTimerCounter = 0;
+		m_envelopeTimerCounter = 0;
+		m_baseTimerCounter = 0;
 	}
 
 	uint8_t AudioNoiseMapping::get(uint16_t address) {
@@ -43,7 +48,7 @@ namespace toygb {
 
 	void AudioNoiseMapping::set(uint16_t address, uint8_t value){
 		switch (address) {
-			case OFFSET_LENGTH: length = value & 0x3F; break;
+			case OFFSET_LENGTH: length = 64 - (value & 0x3F); break;
 			case OFFSET_ENVELOPE:
 				initialEnvelopeVolume = (value >> 4) & 0x0F;
 				envelopeDirection = (value >> 3) & 1;
@@ -62,15 +67,59 @@ namespace toygb {
 		}
 	}
 
+	const int NOISE_DIVISORS[] = {8, 16, 32, 48, 64, 80, 96, 112};
+
 	void AudioNoiseMapping::update() {
-		
+		m_lengthTimerCounter += 1;
+		if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
+			m_lengthTimerCounter = 0;
+			length -= 1;
+			if (stopSelect && length == 0)
+				disable();
+		}
+
+		m_baseTimerCounter += 1;
+		if (m_baseTimerCounter >= NOISE_DIVISORS[dividingRatio] << frequency){
+			bool newBit = (m_register & 1) ^ ((m_register >> 1) & 1);
+			m_register = ((m_register >> 1) | (newBit << 14));
+			if (counterStep)
+				m_register = (newBit << 6) | (m_register & 0b111111110111111);
+			m_baseTimerCounter = 0;
+		}
+
+		if (envelopeSweep != 0){
+			m_envelopeTimerCounter += 1;
+			if (m_envelopeTimerCounter >= envelopeSweep*ENVELOPE_TIMER_PERIOD){
+				m_envelopeTimerCounter = 0;
+
+				if (envelopeDirection && m_envelopeVolume < 15)
+					m_envelopeVolume += 1;
+				else if (m_envelopeVolume > 0)
+					m_envelopeVolume -= 1;
+			}
+		}
+
+		m_outputTimerCounter += 1;
+		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD && m_outputBufferIndex < OUTPUT_BUFFER_SAMPLES){
+			m_outputTimerCounter = 0;
+			outputSample();
+		}
 	}
 
-	int16_t AudioNoiseMapping::buildSample() {
-		return 0;
+	float AudioNoiseMapping::buildSample() {
+		return ((m_register & 1) ? -1.0f : 1.0f) * m_envelopeVolume / 15;
 	}
 
 	void AudioNoiseMapping::reset() {
+		start();
+		m_register = 0x7FFF;
+		m_lengthTimerCounter = 0;
+		m_baseTimerCounter = 0;
+		m_envelopeTimerCounter = 0;
+		m_outputTimerCounter = 0;
+		m_envelopeVolume = initialEnvelopeVolume;
 
+		std::cout << "Noise : length=" << oh8(length) << ", volume=" << oh8(initialEnvelopeVolume) << ", direction=" << envelopeDirection << ", sweep=" << oh8(envelopeSweep)
+		          << ", frequency=" << oh16(frequency) << ", counterstep=" << counterStep << ", divisor=" << oh8(dividingRatio) << ", stop=" << stopSelect << std::endl;
 	}
 }

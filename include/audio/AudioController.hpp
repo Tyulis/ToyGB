@@ -26,7 +26,7 @@ namespace toygb {
 
 			GBComponent run();
 
-			int16_t* getSamples(int channel);
+			bool getSamples(int16_t* buffer);
 
 		private:
 			OperationMode m_mode;

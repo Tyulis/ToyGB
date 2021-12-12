@@ -7,13 +7,13 @@ namespace toygb {
 		m_control = control;
 
 		m_started = false;
-		m_backBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
-		m_outputBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
+		m_backBuffer = new float[OUTPUT_BUFFER_SAMPLES];
+		m_outputBuffer = new float[OUTPUT_BUFFER_SAMPLES];
 		m_outputBufferIndex = 0;
 		m_bufferAvailable = false;
 	}
 
-	int16_t* AudioChannelMapping::getBuffer(){
+	float* AudioChannelMapping::getBuffer(){
 		if (m_bufferAvailable){
 			m_bufferAvailable = false;
 			return m_outputBuffer;
@@ -33,16 +33,11 @@ namespace toygb {
 	}
 
 	void AudioChannelMapping::outputSample(){
-		m_backBuffer[2*m_outputBufferIndex] = m_backBuffer[2*m_outputBufferIndex+1] = 0;
-		if (m_started){
-			uint16_t outputValue = buildSample();
-			m_backBuffer[2*m_outputBufferIndex] = (m_control->output2Channels[m_channel]) ? (m_control->output2Level+1) * outputValue / 8 : 0;
-			m_backBuffer[2*m_outputBufferIndex+1] = (m_control->output1Channels[m_channel]) ? (m_control->output1Level+1) * outputValue / 8 : 0;
-		}
+		m_backBuffer[m_outputBufferIndex] = (m_started ? buildSample() : 0);
 
 		m_outputBufferIndex = (m_outputBufferIndex + 1) % OUTPUT_BUFFER_SAMPLES;
 		if (m_outputBufferIndex == 0){
-			int16_t* tmp = m_backBuffer;
+			float* tmp = m_backBuffer;
 			m_backBuffer = m_outputBuffer;
 			m_outputBuffer = tmp;
 			m_bufferAvailable = true;

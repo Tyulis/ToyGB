@@ -29,6 +29,7 @@ namespace toygb {
 		m_outputTimerCounter = 0;
 		m_envelopeTimerCounter = 0;
 		m_sweepTimerCounter = 0;
+		m_sweepFrequency = 0;
 	}
 
 	uint8_t AudioToneSweepMapping::get(uint16_t address) {
@@ -62,7 +63,7 @@ namespace toygb {
 				break;
 			case OFFSET_PATTERN:
 				wavePatternDuty = (value >> 6) & 3;
-				length = value & 0x3F;
+				length = 64 - (value & 0x3F);
 				break;
 			case OFFSET_ENVELOPE:
 				initialEnvelopeVolume = (value >> 4) & 0x0F;
@@ -125,11 +126,10 @@ namespace toygb {
 		}
 	}
 
-	int16_t AudioToneSweepMapping::buildSample(){
+	float AudioToneSweepMapping::buildSample(){
 		int periodSample = 7 - (m_baseTimer % 8);
 		bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
-		int16_t outputValue = (patternValue ? 2000 : -2000) * m_envelopeVolume / 15;
-		return outputValue;
+		return (patternValue ? 1.0f : -1.0f) * m_envelopeVolume / 15;
 	}
 
 	void AudioToneSweepMapping::updateFrequencySweep(){

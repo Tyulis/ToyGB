@@ -34,7 +34,7 @@ namespace toygb {
 
 		private:
 			void reset();
-			int16_t buildSample();
+			float buildSample();
 			void updateFrequencySweep();
 
 			int m_envelopeVolume;

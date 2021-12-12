@@ -14,22 +14,22 @@ namespace toygb {
 			AudioChannelMapping(int channel, AudioControlMapping* control);
 
 			virtual void update() = 0;
-			int16_t* getBuffer();
+			float* getBuffer();
 
 			void disable();
 
 		protected:
 			void start();
 			void outputSample();
-			virtual int16_t buildSample() = 0;
+			virtual float buildSample() = 0;
 
 			int m_channel;
 			AudioControlMapping* m_control;
 
 			bool m_started;
 
-			int16_t* m_outputBuffer;
-			int16_t* m_backBuffer;
+			float* m_outputBuffer;
+			float* m_backBuffer;
 			int m_outputBufferIndex;
 			bool m_bufferAvailable;
 	};

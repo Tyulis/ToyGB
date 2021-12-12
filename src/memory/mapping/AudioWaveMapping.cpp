@@ -40,7 +40,7 @@ namespace toygb {
 	void AudioWaveMapping::set(uint16_t address, uint8_t value){
 		switch (address) {
 			case OFFSET_ENABLE: enable = (value >> 7) & 1; break;
-			case OFFSET_LENGTH: length = value; break;
+			case OFFSET_LENGTH: length = (256 - value); break;
 			case OFFSET_LEVEL: outputLevel = (value >> 5) & 3; break;
 			case OFFSET_FREQLOW:
 				frequency = (frequency & 0x0700) | value;
@@ -76,13 +76,14 @@ namespace toygb {
 		}
 	}
 
-	int16_t AudioWaveMapping::buildSample(){
+	const float WAVE_VOLUMES[] = {0.0f, 1.0f, 0.5f, 0.25f};
+
+	float AudioWaveMapping::buildSample(){
 		if (outputLevel > 0 && enable){
 			uint8_t sample = (m_wavePatternMapping->get(m_sampleIndex >> 1) >> ((m_sampleIndex & 1) ? 0 : 4)) & 0x0F;
-			int16_t sampleValue = sample * 4000 / 16 - 2000;
-			return sampleValue >> (outputLevel - 1);
+			return (2*sample / 16.0f - 1) * WAVE_VOLUMES[outputLevel];
 		} else {
-			return 0;
+			return 0.0f;
 		}
 	}
 

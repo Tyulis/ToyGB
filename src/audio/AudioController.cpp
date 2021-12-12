@@ -66,7 +66,24 @@ namespace toygb {
 		}
 	}
 
-	int16_t* AudioController::getSamples(int channel){
-		return m_channels[channel]->getBuffer();
+	bool AudioController::getSamples(int16_t* buffer){
+		for (int i = 0; i < 2*OUTPUT_BUFFER_SAMPLES; i++)
+			buffer[i] = 0;
+
+		float* channelBuffers[4];
+		for (int channel = 0; channel < 4; channel++){
+			if ((channelBuffers[channel] = m_channels[channel]->getBuffer()) == nullptr)
+				return false;
+		}
+
+		for (int channel = 0; channel < 4; channel++) {
+			for (int sample = 0; sample < OUTPUT_BUFFER_SAMPLES; sample++){
+				float leftValue = (m_control->output2Channels[channel]) ? (m_control->output2Level+1) * channelBuffers[channel][sample] / 8 : 0;
+				float rightValue = (m_control->output1Channels[channel]) ? (m_control->output1Level+1) * channelBuffers[channel][sample] / 8 : 0;
+				buffer[2*sample] += int16_t(leftValue * 2400);
+				buffer[2*sample+1] += int16_t(rightValue * 2400);
+			}
+		}
+		return true;
 	}
 }

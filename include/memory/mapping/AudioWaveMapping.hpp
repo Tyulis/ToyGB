@@ -28,7 +28,7 @@ namespace toygb {
 			void update();
 
 		private:
-			int16_t buildSample();
+			float buildSample();
 			void reset();
 
 			ArrayMemoryMapping* m_wavePatternMapping;

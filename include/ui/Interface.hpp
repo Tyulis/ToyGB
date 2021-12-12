@@ -24,7 +24,7 @@ namespace toygb {
 			LCDController* m_lcd;
 			AudioController* m_audio;
 			JoypadController* m_joypad;
-			GBAudioStream m_channels[4];
+			GBAudioStream m_audioStream;
 	};
 }
 

@@ -2,27 +2,20 @@
 
 namespace toygb {
 	GBAudioStream::GBAudioStream() : sf::SoundStream() {
-
+		m_sampleBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
 	}
 
-	void GBAudioStream::init(AudioController* controller, int channel){
+	void GBAudioStream::init(AudioController* controller){
 		m_controller = controller;
-		m_channel = channel;
 		initialize(2, OUTPUT_SAMPLE_FREQUENCY);
 	}
 
 	bool GBAudioStream::onGetData(sf::SoundStream::Chunk& data){
-		//std::cout << "Read " << numSamples << " samples";
-		int16_t* sampleBuffer;
-		while ((sampleBuffer = m_controller->getSamples(m_channel)) == nullptr);
-		/*for (int i = 0; i < OUTPUT_BUFFER_SAMPLES; i++){
-			std::cout << m_sampleBuffer[i] << " ";
-		}
-		std::cout << " //" << std::endl;*/
+		while (!m_controller->getSamples(m_sampleBuffer));
 
-		data.samples = sampleBuffer;
+		data.samples = m_sampleBuffer;
 		data.sampleCount = OUTPUT_BUFFER_SAMPLES*2;
-		//std::cout << ", return " << data.sampleCount << " samples, rate " << getSampleRate() << " on " << getChannelCount() << " channels" << std::endl;
+
 		return true;
 	}
 

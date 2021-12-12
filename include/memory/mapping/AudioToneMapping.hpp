@@ -30,7 +30,7 @@ namespace toygb {
 
 		private:
 			void reset();
-			int16_t buildSample();
+			float buildSample();
 
 			int m_envelopeVolume;
 

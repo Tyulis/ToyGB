@@ -46,7 +46,7 @@ namespace toygb {
 		switch (address) {
 			case OFFSET_PATTERN:
 				wavePatternDuty = (value >> 6) & 3;
-				length = value & 0x3F;
+				length = 64 - (value & 0x3F);
 				break;
 			case OFFSET_ENVELOPE:
 				initialEnvelopeVolume = (value >> 4) & 0x0F;
@@ -101,10 +101,10 @@ namespace toygb {
 		}
 	}
 
-	int16_t AudioToneMapping::buildSample(){
+	float AudioToneMapping::buildSample(){
 		int periodSample = 7 - (m_baseTimer % 8);
 		bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
-		return (patternValue ? 2000 : -2000) * m_envelopeVolume / 15;
+		return (patternValue ? 1.0f : -1.0f) * m_envelopeVolume / 15;
 	}
 
 	void AudioToneMapping::reset(){
