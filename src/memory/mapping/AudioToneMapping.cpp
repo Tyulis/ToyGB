@@ -7,7 +7,7 @@
 #define OFFSET_CONTROL  IO_CH2_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control) : AudioChannelMapping(channel, control) {
+	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
 		wavePatternDuty = 0;
 		length = 0x3F;
 
@@ -18,7 +18,7 @@ namespace toygb {
 		frequency = 0x07FF;
 		stopSelect = false;
 
-		m_baseTimer = 0;
+		m_dutyPointer = 0;
 		m_baseTimerCounter = 0;
 		m_lengthTimerCounter = 0;
 		m_outputTimerCounter = 0;
@@ -43,25 +43,28 @@ namespace toygb {
 	}
 
 	void AudioToneMapping::set(uint16_t address, uint8_t value){
-		switch (address) {
-			case OFFSET_PATTERN:
-				wavePatternDuty = (value >> 6) & 3;
-				length = 64 - (value & 0x3F);
-				break;
-			case OFFSET_ENVELOPE:
-				initialEnvelopeVolume = (value >> 4) & 0x0F;
-				envelopeDirection = (value >> 3) & 1;
-				envelopeSweep = value & 7;
-				break;
-			case OFFSET_FREQLOW:
-				frequency = (frequency & 0x0700) | value;
-				break;
-			case OFFSET_CONTROL:
-				stopSelect = (value >> 6) & 1;
-				frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
-				if ((value >> 7) & 1)
-					reset();
-				break;
+		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_PATTERN)){
+			switch (address) {
+				case OFFSET_PATTERN:
+					if (powered)
+						wavePatternDuty = (value >> 6) & 3;
+					length = 64 - (value & 0x3F);
+					break;
+				case OFFSET_ENVELOPE:
+					initialEnvelopeVolume = (value >> 4) & 0x0F;
+					envelopeDirection = (value >> 3) & 1;
+					envelopeSweep = value & 7;
+					break;
+				case OFFSET_FREQLOW:
+					frequency = (frequency & 0x0700) | value;
+					break;
+				case OFFSET_CONTROL:
+					stopSelect = (value >> 6) & 1;
+					frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
+					if ((value >> 7) & 1)
+						reset();
+					break;
+			}
 		}
 	}
 
@@ -78,7 +81,7 @@ namespace toygb {
 
 		m_baseTimerCounter += 1;
 		if (m_baseTimerCounter >= 4*(2048 - frequency)){
-			m_baseTimer += 1;
+			m_dutyPointer = (m_dutyPointer + 1) % 8;
 			m_baseTimerCounter = 0;
 		}
 
@@ -102,8 +105,7 @@ namespace toygb {
 	}
 
 	float AudioToneMapping::buildSample(){
-		int periodSample = 7 - (m_baseTimer % 8);
-		bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> periodSample) & 1;
+		bool patternValue = (TONE_WAVEPATTERNS[wavePatternDuty] >> (7 - m_dutyPointer)) & 1;
 		return (patternValue ? 1.0f : -1.0f) * m_envelopeVolume / 15;
 	}
 
@@ -111,9 +113,19 @@ namespace toygb {
 		start();
 		m_outputTimerCounter = 0;
 		m_baseTimerCounter = 0;
+		m_envelopeVolume = initialEnvelopeVolume;
+	}
+
+	void AudioToneMapping::onPowerOff(){
+		set(OFFSET_PATTERN, 0);
+		set(OFFSET_ENVELOPE, 0);
+		set(OFFSET_FREQLOW, 0);
+		set(OFFSET_CONTROL, 0);
+	}
+
+	void AudioToneMapping::onPowerOn(){
 		m_lengthTimerCounter = 0;
 		m_envelopeTimerCounter = 0;
-		m_baseTimer = 0;
-		m_envelopeVolume = initialEnvelopeVolume;
+		m_dutyPointer = 0;
 	}
 }

@@ -2,6 +2,7 @@
 #define _MEMORY_MAPPING_AUDIOTONEMAPPING_HPP
 
 #include "audio/timing.hpp"
+#include "core/OperationMode.hpp"
 #include "memory/Constants.hpp"
 #include "memory/mapping/AudioChannelMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
@@ -11,7 +12,7 @@
 namespace toygb {
 	class AudioToneMapping : public AudioChannelMapping {
 		public:
-			AudioToneMapping(int channel, AudioControlMapping* control);
+			AudioToneMapping(int channel, AudioControlMapping* control, OperationMode mode);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -28,9 +29,11 @@ namespace toygb {
 
 			void update();
 
-		private:
+		protected:
 			void reset();
 			float buildSample();
+			void onPowerOn();
+			void onPowerOff();
 
 			int m_envelopeVolume;
 
@@ -39,7 +42,7 @@ namespace toygb {
 			int m_outputTimerCounter;
 			int m_envelopeTimerCounter;
 
-			uint64_t m_baseTimer;
+			int m_dutyPointer;
 	};
 }
 

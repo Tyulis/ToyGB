@@ -48,27 +48,27 @@ namespace toygb {
 		GBComponent audioComponent = m_audio.run();
 
 		clocktime_t startTime = std::chrono::steady_clock::now();
-		int64_t lastCycle = 0;
+		double lastCycle = 0;
 
 		/*uint64_t cycleCount = 0;
 		clocktime_t cycleStart = std::chrono::steady_clock::now();*/
 		while (true){
-			/*cycleCount += 1;
-			if (cycleCount % 0x400000 == 0){
-				clocktime_t cycleEnd = std::chrono::steady_clock::now();
-				double duration = std::chrono::duration_cast<std::chrono::microseconds>(cycleEnd - cycleStart).count() / 1000000.0;
-				std::cout << 0x400000 << " cycles in " << duration << " seconds : " << 100.0 / duration << "%" << std::endl;
-				cycleStart = cycleEnd;
-			}*/
-
 			cpuComponent.onCycle();
 			lcdComponent.onCycle();
 			dmaComponent.onCycle();
 			audioComponent.onCycle();
 
-			int64_t target = lastCycle + CLOCK_CYCLE_NS;
+			double target = lastCycle + CLOCK_CYCLE_NS_REAL;
 			while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime).count() < target);
 			lastCycle = target;
+
+			/*cycleCount += 1;
+			if (cycleCount % 0x400000 == 0){
+				clocktime_t cycleEnd = std::chrono::steady_clock::now();
+				double duration = std::chrono::duration_cast<std::chrono::microseconds>(cycleEnd - cycleStart).count() / 1000000.0;
+				std::cout << 0x400000 << " cycles in " << duration << " seconds : " << 100.0 / duration << "% (" << int(0x400000 / duration) << " Hz)" << std::endl;
+				cycleStart = cycleEnd;
+			}*/
 		}
 
 		uiThread.join();

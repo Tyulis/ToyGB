@@ -7,7 +7,7 @@
 #define OFFSET_CONTROL  IO_CH4_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control) : AudioChannelMapping(channel, control) {
+	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
 		length = 0x3F;
 
 		initialEnvelopeVolume = 0;
@@ -47,23 +47,25 @@ namespace toygb {
 	}
 
 	void AudioNoiseMapping::set(uint16_t address, uint8_t value){
-		switch (address) {
-			case OFFSET_LENGTH: length = 64 - (value & 0x3F); break;
-			case OFFSET_ENVELOPE:
-				initialEnvelopeVolume = (value >> 4) & 0x0F;
-				envelopeDirection = (value >> 3) & 1;
-				envelopeSweep = value & 7;
-				break;
-			case OFFSET_COUNTER:
-				frequency = (value >> 4) & 0x0F;
-				counterStep = (value >> 3) & 1;
-				dividingRatio = value & 7;
-				break;
-			case OFFSET_CONTROL:
-				stopSelect = (value >> 6) & 1;
-				if ((value >> 7) & 1)
-					reset();
-				break;
+		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
+			switch (address) {
+				case OFFSET_LENGTH: length = 64 - (value & 0x3F); break;
+				case OFFSET_ENVELOPE:
+					initialEnvelopeVolume = (value >> 4) & 0x0F;
+					envelopeDirection = (value >> 3) & 1;
+					envelopeSweep = value & 7;
+					break;
+				case OFFSET_COUNTER:
+					frequency = (value >> 4) & 0x0F;
+					counterStep = (value >> 3) & 1;
+					dividingRatio = value & 7;
+					break;
+				case OFFSET_CONTROL:
+					stopSelect = (value >> 6) & 1;
+					if ((value >> 7) & 1)
+						reset();
+					break;
+			}
 		}
 	}
 
@@ -113,13 +115,20 @@ namespace toygb {
 	void AudioNoiseMapping::reset() {
 		start();
 		m_register = 0x7FFF;
-		m_lengthTimerCounter = 0;
 		m_baseTimerCounter = 0;
-		m_envelopeTimerCounter = 0;
 		m_outputTimerCounter = 0;
 		m_envelopeVolume = initialEnvelopeVolume;
+	}
 
-		std::cout << "Noise : length=" << oh8(length) << ", volume=" << oh8(initialEnvelopeVolume) << ", direction=" << envelopeDirection << ", sweep=" << oh8(envelopeSweep)
-		          << ", frequency=" << oh16(frequency) << ", counterstep=" << counterStep << ", divisor=" << oh8(dividingRatio) << ", stop=" << stopSelect << std::endl;
+	void AudioNoiseMapping::onPowerOff(){
+		set(OFFSET_LENGTH, 0);
+		set(OFFSET_ENVELOPE, 0);
+		set(OFFSET_COUNTER, 0);
+		set(OFFSET_CONTROL, 0);
+	}
+
+	void AudioNoiseMapping::onPowerOn(){
+		m_envelopeTimerCounter = 0;
+		m_lengthTimerCounter = 0;
 	}
 }

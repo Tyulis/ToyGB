@@ -24,6 +24,10 @@ namespace toygb {
 
 			bool audioEnable;
 			bool channelEnable[4];
+
+		private:
+			void onPowerOn();
+			void onPowerOff();
 	};
 }
 

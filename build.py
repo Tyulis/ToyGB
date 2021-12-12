@@ -2,7 +2,7 @@ import os
 
 
 CC = "g++"
-LDFLAGS = "-lm -pthread -L./lib -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio"
+LDFLAGS = "-lm -pthread -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio"
 CFLAGS = "-Wall -Wextra -Wno-unused-parameter -gdwarf-2 -fcoroutines -I./include"
 
 objects = []

@@ -2,11 +2,13 @@
 
 
 namespace toygb {
-	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control){
+	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, OperationMode mode){
 		m_channel = channel;
 		m_control = control;
+		m_mode = mode;
 
 		m_started = false;
+		powered = true;
 		m_backBuffer = new float[OUTPUT_BUFFER_SAMPLES];
 		m_outputBuffer = new float[OUTPUT_BUFFER_SAMPLES];
 		m_outputBufferIndex = 0;
@@ -30,6 +32,25 @@ namespace toygb {
 	void AudioChannelMapping::disable(){
 		m_control->channelEnable[m_channel] = false;
 		m_started = false;
+	}
+
+	void AudioChannelMapping::powerOff(){
+		disable();
+		powered = false;
+		onPowerOff();
+	}
+
+	void AudioChannelMapping::powerOn(){
+		powered = true;
+		onPowerOn();
+	}
+
+	void AudioChannelMapping::onPowerOff(){
+
+	}
+
+	void AudioChannelMapping::onPowerOn(){
+
 	}
 
 	void AudioChannelMapping::outputSample(){

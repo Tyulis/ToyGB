@@ -48,7 +48,7 @@ namespace toygb {
 				uint8_t result = audioEnable << 7;
 				for (int i = 0; i < 4; i++)
 					result |= channelEnable[i] << i;
-				return result;
+				return result | 0x70;
 			}
 		}
 		std::stringstream errstream;
@@ -71,8 +71,22 @@ namespace toygb {
 					output1Channels[i] = (value >> i) & 1;
 				break;
 			case OFFSET_ENABLE:
-				audioEnable = (value >> 7) & 1;
+				bool newEnable = (value >> 7) & 1;
+				if (audioEnable && !newEnable)
+					onPowerOff();
+				else if (!audioEnable && newEnable)
+					onPowerOn();
+				audioEnable = newEnable;
 				break;
 		}
+	}
+
+	void AudioControlMapping::onPowerOff(){
+		set(OFFSET_LEVELS, 0);
+		set(OFFSET_OUTPUT, 0);
+	}
+
+	void AudioControlMapping::onPowerOn(){
+		
 	}
 }

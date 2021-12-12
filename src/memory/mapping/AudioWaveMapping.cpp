@@ -8,7 +8,7 @@
 #define OFFSET_CONTROL IO_CH3_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping) : AudioChannelMapping(channel, control) {
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
 		m_wavePatternMapping = wavePatternMapping;
 
 		enable = false;
@@ -38,19 +38,21 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::set(uint16_t address, uint8_t value){
-		switch (address) {
-			case OFFSET_ENABLE: enable = (value >> 7) & 1; break;
-			case OFFSET_LENGTH: length = (256 - value); break;
-			case OFFSET_LEVEL: outputLevel = (value >> 5) & 3; break;
-			case OFFSET_FREQLOW:
-				frequency = (frequency & 0x0700) | value;
-				break;
-			case OFFSET_CONTROL:
-				stopSelect = (value >> 6) & 1;
-				frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
-				if ((value >> 7) & 1)
-					reset();
-				break;
+		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
+			switch (address) {
+				case OFFSET_ENABLE: enable = (value >> 7) & 1; break;
+				case OFFSET_LENGTH: length = (256 - value); break;
+				case OFFSET_LEVEL: outputLevel = (value >> 5) & 3; break;
+				case OFFSET_FREQLOW:
+					frequency = (frequency & 0x0700) | value;
+					break;
+				case OFFSET_CONTROL:
+					stopSelect = (value >> 6) & 1;
+					frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
+					if ((value >> 7) & 1)
+						reset();
+					break;
+			}
 		}
 	}
 
@@ -89,9 +91,21 @@ namespace toygb {
 
 	void AudioWaveMapping::reset(){
 		start();
-		m_sampleIndex = 0;
+		m_sampleIndex = 1;
 		m_outputTimerCounter = 0;
 		m_baseTimerCounter = 0;
+	}
+
+	void AudioWaveMapping::onPowerOff(){
+		set(OFFSET_ENABLE, 0);
+		set(OFFSET_LENGTH, 0);
+		set(OFFSET_LEVEL, 0);
+		set(OFFSET_FREQLOW, 0);
+		set(OFFSET_CONTROL, 0);
+	}
+
+	void AudioWaveMapping::onPowerOn(){
+		m_sampleIndex = 1;
 		m_lengthTimerCounter = 0;
 	}
 }

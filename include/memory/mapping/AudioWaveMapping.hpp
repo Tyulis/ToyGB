@@ -2,6 +2,7 @@
 #define _MEMORY_MAPPING_AUDIOWAVEMAPPING_HPP
 
 #include "audio/timing.hpp"
+#include "core/OperationMode.hpp"
 #include "memory/Constants.hpp"
 #include "memory/mapping/AudioChannelMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
@@ -12,7 +13,7 @@
 namespace toygb {
 	class AudioWaveMapping : public AudioChannelMapping {
 		public:
-			AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping);
+			AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping, OperationMode mode);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -27,9 +28,11 @@ namespace toygb {
 
 			void update();
 
-		private:
+		protected:
 			float buildSample();
 			void reset();
+			void onPowerOn();
+			void onPowerOff();
 
 			ArrayMemoryMapping* m_wavePatternMapping;
 

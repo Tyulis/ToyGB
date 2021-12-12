@@ -36,10 +36,10 @@ namespace toygb {
 
 		m_wavePatternMapping = new ArrayMemoryMapping(m_wavePattern);
 		m_control = new AudioControlMapping();
-		m_channels[0] = new AudioToneSweepMapping(0, m_control);
-		m_channels[1] = new AudioToneMapping(1, m_control);
-		m_channels[2] = new AudioWaveMapping(2, m_control, m_wavePatternMapping);
-		m_channels[3] = new AudioNoiseMapping(3, m_control);
+		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_mode);
+		m_channels[1] = new AudioToneMapping(1, m_control, m_mode);
+		m_channels[2] = new AudioWaveMapping(2, m_control, m_wavePatternMapping, m_mode);
+		m_channels[3] = new AudioNoiseMapping(3, m_control, m_mode);
 	}
 
 	void AudioController::configureMemory(MemoryMap* memory) {
@@ -55,11 +55,14 @@ namespace toygb {
 
 	GBComponent AudioController::run(){
 		while (true){
-			for (int channel = 0; channel < 4; channel++){
+			for (int index = 0; index < 4; index++){
+				AudioChannelMapping* channel = m_channels[index];
 				if (m_control->audioEnable){
-					m_channels[channel]->update();
-				} else {
-					m_channels[channel]->disable();
+					if (!channel->powered)
+						channel->powerOn();
+					channel->update();
+				} else if (channel->powered){
+					channel->powerOff();
 				}
 			}
 			dot();

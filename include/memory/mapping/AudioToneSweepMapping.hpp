@@ -2,6 +2,7 @@
 #define _MEMORY_MAPPING_AUDIOTONESWEEPMAPPING_HPP
 
 #include "audio/timing.hpp"
+#include "core/OperationMode.hpp"
 #include "memory/Constants.hpp"
 #include "memory/mapping/AudioChannelMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
@@ -11,7 +12,7 @@
 namespace toygb {
 	class AudioToneSweepMapping : public AudioChannelMapping {
 		public:
-			AudioToneSweepMapping(int channel, AudioControlMapping* control);
+			AudioToneSweepMapping(int channel, AudioControlMapping* control, OperationMode mode);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -32,10 +33,12 @@ namespace toygb {
 
 			void update();
 
-		private:
+		protected:
 			void reset();
 			float buildSample();
 			void updateFrequencySweep();
+			void onPowerOn();
+			void onPowerOff();
 
 			int m_envelopeVolume;
 			int m_sweepFrequency;
@@ -46,7 +49,7 @@ namespace toygb {
 			int m_envelopeTimerCounter;
 			int m_sweepTimerCounter;
 
-			uint64_t m_baseTimer;
+			int m_dutyPointer;
 	};
 }
 
