@@ -36,13 +36,13 @@ namespace toygb {
 
 	void AudioChannelMapping::powerOff(){
 		disable();
-		powered = false;
 		onPowerOff();
+		powered = false;
 	}
 
 	void AudioChannelMapping::powerOn(){
-		powered = true;
 		onPowerOn();
+		powered = true;
 	}
 
 	void AudioChannelMapping::onPowerOff(){

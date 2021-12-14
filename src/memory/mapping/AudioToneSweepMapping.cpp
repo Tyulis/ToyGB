@@ -68,6 +68,8 @@ namespace toygb {
 					length = 64 - (value & 0x3F);
 					break;
 				case OFFSET_ENVELOPE:
+					if ((value & 0xF8) == 0)
+						disable();
 					initialEnvelopeVolume = (value >> 4) & 0x0F;
 					envelopeDirection = (value >> 3) & 1;
 					envelopeSweep = value & 7;
@@ -88,12 +90,16 @@ namespace toygb {
 	const uint8_t TONE_WAVEPATTERNS[4] = {0b00000001, 0b10000001, 0b10000111, 0b01111110};
 
 	void AudioToneSweepMapping::update(){
-		m_lengthTimerCounter += 1;
-		if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
-			m_lengthTimerCounter = 0;
-			length -= 1;
-			if (stopSelect && length == 0)
-				disable();
+		if (stopSelect){
+			m_lengthTimerCounter += 1;
+			if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
+				m_lengthTimerCounter = 0;
+				length -= 1;
+				if (length == 0){
+					length = 64;
+					disable();
+				}
+			}
 		}
 
 		if (sweepTime != 0){
@@ -161,13 +167,17 @@ namespace toygb {
 	}
 
 	void AudioToneSweepMapping::reset(){
-		start();
-		m_outputTimerCounter = 0;
-		m_baseTimerCounter = 0;
-		m_envelopeVolume = initialEnvelopeVolume;
-		m_sweepFrequency = frequency;
+		if (initialEnvelopeVolume != 0 || envelopeDirection != 0){
+			start();
+			if (length == 0)
+				length = 64;
+			m_outputTimerCounter = 0;
+			m_baseTimerCounter = 0;
+			m_envelopeVolume = initialEnvelopeVolume;
+			m_sweepFrequency = frequency;
 
-		updateFrequencySweep();
+			updateFrequencySweep();
+		}
 	}
 
 	void AudioToneSweepMapping::onPowerOff(){

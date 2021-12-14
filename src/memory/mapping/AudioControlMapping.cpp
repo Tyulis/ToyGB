@@ -57,27 +57,29 @@ namespace toygb {
 	}
 
 	void AudioControlMapping::set(uint16_t address, uint8_t value){
-		switch (address) {
-			case OFFSET_LEVELS:
-				vinOutput2 = (value >> 7) & 1;
-				output2Level = (value >> 4) & 7;
-				vinOutput1 = (value >> 3) & 1;
-				output1Level = value & 7;
-				break;
-			case OFFSET_OUTPUT:
-				for (int i = 0; i < 4; i++)
-					output2Channels[i] = (value >> (i + 4)) & 1;
-				for (int i = 0; i < 4; i++)
-					output1Channels[i] = (value >> i) & 1;
-				break;
-			case OFFSET_ENABLE:
-				bool newEnable = (value >> 7) & 1;
-				if (audioEnable && !newEnable)
-					onPowerOff();
-				else if (!audioEnable && newEnable)
-					onPowerOn();
-				audioEnable = newEnable;
-				break;
+		if (audioEnable || address == OFFSET_ENABLE){
+			switch (address) {
+				case OFFSET_LEVELS:
+					vinOutput2 = (value >> 7) & 1;
+					output2Level = (value >> 4) & 7;
+					vinOutput1 = (value >> 3) & 1;
+					output1Level = value & 7;
+					break;
+				case OFFSET_OUTPUT:
+					for (int i = 0; i < 4; i++)
+						output2Channels[i] = (value >> (i + 4)) & 1;
+					for (int i = 0; i < 4; i++)
+						output1Channels[i] = (value >> i) & 1;
+					break;
+				case OFFSET_ENABLE:
+					bool newEnable = (value >> 7) & 1;
+					if (audioEnable && !newEnable)
+						onPowerOff();
+					else if (!audioEnable && newEnable)
+						onPowerOn();
+					audioEnable = newEnable;
+					break;
+			}
 		}
 	}
 
@@ -87,6 +89,6 @@ namespace toygb {
 	}
 
 	void AudioControlMapping::onPowerOn(){
-		
+
 	}
 }

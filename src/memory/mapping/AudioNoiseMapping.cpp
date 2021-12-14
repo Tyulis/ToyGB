@@ -51,6 +51,8 @@ namespace toygb {
 			switch (address) {
 				case OFFSET_LENGTH: length = 64 - (value & 0x3F); break;
 				case OFFSET_ENVELOPE:
+					if ((value & 0xF8) == 0)
+						disable();
 					initialEnvelopeVolume = (value >> 4) & 0x0F;
 					envelopeDirection = (value >> 3) & 1;
 					envelopeSweep = value & 7;
@@ -72,12 +74,16 @@ namespace toygb {
 	const int NOISE_DIVISORS[] = {8, 16, 32, 48, 64, 80, 96, 112};
 
 	void AudioNoiseMapping::update() {
-		m_lengthTimerCounter += 1;
-		if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
-			m_lengthTimerCounter = 0;
-			length -= 1;
-			if (stopSelect && length == 0)
-				disable();
+		if (stopSelect){
+			m_lengthTimerCounter += 1;
+			if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
+				m_lengthTimerCounter = 0;
+				length -= 1;
+				if (length == 0){
+					disable();
+					length = 64;
+				}
+			}
 		}
 
 		m_baseTimerCounter += 1;
@@ -113,11 +119,15 @@ namespace toygb {
 	}
 
 	void AudioNoiseMapping::reset() {
-		start();
-		m_register = 0x7FFF;
-		m_baseTimerCounter = 0;
-		m_outputTimerCounter = 0;
-		m_envelopeVolume = initialEnvelopeVolume;
+		if (initialEnvelopeVolume != 0 || envelopeDirection != 0){
+			start();
+			if (length == 0)
+				length = 64;
+			m_register = 0x7FFF;
+			m_baseTimerCounter = 0;
+			m_outputTimerCounter = 0;
+			m_envelopeVolume = initialEnvelopeVolume;
+		}
 	}
 
 	void AudioNoiseMapping::onPowerOff(){

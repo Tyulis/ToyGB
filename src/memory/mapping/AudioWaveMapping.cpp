@@ -40,7 +40,11 @@ namespace toygb {
 	void AudioWaveMapping::set(uint16_t address, uint8_t value){
 		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
 			switch (address) {
-				case OFFSET_ENABLE: enable = (value >> 7) & 1; break;
+				case OFFSET_ENABLE:
+					enable = (value >> 7) & 1;
+					if (!enable)
+						disable();
+					break;
 				case OFFSET_LENGTH: length = (256 - value); break;
 				case OFFSET_LEVEL: outputLevel = (value >> 5) & 3; break;
 				case OFFSET_FREQLOW:
@@ -57,12 +61,14 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::update(){
-		m_lengthTimerCounter += 1;
-		if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
-			m_lengthTimerCounter = 0;
-			length -= 1;
-			if (stopSelect && length == 0)
-				disable();
+		if (stopSelect){
+			m_lengthTimerCounter += 1;
+			if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
+				m_lengthTimerCounter = 0;
+				length -= 1;
+				if (length == 0)
+					disable();
+			}
 		}
 
 		m_baseTimerCounter += 1;
@@ -90,10 +96,12 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::reset(){
-		start();
-		m_sampleIndex = 1;
-		m_outputTimerCounter = 0;
-		m_baseTimerCounter = 0;
+		if (enable){
+			start();
+			m_sampleIndex = 1;
+			m_outputTimerCounter = 0;
+			m_baseTimerCounter = 0;
+		}
 	}
 
 	void AudioWaveMapping::onPowerOff(){

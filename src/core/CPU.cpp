@@ -1369,7 +1369,7 @@ namespace toygb {
 
 	void CPU::logStatus(){
 		std::cout << "\t\taf: " << oh16(reg_af) << ", bc: " << oh16(reg_bc) << ", de: " << oh16(reg_de) << ", hl: " << oh16(reg_hl) << ", sp: " << oh16(reg_sp);
-
+		std::cout << ", (hl): " << oh8(m_memory->get(reg_hl));
 		/*std::cout << "\t\tstack: ";
 		for (uint16_t pointer = m_sp; pointer < 0xFFF4; pointer += 2){
 			uint16_t low = m_memory->get(pointer);
