@@ -29,21 +29,20 @@ namespace toygb {
 
 			bool stopSelect;
 
-			void update();
-
 		protected:
 			void reset();
 			float buildSample();
 			void onPowerOn();
 			void onPowerOff();
+			void onUpdate();
+			void onLengthFrame();
+			void onEnvelopeFrame();
 
 			uint16_t m_register;
 			int m_envelopeVolume;
 
-			int m_lengthTimerCounter;
-			int m_outputTimerCounter;
-			int m_envelopeTimerCounter;
 			int m_baseTimerCounter;
+			int m_envelopeFrameCounter;
 	};
 }
 

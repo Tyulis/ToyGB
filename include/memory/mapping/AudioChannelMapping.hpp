@@ -14,7 +14,7 @@ namespace toygb {
 		public:
 			AudioChannelMapping(int channel, AudioControlMapping* control, OperationMode mode);
 
-			virtual void update() = 0;
+			void update();
 			float* getBuffer();
 
 			void powerOn();
@@ -25,6 +25,10 @@ namespace toygb {
 		protected:
 			virtual void onPowerOn();
 			virtual void onPowerOff();
+			virtual void onUpdate() = 0;
+			virtual void onSweepFrame();
+			virtual void onLengthFrame();
+			virtual void onEnvelopeFrame();
 
 			void start();
 			void disable();
@@ -41,6 +45,14 @@ namespace toygb {
 			float* m_backBuffer;
 			int m_outputBufferIndex;
 			bool m_bufferAvailable;
+
+			int m_frameSequencerTimer;
+			int m_frameSequencer;
+			int m_outputTimerCounter;
+
+
+		private:
+			void onFrame(int frame);
 	};
 }
 

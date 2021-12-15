@@ -19,10 +19,8 @@ namespace toygb {
 		dividingRatio = 0;
 		stopSelect = false;
 
-		m_lengthTimerCounter = 0;
-		m_outputTimerCounter = 0;
-		m_envelopeTimerCounter = 0;
 		m_baseTimerCounter = 0;
+		m_envelopeFrameCounter = 0;
 	}
 
 	uint8_t AudioNoiseMapping::get(uint16_t address) {
@@ -47,7 +45,7 @@ namespace toygb {
 	}
 
 	void AudioNoiseMapping::set(uint16_t address, uint8_t value){
-		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
+		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
 			switch (address) {
 				case OFFSET_LENGTH: length = 64 - (value & 0x3F); break;
 				case OFFSET_ENVELOPE:
@@ -62,30 +60,24 @@ namespace toygb {
 					counterStep = (value >> 3) & 1;
 					dividingRatio = value & 7;
 					break;
-				case OFFSET_CONTROL:
+				case OFFSET_CONTROL: {
+					// If enabling length in first half of the length period
+					bool wasEnabled = stopSelect;
 					stopSelect = (value >> 6) & 1;
+					if (!wasEnabled && stopSelect && m_frameSequencer % 2 == 0 && length > 0)
+						onLengthFrame();
+
 					if ((value >> 7) & 1)
 						reset();
 					break;
+				}
 			}
 		}
 	}
 
 	const int NOISE_DIVISORS[] = {8, 16, 32, 48, 64, 80, 96, 112};
 
-	void AudioNoiseMapping::update() {
-		if (stopSelect){
-			m_lengthTimerCounter += 1;
-			if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
-				m_lengthTimerCounter = 0;
-				length -= 1;
-				if (length == 0){
-					disable();
-					length = 64;
-				}
-			}
-		}
-
+	void AudioNoiseMapping::onUpdate() {
 		m_baseTimerCounter += 1;
 		if (m_baseTimerCounter >= NOISE_DIVISORS[dividingRatio] << frequency){
 			bool newBit = (m_register & 1) ^ ((m_register >> 1) & 1);
@@ -94,23 +86,25 @@ namespace toygb {
 				m_register = (newBit << 6) | (m_register & 0b111111110111111);
 			m_baseTimerCounter = 0;
 		}
+	}
 
+	void AudioNoiseMapping::onLengthFrame(){
+		if (stopSelect){
+			length -= 1;
+			if (length == 0)
+				disable();
+		}
+	}
+
+	void AudioNoiseMapping::onEnvelopeFrame(){
 		if (envelopeSweep != 0){
-			m_envelopeTimerCounter += 1;
-			if (m_envelopeTimerCounter >= envelopeSweep*ENVELOPE_TIMER_PERIOD){
-				m_envelopeTimerCounter = 0;
-
+			m_envelopeFrameCounter = (m_envelopeFrameCounter + 1) % envelopeSweep;
+			if (m_envelopeFrameCounter == 0){
 				if (envelopeDirection && m_envelopeVolume < 15)
 					m_envelopeVolume += 1;
 				else if (m_envelopeVolume > 0)
 					m_envelopeVolume -= 1;
 			}
-		}
-
-		m_outputTimerCounter += 1;
-		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD && m_outputBufferIndex < OUTPUT_BUFFER_SAMPLES){
-			m_outputTimerCounter = 0;
-			outputSample();
 		}
 	}
 
@@ -119,15 +113,18 @@ namespace toygb {
 	}
 
 	void AudioNoiseMapping::reset() {
-		if (initialEnvelopeVolume != 0 || envelopeDirection != 0){
+		// Only start if DAC is enabled
+		if (initialEnvelopeVolume != 0 || envelopeDirection != 0)
 			start();
-			if (length == 0)
+			
+		if (length == 0){
+			if (m_frameSequencer % 2 == 0 && stopSelect)
+				length = 63;
+			else
 				length = 64;
-			m_register = 0x7FFF;
-			m_baseTimerCounter = 0;
-			m_outputTimerCounter = 0;
-			m_envelopeVolume = initialEnvelopeVolume;
 		}
+		m_register = 0x7FFF;
+		m_envelopeVolume = initialEnvelopeVolume;
 	}
 
 	void AudioNoiseMapping::onPowerOff(){
@@ -138,7 +135,7 @@ namespace toygb {
 	}
 
 	void AudioNoiseMapping::onPowerOn(){
-		m_envelopeTimerCounter = 0;
-		m_lengthTimerCounter = 0;
+		m_envelopeFrameCounter = 0;
+		m_baseTimerCounter = 0;
 	}
 }

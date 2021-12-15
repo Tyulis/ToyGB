@@ -19,26 +19,24 @@ namespace toygb {
 			void set(uint16_t address, uint8_t value);
 
 			bool enable;
-			uint8_t length;
+			uint16_t length;
 
 			uint8_t outputLevel;
 
 			uint16_t frequency;
 			bool stopSelect;
 
-			void update();
-
 		protected:
 			float buildSample();
 			void reset();
 			void onPowerOn();
 			void onPowerOff();
+			void onUpdate();
+			void onLengthFrame();
 
 			ArrayMemoryMapping* m_wavePatternMapping;
 
-			int m_lengthTimerCounter;
 			int m_baseTimerCounter;
-			int m_outputTimerCounter;
 			int m_sampleIndex;
 	};
 }

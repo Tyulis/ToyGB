@@ -20,9 +20,7 @@ namespace toygb {
 
 		m_dutyPointer = 0;
 		m_baseTimerCounter = 0;
-		m_lengthTimerCounter = 0;
-		m_outputTimerCounter = 0;
-		m_envelopeTimerCounter = 0;
+		m_envelopeFrameCounter = 0;
 	}
 
 	uint8_t AudioToneMapping::get(uint16_t address) {
@@ -43,7 +41,7 @@ namespace toygb {
 	}
 
 	void AudioToneMapping::set(uint16_t address, uint8_t value){
-		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_PATTERN)){
+		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_PATTERN)){
 			switch (address) {
 				case OFFSET_PATTERN:
 					if (powered)
@@ -60,53 +58,49 @@ namespace toygb {
 				case OFFSET_FREQLOW:
 					frequency = (frequency & 0x0700) | value;
 					break;
-				case OFFSET_CONTROL:
+				case OFFSET_CONTROL: {
+					// If enabling length in first half of the length period
+					bool wasEnabled = stopSelect;
 					stopSelect = (value >> 6) & 1;
+					if (!wasEnabled && stopSelect && m_frameSequencer % 2 == 0 && length > 0)
+						onLengthFrame();
+
 					frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
 					if ((value >> 7) & 1)
 						reset();
 					break;
+				}
 			}
 		}
 	}
 
 	const uint8_t TONE_WAVEPATTERNS[4] = {0b00000001, 0b10000001, 0b10000111, 0b01111110};
 
-	void AudioToneMapping::update(){
-		if (stopSelect){
-			m_lengthTimerCounter += 1;
-			if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
-				m_lengthTimerCounter = 0;
-				length -= 1;
-				if (length == 0){
-					length = 64;
-					disable();
-				}
-			}
-		}
-
+	void AudioToneMapping::onUpdate(){
 		m_baseTimerCounter += 1;
 		if (m_baseTimerCounter >= 4*(2048 - frequency)){
 			m_dutyPointer = (m_dutyPointer + 1) % 8;
 			m_baseTimerCounter = 0;
 		}
+	}
 
+	void AudioToneMapping::onLengthFrame(){
+		if (stopSelect){
+			length -= 1;
+			if (length == 0)
+				disable();
+		}
+	}
+
+	void AudioToneMapping::onEnvelopeFrame(){
 		if (envelopeSweep != 0){
-			m_envelopeTimerCounter += 1;
-			if (m_envelopeTimerCounter >= envelopeSweep*ENVELOPE_TIMER_PERIOD){
-				m_envelopeTimerCounter = 0;
-
+			m_envelopeFrameCounter = (m_envelopeFrameCounter + 1) % envelopeSweep;
+			if (m_envelopeFrameCounter == 0){
 				if (envelopeDirection && m_envelopeVolume < 15)
 					m_envelopeVolume += 1;
 				else if (m_envelopeVolume > 0)
 					m_envelopeVolume -= 1;
 			}
-		}
-
-		m_outputTimerCounter += 1;
-		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD && m_outputBufferIndex < OUTPUT_BUFFER_SAMPLES){
-			m_outputTimerCounter = 0;
-			outputSample();
 		}
 	}
 
@@ -116,14 +110,18 @@ namespace toygb {
 	}
 
 	void AudioToneMapping::reset(){
-		if (initialEnvelopeVolume != 0 || envelopeDirection != 0){
+		// Only start if DAC is enabled
+		if (initialEnvelopeVolume != 0 || envelopeDirection != 0)
 			start();
-			if (length == 0)
+
+		if (length == 0){
+			if (m_frameSequencer % 2 == 0 && stopSelect)
+				length = 63;
+			else
 				length = 64;
-			m_outputTimerCounter = 0;
-			m_baseTimerCounter = 0;
-			m_envelopeVolume = initialEnvelopeVolume;
 		}
+
+		m_envelopeVolume = initialEnvelopeVolume;
 	}
 
 	void AudioToneMapping::onPowerOff(){
@@ -134,8 +132,8 @@ namespace toygb {
 	}
 
 	void AudioToneMapping::onPowerOn(){
-		m_lengthTimerCounter = 0;
-		m_envelopeTimerCounter = 0;
+		m_baseTimerCounter = 0;
+		m_envelopeFrameCounter = 0;
 		m_dutyPointer = 0;
 	}
 }

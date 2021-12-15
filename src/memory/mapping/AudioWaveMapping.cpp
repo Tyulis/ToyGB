@@ -17,9 +17,7 @@ namespace toygb {
 		frequency = 0x07FF;
 		stopSelect = false;
 
-		m_lengthTimerCounter = 0;
 		m_baseTimerCounter = 0;
-		m_outputTimerCounter = 0;
 		m_sampleIndex = 0;
 	}
 
@@ -38,7 +36,7 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::set(uint16_t address, uint8_t value){
-		if (powered | (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
+		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
 			switch (address) {
 				case OFFSET_ENABLE:
 					enable = (value >> 7) & 1;
@@ -50,37 +48,35 @@ namespace toygb {
 				case OFFSET_FREQLOW:
 					frequency = (frequency & 0x0700) | value;
 					break;
-				case OFFSET_CONTROL:
+				case OFFSET_CONTROL: {
+					// If enabling length in first half of the length period
+					bool wasEnabled = stopSelect;
 					stopSelect = (value >> 6) & 1;
+					if (!wasEnabled && stopSelect && m_frameSequencer % 2 == 0 && length > 0)
+						onLengthFrame();
+
 					frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);
 					if ((value >> 7) & 1)
 						reset();
 					break;
+				}
 			}
 		}
 	}
 
-	void AudioWaveMapping::update(){
-		if (stopSelect){
-			m_lengthTimerCounter += 1;
-			if (m_lengthTimerCounter >= LENGTH_TIMER_PERIOD){
-				m_lengthTimerCounter = 0;
-				length -= 1;
-				if (length == 0)
-					disable();
-			}
-		}
-
+	void AudioWaveMapping::onUpdate(){
 		m_baseTimerCounter += 1;
 		if (m_baseTimerCounter >= 2*(2048 - frequency)){
 			m_sampleIndex = (m_sampleIndex + 1) % 32;
 			m_baseTimerCounter = 0;
 		}
+	}
 
-		m_outputTimerCounter += 1;
-		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD && m_outputBufferIndex < OUTPUT_BUFFER_SAMPLES){
-			m_outputTimerCounter = 0;
-			outputSample();
+	void AudioWaveMapping::onLengthFrame(){
+		if (stopSelect){
+			length -= 1;
+			if (length == 0)
+				disable();
 		}
 	}
 
@@ -96,11 +92,17 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::reset(){
-		if (enable){
+		// Only start if DAC is enabled
+		if (enable)
 			start();
-			m_sampleIndex = 1;
-			m_outputTimerCounter = 0;
-			m_baseTimerCounter = 0;
+
+		m_sampleIndex = 1;
+
+		if (length == 0){
+			if (m_frameSequencer % 2 == 0 && stopSelect)
+				length = 255;
+			else
+				length = 256;
 		}
 	}
 
@@ -114,6 +116,6 @@ namespace toygb {
 
 	void AudioWaveMapping::onPowerOn(){
 		m_sampleIndex = 1;
-		m_lengthTimerCounter = 0;
+		m_baseTimerCounter = 0;
 	}
 }

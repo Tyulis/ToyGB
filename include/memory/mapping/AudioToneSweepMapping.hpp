@@ -31,25 +31,25 @@ namespace toygb {
 			uint16_t frequency;
 			bool stopSelect;
 
-			void update();
-
 		protected:
 			void reset();
 			float buildSample();
-			void updateFrequencySweep();
+			uint16_t calculateFrequencySweep();
 			void onPowerOn();
 			void onPowerOff();
+			void onUpdate();
+			void onLengthFrame();
+			void onSweepFrame();
+			void onEnvelopeFrame();
 
 			int m_envelopeVolume;
-			int m_sweepFrequency;
-
-			int m_lengthTimerCounter;
-			int m_baseTimerCounter;
-			int m_outputTimerCounter;
-			int m_envelopeTimerCounter;
-			int m_sweepTimerCounter;
-
+			uint16_t m_sweepFrequency;
 			int m_dutyPointer;
+
+			int m_baseTimerCounter;
+			int m_envelopeFrameCounter;
+			int m_sweepFrameCounter;
+			bool m_sweepEnabled;
 	};
 }
 

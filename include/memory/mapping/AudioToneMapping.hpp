@@ -27,22 +27,20 @@ namespace toygb {
 			uint16_t frequency;
 			bool stopSelect;
 
-			void update();
-
 		protected:
 			void reset();
 			float buildSample();
 			void onPowerOn();
 			void onPowerOff();
+			void onUpdate();
+			void onLengthFrame();
+			void onEnvelopeFrame();
 
 			int m_envelopeVolume;
-
-			int m_lengthTimerCounter;
-			int m_baseTimerCounter;
-			int m_outputTimerCounter;
-			int m_envelopeTimerCounter;
-
 			int m_dutyPointer;
+
+			int m_baseTimerCounter;
+			int m_envelopeFrameCounter;
 	};
 }
 
