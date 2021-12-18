@@ -75,7 +75,7 @@ namespace toygb {
 		}
 	}
 
-	const int NOISE_DIVISORS[] = {8, 16, 32, 48, 64, 80, 96, 112};
+	const int NOISE_DIVISORS[] = {4, 8, 16, 24, 32, 40, 48, 56};
 
 	void AudioNoiseMapping::onUpdate() {
 		m_baseTimerCounter += 1;
@@ -116,7 +116,7 @@ namespace toygb {
 		// Only start if DAC is enabled
 		if (initialEnvelopeVolume != 0 || envelopeDirection != 0)
 			start();
-			
+
 		if (length == 0){
 			if (m_frameSequencer % 2 == 0 && stopSelect)
 				length = 63;

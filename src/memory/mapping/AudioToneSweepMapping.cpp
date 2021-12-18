@@ -30,6 +30,7 @@ namespace toygb {
 		m_envelopeFrameCounter = 0;
 		m_sweepFrameCounter = 0;
 		m_sweepEnabled = false;
+		m_sweepNegateCalculated = false;
 	}
 
 	uint8_t AudioToneSweepMapping::get(uint16_t address) {
@@ -59,6 +60,9 @@ namespace toygb {
 			switch (address) {
 				case OFFSET_SWEEP:
 					sweepTime = (value >> 4) & 7;
+					// Disable the channel when clearing the direction bit after sweep has been calculated at least one
+					if (!((value >> 3) & 1) && sweepDirection && m_sweepNegateCalculated)
+						disable();
 					sweepDirection = (value >> 3) & 1;
 					sweepShift = value & 7;
 					break;
@@ -97,7 +101,7 @@ namespace toygb {
 
 	void AudioToneSweepMapping::onUpdate(){
 		m_baseTimerCounter += 1;
-		if (m_baseTimerCounter >= 4*(2048 - m_sweepFrequency)){
+		if (m_baseTimerCounter >= 2*(2048 - m_sweepFrequency)){
 			m_dutyPointer = (m_dutyPointer + 1) % 8;
 			m_baseTimerCounter = 0;
 		}
@@ -113,13 +117,16 @@ namespace toygb {
 
 	void AudioToneSweepMapping::onSweepFrame(){
 		if (m_started){
-			m_sweepFrameCounter = (m_sweepFrameCounter + 1) % (sweepTime == 0 ? 8 : sweepTime);
-			if (m_sweepFrameCounter == 0 && m_sweepEnabled && sweepTime != 0){
-				uint16_t newFrequency = calculateFrequencySweep();
-				if (newFrequency < 2048 && sweepShift != 0){
-					m_sweepFrequency = newFrequency;
-					frequency = newFrequency;
-					calculateFrequencySweep();
+			m_sweepFrameCounter -= 1;
+			if (m_sweepFrameCounter <= 0){
+				m_sweepFrameCounter = (sweepTime == 0 ? 8 : sweepTime);
+				if (m_sweepEnabled && sweepTime != 0){
+					uint16_t newFrequency = calculateFrequencySweep();
+					if (newFrequency < 2048 && sweepShift != 0){
+						m_sweepFrequency = newFrequency;
+						frequency = newFrequency;
+						calculateFrequencySweep();
+					}
 				}
 			}
 		}
@@ -127,8 +134,9 @@ namespace toygb {
 
 	void AudioToneSweepMapping::onEnvelopeFrame(){
 		if (envelopeSweep != 0){
-			m_envelopeFrameCounter = (m_envelopeFrameCounter + 1) % envelopeSweep;
-			if (m_envelopeFrameCounter == 0){
+			m_envelopeFrameCounter -= 1;
+			if (m_envelopeFrameCounter <= 0){
+				m_envelopeFrameCounter = (envelopeSweep == 0 ? 8 : envelopeSweep);
 				if (envelopeDirection && m_envelopeVolume < 15)
 					m_envelopeVolume += 1;
 				else if (m_envelopeVolume > 0)
@@ -144,14 +152,17 @@ namespace toygb {
 
 	uint16_t AudioToneSweepMapping::calculateFrequencySweep(){
 		uint16_t newFrequency = m_sweepFrequency;
-		if (sweepDirection)
+		if (sweepDirection){
 			newFrequency -= (m_sweepFrequency >> sweepShift);
-		else
+			m_sweepNegateCalculated = true;
+		} else {
 			newFrequency += (m_sweepFrequency >> sweepShift);
+		}
 
 		// Overflow check
 		if (newFrequency > 2047)
 			disable();
+
 		return newFrequency;
 	}
 
@@ -169,9 +180,10 @@ namespace toygb {
 
 		m_envelopeVolume = initialEnvelopeVolume;
 		m_sweepFrequency = frequency;
-		m_sweepFrameCounter = 0;
+		m_sweepFrameCounter = (sweepTime == 0 ? 8 : sweepTime);
 
 		m_sweepEnabled = (sweepShift != 0 || sweepTime != 0);
+		m_sweepNegateCalculated = false;
 
 		if (sweepShift != 0)
 			calculateFrequencySweep();

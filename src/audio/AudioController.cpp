@@ -34,7 +34,7 @@ namespace toygb {
 		m_mode = mode;
 		m_wavePattern = new uint8_t[IO_WAVEPATTERN_SIZE];
 
-		m_wavePatternMapping = new ArrayMemoryMapping(m_wavePattern);
+		m_wavePatternMapping = new WaveMemoryMapping(m_wavePattern, m_mode);
 		m_control = new AudioControlMapping();
 		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_mode);
 		m_channels[1] = new AudioToneMapping(1, m_control, m_mode);
@@ -65,6 +65,7 @@ namespace toygb {
 					channel->powerOff();
 				}
 			}
+			dot();
 			dot();
 		}
 	}

@@ -11,7 +11,7 @@
 #include "memory/mapping/AudioWaveMapping.hpp"
 #include "memory/mapping/AudioNoiseMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
-#include "memory/mapping/ArrayMemoryMapping.hpp"
+#include "memory/mapping/WaveMemoryMapping.hpp"
 #include "util/component.hpp"
 
 
@@ -35,7 +35,7 @@ namespace toygb {
 
 			AudioChannelMapping* m_channels[4];
 			AudioControlMapping* m_control;
-			ArrayMemoryMapping* m_wavePatternMapping;
+			WaveMemoryMapping* m_wavePatternMapping;
 	};
 }
 

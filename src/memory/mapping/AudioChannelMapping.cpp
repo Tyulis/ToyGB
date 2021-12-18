@@ -47,7 +47,7 @@ namespace toygb {
 	void AudioChannelMapping::powerOn(){
 		onPowerOn();
 		powered = true;
-		m_frameSequencer = 0;
+		m_frameSequencer = 7;
 		m_frameSequencerTimer = 0;
 		m_outputTimerCounter = 0;
 	}

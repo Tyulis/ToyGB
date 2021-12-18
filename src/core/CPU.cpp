@@ -101,6 +101,7 @@ namespace toygb {
 				cycles += 1; \
 				incrementTimer(4);
 
+
 	GBComponent CPU::run(MemoryMap* memory, DMAController* dma){
 		m_memory = memory;
 		m_dma = dma;

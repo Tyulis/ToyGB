@@ -50,6 +50,7 @@ namespace toygb {
 			int m_envelopeFrameCounter;
 			int m_sweepFrameCounter;
 			bool m_sweepEnabled;
+			bool m_sweepNegateCalculated;
 	};
 }
 

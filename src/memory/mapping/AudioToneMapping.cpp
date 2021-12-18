@@ -78,7 +78,7 @@ namespace toygb {
 
 	void AudioToneMapping::onUpdate(){
 		m_baseTimerCounter += 1;
-		if (m_baseTimerCounter >= 4*(2048 - frequency)){
+		if (m_baseTimerCounter >= 2*(2048 - frequency)){
 			m_dutyPointer = (m_dutyPointer + 1) % 8;
 			m_baseTimerCounter = 0;
 		}

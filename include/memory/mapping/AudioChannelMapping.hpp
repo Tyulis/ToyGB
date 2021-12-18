@@ -30,9 +30,9 @@ namespace toygb {
 			virtual void onLengthFrame();
 			virtual void onEnvelopeFrame();
 
-			void start();
-			void disable();
-			void outputSample();
+			virtual void start();
+			virtual void disable();
+			virtual void outputSample();
 			virtual float buildSample() = 0;
 
 			int m_channel;

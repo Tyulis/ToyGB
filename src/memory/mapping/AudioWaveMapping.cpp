@@ -8,7 +8,7 @@
 #define OFFSET_CONTROL IO_CH3_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, ArrayMemoryMapping* wavePatternMapping, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, WaveMemoryMapping* wavePatternMapping, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
 		m_wavePatternMapping = wavePatternMapping;
 
 		enable = false;
@@ -65,10 +65,14 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::onUpdate(){
-		m_baseTimerCounter += 1;
-		if (m_baseTimerCounter >= 2*(2048 - frequency)){
-			m_sampleIndex = (m_sampleIndex + 1) % 32;
-			m_baseTimerCounter = 0;
+		if (m_started){
+			m_baseTimerCounter -= 1;
+			if (m_baseTimerCounter <= 0){
+				m_baseTimerCounter = 2048 - frequency;
+				m_sampleIndex = (m_sampleIndex + 1) % 32;
+				m_wavePatternMapping->setCurrentIndex(m_sampleIndex >> 1);
+			}
+			m_wavePatternMapping->update();
 		}
 	}
 
@@ -84,7 +88,7 @@ namespace toygb {
 
 	float AudioWaveMapping::buildSample(){
 		if (outputLevel > 0 && enable){
-			uint8_t sample = (m_wavePatternMapping->get(m_sampleIndex >> 1) >> ((m_sampleIndex & 1) ? 0 : 4)) & 0x0F;
+			uint8_t sample = (m_wavePatternMapping->waveGet(m_sampleIndex >> 1) >> ((m_sampleIndex & 1) ? 0 : 4)) & 0x0F;
 			return (2*sample / 16.0f - 1) * WAVE_VOLUMES[outputLevel];
 		} else {
 			return 0.0f;
@@ -96,7 +100,9 @@ namespace toygb {
 		if (enable)
 			start();
 
-		m_sampleIndex = 1;
+		// https://forums.nesdev.org/viewtopic.php?t=13730&p=188035
+		m_sampleIndex = 0;
+		m_baseTimerCounter = 2048 - frequency + 3;
 
 		if (length == 0){
 			if (m_frameSequencer % 2 == 0 && stopSelect)
@@ -117,5 +123,27 @@ namespace toygb {
 	void AudioWaveMapping::onPowerOn(){
 		m_sampleIndex = 1;
 		m_baseTimerCounter = 0;
+	}
+
+	void AudioWaveMapping::start(){
+		// Trigger while the channel reads a sample : corrupt first bytes of wave RAM
+		if (m_baseTimerCounter - 1 == 0 && m_started){
+			uint16_t position = ((m_sampleIndex + 1) >> 1) & 0x0F;
+			if (position < 4){
+				m_wavePatternMapping->waveSet(0, m_wavePatternMapping->waveGet(position));
+			} else {
+				for (int i = 0; i < 4; i++){
+					m_wavePatternMapping->waveSet(i, m_wavePatternMapping->waveGet((position & 0b1100) + i));
+				}
+			}
+		}
+
+		m_wavePatternMapping->setPlaying(true);
+		AudioChannelMapping::start();
+	}
+
+	void AudioWaveMapping::disable(){
+		m_wavePatternMapping->setPlaying(false);
+		AudioChannelMapping::disable();
 	}
 }
