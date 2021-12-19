@@ -52,7 +52,7 @@ namespace toygb {
 
 		/*uint64_t cycleCount = 0;
 		clocktime_t cycleStart = std::chrono::steady_clock::now();*/
-		while (true){
+		while (!m_interface.isStopping()){
 			cpuComponent.onCycle();
 			lcdComponent.onCycle();
 			dmaComponent.onCycle();
@@ -72,6 +72,7 @@ namespace toygb {
 		}
 
 		uiThread.join();
+		m_cart.save();
 	}
 
 	void runInterface(Interface* interface, LCDController* lcd, AudioController* audio, JoypadController* joypad){

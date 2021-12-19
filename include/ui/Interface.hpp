@@ -15,6 +15,7 @@ namespace toygb {
 			Interface();
 
 			void run(LCDController* lcd, AudioController* audio, JoypadController* joypad);
+			bool isStopping();
 
 		private:
 			void setupAudio();
@@ -25,6 +26,8 @@ namespace toygb {
 			AudioController* m_audio;
 			JoypadController* m_joypad;
 			GBAudioStream m_audioStream;
+
+			bool m_stopping;
 	};
 }
 

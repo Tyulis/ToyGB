@@ -9,6 +9,7 @@ namespace toygb {
 		m_lcd = nullptr;
 		m_audio = nullptr;
 		m_joypad = nullptr;
+		m_stopping = false;
 	}
 
 
@@ -33,8 +34,11 @@ namespace toygb {
 		while (window.isOpen()) {
 			sf::Event event;
 			while (window.pollEvent(event)) {
-				if (event.type == sf::Event::Closed)
+				if (event.type == sf::Event::Closed){
 					window.close();
+					m_audioStream.stop();
+					m_stopping = true;
+				}
 			}
 
 			updateJoypad();
@@ -84,5 +88,9 @@ namespace toygb {
 	void Interface::setupAudio(){
 		m_audioStream.init(m_audio);
 		m_audioStream.play();
+	}
+
+	bool Interface::isStopping(){
+		return m_stopping;
 	}
 }

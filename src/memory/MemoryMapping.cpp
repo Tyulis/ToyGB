@@ -2,7 +2,15 @@
 
 
 namespace toygb {
-	MemoryMapping::~MemoryMapping(){
+	MemoryMapping::~MemoryMapping() {
+
+	}
+
+	void MemoryMapping::load(std::istream& input) {
+
+	}
+
+	void MemoryMapping::save(std::ostream& output) {
 		
 	}
 }

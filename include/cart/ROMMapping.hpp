@@ -20,6 +20,8 @@ namespace toygb {
 
 			virtual MemoryMapping* getRAM() = 0;
 			OperationMode getAutoOperationMode();
+			bool hasRAM() const;
+			bool hasBattery() const;
 
 		protected:
 			void setCartFeatures(bool hasRAM, bool hasBattery);

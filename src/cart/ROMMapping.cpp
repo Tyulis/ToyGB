@@ -22,6 +22,14 @@ namespace toygb {
 		}*/
 	}
 
+	bool ROMMapping::hasRAM() const {
+		return m_hasRAM;
+	}
+
+	bool ROMMapping::hasBattery() const {
+		return m_hasBattery;
+	}
+
 	void ROMMapping::setCartFeatures(bool hasRAM, bool hasBattery){
 		m_hasRAM = hasRAM;
 		m_hasBattery = hasBattery;

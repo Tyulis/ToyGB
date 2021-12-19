@@ -7,7 +7,7 @@
 namespace toygb {
 	class MBC1RAMMapping : public FullBankedMemoryMapping {
 		public:
-			MBC1RAMMapping(uint8_t* bankSelect, bool* modeSelect, uint16_t bankSize, uint8_t* array, bool accessible);
+			MBC1RAMMapping(uint8_t* bankSelect, bool* modeSelect, int numBanks, uint16_t bankSize, uint8_t* array, bool accessible);
 
 			virtual uint8_t get(uint16_t address);
 			virtual void set(uint16_t address, uint8_t value);

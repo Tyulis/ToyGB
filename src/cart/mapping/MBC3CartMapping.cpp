@@ -21,7 +21,7 @@ namespace toygb {
 		m_ramBankSelect = 0;
 		m_romBankSelect = 1;
 		if (m_ramData != nullptr){
-			m_ramMapping = new FullBankedMemoryMapping(&m_ramBankSelect, SRAM_SIZE, m_ramData, false);
+			m_ramMapping = new FullBankedMemoryMapping(&m_ramBankSelect, m_ramSize/SRAM_SIZE, SRAM_SIZE, m_ramData, false);
 		} else {
 			m_ramMapping = nullptr;
 		}

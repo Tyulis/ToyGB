@@ -76,7 +76,7 @@ namespace toygb {
 			m_wramMapping = new ArrayMemoryMapping(m_wram);
 		} else if (m_mode == OperationMode::CGB) {
 			m_wramBankMapping = new WRAMBankSelectMapping(&m_wramBank);
-			m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_SIZE, m_wram, true);
+			m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_NUM, WRAM_BANK_SIZE, m_wram, true);
 		}
 
 		m_timer = new TimerMapping(mode, interrupt);

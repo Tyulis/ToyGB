@@ -26,8 +26,11 @@ namespace toygb {
 			void init(std::string romfile, std::string ramfile);
 			void configureMemory(MemoryMap* memory);
 			OperationMode getAutoOperationMode();
+			void save();
 
 		private:
+			std::string m_romfile;
+			std::string m_ramfile;
 			ROMMapping* m_romMapping;
 			MemoryMapping* m_ramMapping;
 	};

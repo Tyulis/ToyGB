@@ -2,18 +2,21 @@
 
 
 namespace toygb {
-	CartController::CartController(){
+	CartController::CartController() {
 		m_romMapping = nullptr;
 		m_ramMapping = nullptr;
 	}
 
-	CartController::~CartController(){
+	CartController::~CartController() {
 		if (m_romMapping != nullptr) delete m_romMapping;
 	}
 
-	void CartController::init(std::string romfile, std::string ramfile){
+	void CartController::init(std::string romfile, std::string ramfile) {
+		m_romfile = romfile;
+		m_ramfile = ramfile;
+
 		std::ifstream rom(romfile, std::ifstream::in | std::ifstream::binary);
-		if (!rom.is_open()){
+		if (!rom.is_open()) {
 			std::stringstream errstream;
 			errstream << "ROM file " << romfile << " not found";
 			throw EmulationError(errstream.str());
@@ -75,14 +78,22 @@ namespace toygb {
 		m_ramMapping = m_romMapping->getRAM();
 	}
 
-	void CartController::configureMemory(MemoryMap* memory){
+	void CartController::configureMemory(MemoryMap* memory) {
 		memory->add(ROM0_OFFSET, ROM0_OFFSET + ROM_SIZE - 1, m_romMapping);
-		if (m_ramMapping != nullptr){
+		if (m_ramMapping != nullptr) {
 			memory->add(SRAM_OFFSET, SRAM_OFFSET + SRAM_SIZE - 1, m_ramMapping);
 		}
 	}
 
 	OperationMode CartController::getAutoOperationMode() {
 		return m_romMapping->getAutoOperationMode();
+	}
+
+	void CartController::save() {
+		if (m_romMapping->hasBattery() && !m_ramfile.empty()){
+			std::ofstream savefile(m_ramfile, std::ofstream::out | std::ofstream::binary);
+			m_ramMapping->save(savefile);
+			savefile.close();
+		}
 	}
 }

@@ -18,7 +18,7 @@ namespace toygb {
 		m_romBankSelect = 1;
 		m_modeSelect = false;
 		if (m_ramData != nullptr){
-			m_ramMapping = new MBC1RAMMapping(&m_ramBankSelect, &m_modeSelect, SRAM_SIZE, m_ramData, false);
+			m_ramMapping = new MBC1RAMMapping(&m_ramBankSelect, &m_modeSelect, m_ramSize/SRAM_SIZE, SRAM_SIZE, m_ramData, false);
 		} else {
 			m_ramMapping = nullptr;
 		}
