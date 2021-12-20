@@ -7,7 +7,7 @@
 #define OFFSET_CONTROL  IO_CH2_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
+	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		wavePatternDuty = 0;
 		length = 0x3F;
 

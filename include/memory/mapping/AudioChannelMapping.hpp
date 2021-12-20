@@ -6,13 +6,14 @@
 #include "memory/Constants.hpp"
 #include "memory/MemoryMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
+#include "memory/mapping/AudioDebugMapping.hpp"
 #include "util/error.hpp"
 
 
 namespace toygb {
 	class AudioChannelMapping : public MemoryMapping {
 		public:
-			AudioChannelMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware);
+			AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware);
 
 			void update();
 			float* getBuffer();
@@ -37,6 +38,7 @@ namespace toygb {
 
 			int m_channel;
 			AudioControlMapping* m_control;
+			AudioDebugMapping* m_debug;
 			HardwareConfig m_hardware;
 
 			bool m_started;
@@ -49,7 +51,6 @@ namespace toygb {
 			int m_frameSequencerTimer;
 			int m_frameSequencer;
 			int m_outputTimerCounter;
-
 
 		private:
 			void onFrame(int frame);

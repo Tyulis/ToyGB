@@ -7,7 +7,7 @@
 #define OFFSET_CONTROL  IO_CH4_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
+	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		length = 0x3F;
 
 		initialEnvelopeVolume = 0;

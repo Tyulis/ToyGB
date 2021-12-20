@@ -8,7 +8,7 @@
 #define OFFSET_CONTROL  IO_CH1_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
+	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		sweepTime = 0;
 		sweepDirection = false;
 		sweepShift = 0;

@@ -11,11 +11,13 @@
 #include "memory/mapping/AudioWaveMapping.hpp"
 #include "memory/mapping/AudioNoiseMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
+#include "memory/mapping/AudioDebugMapping.hpp"
 #include "memory/mapping/WaveMemoryMapping.hpp"
 #include "util/component.hpp"
 
 
 namespace toygb {
+	/** Main audio controller, emulates the APU */
 	class AudioController {
 		public:
 			AudioController();
@@ -26,6 +28,11 @@ namespace toygb {
 
 			GBComponent run();
 
+			/** Read the samples for an audio buffer if available
+			 * If the amount of available samples is greater than audio/timing.hpp:OUTPUT_BUFFER_SAMPLES,
+			 * return true and fill the given buffer with the available samples
+			 * Otherwise, return false and clear the buffer.
+			 * The output is the fully mixed PCM16 audio data */
 			bool getSamples(int16_t* buffer);
 
 		private:
@@ -35,6 +42,7 @@ namespace toygb {
 
 			AudioChannelMapping* m_channels[4];
 			AudioControlMapping* m_control;
+			AudioDebugMapping* m_debug;
 			WaveMemoryMapping* m_wavePatternMapping;
 	};
 }

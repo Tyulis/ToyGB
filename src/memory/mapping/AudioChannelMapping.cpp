@@ -2,9 +2,10 @@
 
 
 namespace toygb {
-	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware){
+	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware){
 		m_channel = channel;
 		m_control = control;
+		m_debug = debug;
 		m_hardware = hardware;
 
 		m_started = false;
@@ -103,7 +104,9 @@ namespace toygb {
 	}
 
 	void AudioChannelMapping::outputSample(){
-		m_backBuffer[m_outputBufferIndex] = (m_started ? buildSample() : 0);
+		float sample = (m_started ? buildSample() : 0);
+		m_backBuffer[m_outputBufferIndex] = sample;
+		m_debug->setChannelAmplitude(m_channel, uint8_t(((sample + 1.0f) / 2) * 0x0F));
 
 		m_outputBufferIndex = (m_outputBufferIndex + 1) % OUTPUT_BUFFER_SAMPLES;
 		if (m_outputBufferIndex == 0){

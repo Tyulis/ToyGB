@@ -5,11 +5,12 @@
 #define CHANNEL_WAVE 2
 #define CHANNEL_NOISE 3
 
-
 #define SAMPLE_LOW (-2000)
 #define SAMPLE_HIGH (2000)
 
+
 namespace toygb {
+	// Constructor, only initialize with null values (the actual initialization is done by AudioController::init)
 	AudioController::AudioController() {
 		for (int i = 0; i < 4; i++)
 			m_channels[i] = nullptr;
@@ -30,18 +31,21 @@ namespace toygb {
 		}
 	}
 
-	void AudioController::init(HardwareConfig& hardware){
+	// Initialize the component
+	void AudioController::init(HardwareConfig& hardware) {
 		m_hardware = hardware;
 		m_wavePattern = new uint8_t[IO_WAVEPATTERN_SIZE];
 
 		m_wavePatternMapping = new WaveMemoryMapping(m_wavePattern, m_hardware);
 		m_control = new AudioControlMapping();
-		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_hardware);
-		m_channels[1] = new AudioToneMapping(1, m_control, m_hardware);
-		m_channels[2] = new AudioWaveMapping(2, m_control, m_wavePatternMapping, m_hardware);
-		m_channels[3] = new AudioNoiseMapping(3, m_control, m_hardware);
+		m_debug = new AudioDebugMapping(m_hardware);
+		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_debug, m_hardware);
+		m_channels[1] = new AudioToneMapping(1, m_control, m_debug, m_hardware);
+		m_channels[2] = new AudioWaveMapping(2, m_control, m_debug, m_wavePatternMapping, m_hardware);
+		m_channels[3] = new AudioNoiseMapping(3, m_control, m_debug, m_hardware);
 	}
 
+	// Configure the component's memory mappings
 	void AudioController::configureMemory(MemoryMap* memory) {
 		memory->add(IO_CH1_SWEEP, IO_CH1_CONTROL, m_channels[0]);
 		memory->add(IO_CH2_PATTERN, IO_CH2_CONTROL, m_channels[1]);
@@ -49,6 +53,7 @@ namespace toygb {
 		memory->add(IO_CH4_LENGTH, IO_CH4_CONTROL, m_channels[3]);
 		memory->add(IO_AUDIO_LEVELS, IO_AUDIO_ENABLE, m_control);
 		memory->add(IO_WAVEPATTERN_START, IO_WAVEPATTERN_END, m_wavePatternMapping);
+		memory->add(IO_UNDOCUMENTED_FF72, IO_PCM34, m_debug);
 	}
 
 #define dot() co_await std::suspend_always()
