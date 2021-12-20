@@ -2,10 +2,10 @@
 
 
 namespace toygb {
-	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, OperationMode mode){
+	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware){
 		m_channel = channel;
 		m_control = control;
-		m_mode = mode;
+		m_hardware = hardware;
 
 		m_started = false;
 		powered = true;

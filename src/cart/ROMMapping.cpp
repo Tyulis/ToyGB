@@ -13,8 +13,8 @@ namespace toygb {
 		if (m_ramData != nullptr) delete[] m_ramData;
 	}
 
-	OperationMode ROMMapping::getAutoOperationMode(){
-		return OperationMode::DMG;
+	HardwareConfig ROMMapping::getDefaultHardwareConfig() {
+		return HardwareConfig(OperationMode::DMG, ConsoleModel::DMG, SystemRevision::DMG_C);  // TODO
 		/* if (m_romdata[0x0143] & 0x80){
 			return OperationMode::CGB;
 		} else {

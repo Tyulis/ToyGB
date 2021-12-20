@@ -2,7 +2,7 @@
 #define _AUDIO_AUDIOCONTROLLER_HPP
 
 #include "core/timing.hpp"
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/mapping/AudioChannelMapping.hpp"
@@ -22,14 +22,14 @@ namespace toygb {
 			~AudioController();
 
 			void configureMemory(MemoryMap* memory);
-			void init(OperationMode mode);
+			void init(HardwareConfig& hardware);
 
 			GBComponent run();
 
 			bool getSamples(int16_t* buffer);
 
 		private:
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 
 			uint8_t* m_wavePattern;
 

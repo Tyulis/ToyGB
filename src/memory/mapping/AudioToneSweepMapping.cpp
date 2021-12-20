@@ -8,7 +8,7 @@
 #define OFFSET_CONTROL  IO_CH1_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
+	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
 		sweepTime = 0;
 		sweepDirection = false;
 		sweepShift = 0;
@@ -56,7 +56,7 @@ namespace toygb {
 	}
 
 	void AudioToneSweepMapping::set(uint16_t address, uint8_t value){
-		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_PATTERN)){
+		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_PATTERN)){
 			switch (address) {
 				case OFFSET_SWEEP:
 					sweepTime = (value >> 4) & 7;

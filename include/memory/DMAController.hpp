@@ -1,11 +1,11 @@
 #ifndef _MEMORY_DMACONTROLLER_HPP
 #define _MEMORY_DMACONTROLLER_HPP
 
-#include "util/error.hpp"
-#include "util/component.hpp"
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/mapping/OAMDMAMapping.hpp"
+#include "util/error.hpp"
+#include "util/component.hpp"
 
 
 namespace toygb {
@@ -15,14 +15,14 @@ namespace toygb {
 			~DMAController();
 
 			void configureMemory(MemoryMap* memory);
-			void init(OperationMode mode);
+			void init(HardwareConfig& hardware);
 
 			GBComponent run(MemoryMap* memory);
 
 			bool isOAMDMAActive();
 
 		private:
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 			OAMDMAMapping* m_oamDmaMapping;
 	};
 }

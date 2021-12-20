@@ -11,8 +11,8 @@ namespace toygb {
 		if (m_register != nullptr) delete m_register;
 	}
 
-	void JoypadController::init(OperationMode mode, InterruptVector* interrupt){
-		m_mode = mode;
+	void JoypadController::init(HardwareConfig& hardware, InterruptVector* interrupt){
+		m_hardware = hardware;
 		m_interrupt = interrupt;
 		m_register = new JoypadMapping();
 	}

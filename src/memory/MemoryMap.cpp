@@ -116,6 +116,11 @@ namespace toygb {
 		}
 	}
 
+	MemoryMapping* MemoryMap::getMapping(uint16_t address){
+		MemoryMap::Node* node = getNode(address);
+		return node->mapping;
+	}
+
 	// MemoryMap::Node
 
 	MemoryMap::Node::Node(){

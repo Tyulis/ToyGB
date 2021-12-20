@@ -2,7 +2,7 @@
 #define _MEMORY_MAPPING_AUDIOCHANNELMAPPING_HPP
 
 #include "audio/timing.hpp"
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMapping.hpp"
 #include "memory/mapping/AudioControlMapping.hpp"
@@ -12,7 +12,7 @@
 namespace toygb {
 	class AudioChannelMapping : public MemoryMapping {
 		public:
-			AudioChannelMapping(int channel, AudioControlMapping* control, OperationMode mode);
+			AudioChannelMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware);
 
 			void update();
 			float* getBuffer();
@@ -37,7 +37,7 @@ namespace toygb {
 
 			int m_channel;
 			AudioControlMapping* m_control;
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 
 			bool m_started;
 

@@ -50,23 +50,28 @@ namespace toygb {
 		m_oamMapping = nullptr;
 	}
 
-	void LCDController::init(OperationMode mode, InterruptVector* interrupt){
-		m_mode = mode;
+	void LCDController::init(HardwareConfig& hardware, InterruptVector* interrupt){
+		m_hardware = hardware;
 		m_interrupt = interrupt;
 
 		m_oam = new uint8_t[OAM_SIZE];
 		for (int i = 0; i < OAM_SIZE; i++) m_oam[i] = 0;
 
-		if (mode == OperationMode::DMG) {
-			m_vram = new uint8_t[VRAM_SIZE];
-			for (int i = 0; i < VRAM_SIZE; i++) m_vram[i] = 0;
-		} else if (mode == OperationMode::CGB){
-			m_vram = new uint8_t[VRAM_BANK_SIZE * VRAM_BANK_NUM];
-			for (int i = 0; i < VRAM_BANK_SIZE * VRAM_BANK_NUM; i++) m_vram[i] = 0;
+		switch (hardware.mode()){
+			case OperationMode::DMG:
+				m_vram = new uint8_t[VRAM_SIZE];
+				for (int i = 0; i < VRAM_SIZE; i++) m_vram[i] = 0;
+				break;
+			case OperationMode::CGB:
+				m_vram = new uint8_t[VRAM_BANK_SIZE * VRAM_BANK_NUM];
+				for (int i = 0; i < VRAM_BANK_SIZE * VRAM_BANK_NUM; i++) m_vram[i] = 0;
+				break;
+			case OperationMode::Auto:
+				throw EmulationError("OperationMode::Auto given to LCD controller");
 		}
 		m_vramBank = 0;
 
-		m_oamMapping = new OAMMapping(mode, m_oam);
+		m_oamMapping = new OAMMapping(hardware, m_oam);
 		m_lcdControl = new LCDControlMapping();
 		m_dmgPalette = new DMGPaletteMapping();
 	}
@@ -76,17 +81,24 @@ namespace toygb {
 		memory->add(IO_LCD_CONTROL, IO_COORD_COMPARE, m_lcdControl);
 		memory->add(IO_BG_PALETTE, IO_WINDOW_X, m_dmgPalette);
 
-		if (m_mode == OperationMode::DMG){
-			m_vramMapping = new LCDMemoryMapping(m_vram);
-		} else if (m_mode == OperationMode::CGB){
-			m_hdma = new HDMAMapping();
-			m_cgbPalette = new CGBPaletteMapping();
-			m_vramBankMapping = new VRAMBankSelectMapping(&m_vramBank);
-			m_vramMapping = new LCDBankedMemoryMapping(&m_vramBank, VRAM_BANK_SIZE, m_vram);
+		switch (m_hardware.mode()){
+			case OperationMode::DMG:
+				m_vramMapping = new LCDMemoryMapping(m_vram);
+				break;
 
-			memory->add(IO_HDMA_SOURCELOW, IO_HDMA_SETTINGS, m_hdma);
-			memory->add(IO_BGPALETTE_INDEX, IO_OBJPALETTE_DATA, m_cgbPalette);
-			memory->add(IO_VRAM_BANK, IO_VRAM_BANK, m_vramBankMapping);
+			case OperationMode::CGB:
+				m_hdma = new HDMAMapping();
+				m_cgbPalette = new CGBPaletteMapping();
+				m_vramBankMapping = new VRAMBankSelectMapping(&m_vramBank);
+				m_vramMapping = new LCDBankedMemoryMapping(&m_vramBank, VRAM_BANK_SIZE, m_vram);
+
+				memory->add(IO_HDMA_SOURCELOW, IO_HDMA_SETTINGS, m_hdma);
+				memory->add(IO_BGPALETTE_INDEX, IO_OBJPALETTE_DATA, m_cgbPalette);
+				memory->add(IO_VRAM_BANK, IO_VRAM_BANK, m_vramBankMapping);
+				break;
+
+			case OperationMode::Auto:
+				throw EmulationError("OperationMode::Auto given to LCD controller");
 		}
 		memory->add(VRAM_OFFSET, VRAM_OFFSET + VRAM_SIZE - 1, m_vramMapping);
 	}
@@ -98,7 +110,7 @@ namespace toygb {
 		m_backBuffer = new uint16_t[LCD_WIDTH * LCD_HEIGHT];
 		std::deque<uint16_t> selectedSprites;
 
-		LCDController::ObjectSelectionComparator objComparator(m_mode, m_oamMapping);
+		LCDController::ObjectSelectionComparator objComparator(m_hardware, m_oamMapping);
 		while (true){
 			if (m_lcdControl->displayEnable){
 				uint16_t* tmp = m_frontBuffer;
@@ -197,7 +209,7 @@ namespace toygb {
 						// Fetch sprites
 						// std::cout << m_lcdControl->objectEnable << std::endl;
 						if (m_lcdControl->objectEnable){
-							bool pushSprite = objectQueue.empty() || (m_mode == OperationMode::CGB && selectedSprites.front() < objectQueue.front().oamAddress);
+							bool pushSprite = objectQueue.empty() || (m_hardware.mode() == OperationMode::CGB && selectedSprites.front() < objectQueue.front().oamAddress);
 							if (pushSprite){
 								objectQueue.clear();
 								uint16_t spriteToPush;
@@ -208,16 +220,20 @@ namespace toygb {
 								}
 
 								if (!selectedSprites.empty() && x >= m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 && x < m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 + 8){
-									if (m_mode == OperationMode::DMG){
-										spriteToPush = selectedSprites.front();
-										//std::cout << "pop " << oh16(selectedSprites.front()) << " at (" << x << ", " << line << "), OAM " << "(" << m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 << ", " << m_oamMapping->lcdGet(selectedSprites.front()) - 16 << ")"  << std::endl;
-										selectedSprites.pop_front();
-									} else if (m_mode == OperationMode::CGB) {
-										spriteToPush = selectedSprites.front();
-										for (std::deque<uint16_t>::iterator it = selectedSprites.begin() + 1; it != selectedSprites.end() && m_oamMapping->lcdGet(*it + 1) - 8 < x + 8; it++){
-											if (*it < spriteToPush)
-												spriteToPush = *it;
-										}
+									switch (m_hardware.mode()){
+										case OperationMode::DMG:
+											spriteToPush = selectedSprites.front();
+											selectedSprites.pop_front();
+											break;
+										case OperationMode::CGB:
+											spriteToPush = selectedSprites.front();
+											for (std::deque<uint16_t>::iterator it = selectedSprites.begin() + 1; it != selectedSprites.end() && m_oamMapping->lcdGet(*it + 1) - 8 < x + 8; it++){
+												if (*it < spriteToPush)
+													spriteToPush = *it;
+											}
+											break;
+										case OperationMode::Auto:
+											throw EmulationError("OperationMode::Auto given to LCD controller");
 									}
 									dot(); hblankDuration -= 1;
 
@@ -255,12 +271,19 @@ namespace toygb {
 										} else {
 											color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
 										}
+
 										uint8_t palette;
-										if (m_mode == OperationMode::CGB){
-											palette = control & 7;
-										} else if (m_mode == OperationMode::DMG){
-											palette = (control >> 4) & 1;
+										switch (m_hardware.mode()){
+											case OperationMode::DMG:
+												palette = (control >> 4) & 1;
+												break;
+											case OperationMode::CGB:
+												palette = control & 7;
+												break;
+											case OperationMode::Auto:
+												throw EmulationError("OperationMode::Auto given to LCD controller");
 										}
+
 										LCDController::Pixel pixel(color, palette, spriteToPush, (control >> 7) & 1);
 										objectQueue.push_back(pixel);
 									}
@@ -278,7 +301,7 @@ namespace toygb {
 						backgroundQueue.pop_front();
 
 						uint8_t colorValue;
-						if (m_mode == OperationMode::DMG && !m_lcdControl->backgroundDisplay){
+						if (m_hardware.mode() == OperationMode::DMG && !m_lcdControl->backgroundDisplay){
 							colorValue = COLORVALUE_BLANK;
 						} else {
 							colorValue = backgroundPixel.color;
@@ -311,7 +334,7 @@ namespace toygb {
 						uint16_t colorResult;
 						if (colorValue == COLORVALUE_BLANK){
 							colorResult = COLOR_BLANK;
-						} else if (m_mode == OperationMode::DMG){
+						} else if (m_hardware.mode() == OperationMode::DMG){
 							if (colorPalette == BACKGROUND_PALETTE){
 								colorResult = DMG_PALETTE[m_dmgPalette->backgroundPalette[colorValue]];
 							} else if (colorPalette == 0){
@@ -319,7 +342,7 @@ namespace toygb {
 							} else if (colorPalette == 1){
 								colorResult = DMG_PALETTE[m_dmgPalette->objectPalette1[colorValue]];
 							}
-						} else if (m_mode == OperationMode::CGB) {
+						} else if (m_hardware.mode() == OperationMode::CGB) {
 							int paletteIndex = colorPalette * 4 + colorValue;
 							if (elementIndex == BACKGROUND_INDEX){
 								colorResult = m_cgbPalette->backgroundPalettes[paletteIndex];
@@ -385,8 +408,8 @@ namespace toygb {
 
 	// LCDController::ObjectSelectionComparator
 
-	LCDController::ObjectSelectionComparator::ObjectSelectionComparator(OperationMode mode, LCDMemoryMapping* oam){
-		m_mode = mode;
+	LCDController::ObjectSelectionComparator::ObjectSelectionComparator(HardwareConfig& hardware, LCDMemoryMapping* oam){
+		m_hardware = hardware;
 		m_oamMapping = oam;
 	}
 

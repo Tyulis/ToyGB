@@ -85,8 +85,8 @@ namespace toygb {
 		}
 	}
 
-	OperationMode CartController::getAutoOperationMode() {
-		return m_romMapping->getAutoOperationMode();
+	HardwareConfig CartController::getDefaultHardwareConfig() {
+		return m_romMapping->getDefaultHardwareConfig();
 	}
 
 	void CartController::save() {

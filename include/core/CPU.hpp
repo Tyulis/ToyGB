@@ -3,8 +3,8 @@
 
 #include "util/component.hpp"
 #include "core/timing.hpp"
+#include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
-#include "core/OperationMode.hpp"
 #include "memory/MemoryMapping.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/Constants.hpp"
@@ -24,7 +24,7 @@ namespace toygb {
 			~CPU();
 
 			void configureMemory(MemoryMap* memory);
-			void init(OperationMode mode, InterruptVector* interrupt);
+			void init(HardwareConfig& hardware, InterruptVector* interrupt);
 
 			GBComponent run(MemoryMap* memory, DMAController* dma);
 
@@ -47,7 +47,7 @@ namespace toygb {
 			MemoryMap* m_memory;
 			DMAController* m_dma;
 			InterruptVector* m_interrupt;
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 
 			uint8_t* m_wram;
 			uint8_t* m_hram;

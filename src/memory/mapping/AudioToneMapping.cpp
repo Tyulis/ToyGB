@@ -7,7 +7,7 @@
 #define OFFSET_CONTROL  IO_CH2_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
+	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
 		wavePatternDuty = 0;
 		length = 0x3F;
 
@@ -41,7 +41,7 @@ namespace toygb {
 	}
 
 	void AudioToneMapping::set(uint16_t address, uint8_t value){
-		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_PATTERN)){
+		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_PATTERN)){
 			switch (address) {
 				case OFFSET_PATTERN:
 					if (powered)

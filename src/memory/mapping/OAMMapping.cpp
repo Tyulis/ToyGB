@@ -5,14 +5,13 @@
 #define OFFSET_FEC0 0x00C0
 
 namespace toygb {
-	OAMMapping::OAMMapping(OperationMode mode, uint8_t* array) : LCDMemoryMapping(array){
-		m_mode = mode;
+	OAMMapping::OAMMapping(HardwareConfig& hardware, uint8_t* array) : LCDMemoryMapping(array){
+		m_hardware = hardware;
 		m_fea0 = nullptr;
 		m_fec0 = nullptr;
 
-		// FIXME : Only on revisions < E
-		if (mode == OperationMode::CGB){
-			// FIXME : From The Cycle-Accurate Gameboy Documentation, by Antonio Niño Díaz (AntonioND)
+		if (hardware.isCGBConsole()){
+			// From The Cycle-Accurate Gameboy Documentation, by Antonio Niño Díaz (AntonioND)
 			// Only verified on revision D, probably variable between revisions
 			m_fea0 = new uint8_t[32];
 			for (int i = 0; i < 32; i++) m_fea0[i] = 0;
@@ -34,12 +33,13 @@ namespace toygb {
 		if (address < OFFSET_UNUSED){
 			return m_array[address];
 		} else {  // Unused 0xFEA0-0xFEFF area
-			if (m_mode == OperationMode::DMG){
+			// FIXME : Not verified on SGB ?
+			if (m_hardware.isDMGConsole() || m_hardware.isSGBConsole()){
 				return 0x00;
-			} else if (m_mode == OperationMode::CGB){  // FIXME
+			} else if (m_hardware.isCGBConsole() && m_hardware.system() != SystemRevision::CGB_E){  // CGB revision <D
 				if (address < OFFSET_FEC0) return m_fea0[address - OFFSET_UNUSED];
 				else return m_fec0[(address - OFFSET_FEC0) % 16];
-			} else if (m_mode == OperationMode::AGB){  // FIXME : Also for CGB revision E
+			} else if (m_hardware.isAGBConsole() || (m_hardware.isCGBConsole() && m_hardware.system() == SystemRevision::CGB_E)){  // AGB and CGB-E
 				uint8_t nibble = (address >> 4) & 0x0F;
 				return nibble | (nibble << 4);
 			} else {
@@ -52,7 +52,7 @@ namespace toygb {
 		if (accessible){
 			if (address < OFFSET_UNUSED){
 				m_array[address] = value;
-			} else if (m_mode == OperationMode::CGB) {
+			} else if (m_hardware.isCGBConsole() && m_hardware.system() != SystemRevision::CGB_E){  // CGB revision <D
 				if (address < OFFSET_FEC0) m_fea0[address - OFFSET_UNUSED] = value;
 				else m_fec0[(address - OFFSET_FEC0) % 16] = value;
 			}

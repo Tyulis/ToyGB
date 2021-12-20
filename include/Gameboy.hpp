@@ -8,8 +8,8 @@
 #include "GameboyConfig.hpp"
 #include "core/CPU.hpp"
 #include "core/timing.hpp"
+#include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
-#include "core/OperationMode.hpp"
 #include "cart/CartController.hpp"
 #include "graphics/LCDController.hpp"
 #include "audio/AudioController.hpp"
@@ -25,8 +25,6 @@ namespace toygb {
 	class Gameboy {
 		public:
 			Gameboy(GameboyConfig& config);
-
-			void init(OperationMode mode);
 			void main();
 
 		private:
@@ -40,7 +38,7 @@ namespace toygb {
 			SerialController m_serial;
 			DMAController m_dma;
 
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 			MemoryMap m_memory;
 			Interface m_interface;
 	};

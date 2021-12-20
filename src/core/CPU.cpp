@@ -48,6 +48,7 @@ namespace toygb {
 
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
+		m_wramBankMapping = nullptr;
 		m_hramMapping = nullptr;
 	}
 
@@ -57,35 +58,44 @@ namespace toygb {
 
 		if (m_hramMapping != nullptr) delete m_hramMapping;
 		if (m_wramMapping != nullptr) delete m_wramMapping;
+		if (m_wramBankMapping != nullptr) delete m_wramBankMapping;
 		if (m_timer != nullptr) delete m_timer;
 	}
 
-	void CPU::init(OperationMode mode, InterruptVector* interrupt){
-		m_mode = mode;
+	void CPU::init(HardwareConfig& hardware, InterruptVector* interrupt){
+		m_hardware = hardware;
 		m_interrupt = interrupt;
 		m_hram = new uint8_t[HRAM_SIZE];
 
-		if (mode == OperationMode::DMG){
-			m_wram = new uint8_t[WRAM_SIZE];
-		} else if (mode == OperationMode::CGB) {
-			m_wram = new uint8_t[WRAM_BANK_SIZE * WRAM_BANK_NUM];
+		switch (hardware.mode()){
+			case OperationMode::DMG:
+				m_wram = new uint8_t[WRAM_SIZE]; break;
+			case OperationMode::CGB:
+				m_wram = new uint8_t[WRAM_BANK_SIZE * WRAM_BANK_NUM]; break;
+			case OperationMode::Auto:
+				throw EmulationError("OperationMode::Auto given to CPU");
 		}
 
 		m_hramMapping = new ArrayMemoryMapping(m_hram);
-		if (m_mode == OperationMode::DMG){
-			m_wramMapping = new ArrayMemoryMapping(m_wram);
-		} else if (m_mode == OperationMode::CGB) {
-			m_wramBankMapping = new WRAMBankSelectMapping(&m_wramBank);
-			m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_NUM, WRAM_BANK_SIZE, m_wram, true);
+		switch (hardware.mode()){
+			case OperationMode::DMG:
+				m_wramMapping = new ArrayMemoryMapping(m_wram);
+				break;
+			case OperationMode::CGB:
+				m_wramBankMapping = new WRAMBankSelectMapping(&m_wramBank);
+				m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_NUM, WRAM_BANK_SIZE, m_wram, true);
+				break;
+			case OperationMode::Auto:
+				throw EmulationError("OperationMode::Auto given to CPU");
 		}
 
-		m_timer = new TimerMapping(mode, interrupt);
+		m_timer = new TimerMapping(hardware, interrupt);
 	}
 
 	void CPU::configureMemory(MemoryMap* memory) {
 		memory->add(HRAM_OFFSET, HRAM_OFFSET + HRAM_SIZE - 1, m_hramMapping);
 
-		if (m_mode == OperationMode::CGB) {
+		if (m_hardware.mode() == OperationMode::CGB) {
 			memory->add(IO_WRAM_BANK, IO_WRAM_BANK, m_wramBankMapping);
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
@@ -567,42 +577,79 @@ namespace toygb {
 	}
 
 	void CPU::initRegisters(){
-		switch (m_mode){
-			case OperationMode::DMG:
-				reg_a = 0x01; reg_f = 0xB0;
+		// Defaults set when no bootrom is specified.
+		// TODO : add bootrom support
+		reg_sp = 0xFFFE;
+		m_pc = 0x0100;
+		switch (m_hardware.console()){
+			case ConsoleModel::DMG:
+				if (m_hardware.system() == SystemRevision::DMG_0){
+					reg_a = 0x01; reg_f = 0x00;
+					reg_b = 0xFF; reg_c = 0x13;
+					reg_d = 0x00; reg_e = 0xC1;
+					reg_h = 0x84; reg_l = 0x03;
+				} else {
+					reg_a = 0x01; reg_f = 0x80;  // f is 10??0000
+					reg_b = 0x00; reg_c = 0x13;
+					reg_d = 0x00; reg_e = 0xD8;
+					reg_h = 0x01; reg_l = 0x4D;
+				}
+				break;
+
+			case ConsoleModel::MGB:
+				reg_a = 0xFF; reg_f = 0x80;  // f is 10??0000
 				reg_b = 0x00; reg_c = 0x13;
 				reg_d = 0x00; reg_e = 0xD8;
 				reg_h = 0x01; reg_l = 0x4D;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
 				break;
-			case OperationMode::SGB:
+
+			case ConsoleModel::SGB:
 				reg_a = 0x01; reg_f = 0x00;
 				reg_b = 0x00; reg_c = 0x14;
 				reg_d = 0x00; reg_e = 0x00;
 				reg_h = 0xC0; reg_l = 0x60;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
 				break;
-			case OperationMode::CGB:
-				reg_a = 0x11; reg_f = 0x80;
-				reg_b = 0x00; reg_c = 0x00;
-				reg_d = 0xFF; reg_e = 0x56;
-				reg_h = 0x00; reg_l = 0x0D;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
+
+			case ConsoleModel::SGB2:
+				reg_a = 0xFF; reg_f = 0x00;
+				reg_b = 0x00; reg_c = 0x14;
+				reg_d = 0x00; reg_e = 0x00;
+				reg_h = 0xC0; reg_l = 0x60;
 				break;
-			case OperationMode::AGB:
-				reg_a = 0x11; reg_f = 0x00;
-				reg_b = 0x01; reg_c = 0x00;
-				reg_d = 0xFF; reg_e = 0x56;
-				reg_h = 0x00; reg_l = 0x0D;
-				reg_sp = 0xFFFE;
-				m_pc = 0x0100;
+
+			case ConsoleModel::CGB:
+				if (m_hardware.mode() == OperationMode::DMG){
+					reg_a = 0x11; reg_f = 0x80;
+					reg_b = 0x00; reg_c = 0x00;  // b depends on the cartridge
+					reg_d = 0x00; reg_e = 0x08;
+					reg_h = 0x00; reg_l = 0x7C;  // May be 0x991A in some cases
+				} else {
+					reg_a = 0x11; reg_f = 0x80;
+					reg_b = 0x00; reg_c = 0x00;
+					reg_d = 0xFF; reg_e = 0x56;
+					reg_h = 0x00; reg_l = 0x0D;
+				}
 				break;
-			case OperationMode::Auto:
-				throw EmulationError("OperationMode::Auto given to CPU");
+
+			case ConsoleModel::AGB:
+			case ConsoleModel::AGS:
+			case ConsoleModel::GBP:
+				if (m_hardware.mode() == OperationMode::DMG){
+					reg_a = 0x11; reg_f = 0x00;  // f depends on the cartridge
+					reg_b = 0x01; reg_c = 0x00;  // b depends on the cartridge
+					reg_d = 0x00; reg_e = 0x08;
+					reg_h = 0x00; reg_l = 0x7C;  // May be 0x991A in some cases
+				} else {
+					reg_a = 0x11; reg_f = 0x00;
+					reg_b = 0x01; reg_c = 0x00;
+					reg_d = 0xFF; reg_e = 0x56;
+					reg_h = 0x00; reg_l = 0x0D;
+				}
+				break;
+			case ConsoleModel::Auto:
+				throw EmulationError("ConsoleModel::Auto given to CPU");
 		}
+
 		m_ei_scheduled = false;
 		m_haltBug = false;
 		m_halted = false;

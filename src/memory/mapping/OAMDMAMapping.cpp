@@ -2,9 +2,9 @@
 
 
 namespace toygb {
-	OAMDMAMapping::OAMDMAMapping(OperationMode mode){
-		m_mode = mode;
-		sourceAddress = (mode == OperationMode::CGB)? 0x00 : 0xFF;
+	OAMDMAMapping::OAMDMAMapping(HardwareConfig& hardware){
+		m_hardware = hardware;
+		sourceAddress = hardware.isCGBCapable() ? 0x00 : 0xFF;
 		active = false;
 	}
 

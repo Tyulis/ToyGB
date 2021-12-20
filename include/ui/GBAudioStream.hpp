@@ -12,6 +12,7 @@ namespace toygb {
 	class GBAudioStream : public sf::SoundStream {
 		public:
 			GBAudioStream();
+			~GBAudioStream();
 
 			void init(AudioController* controller);
 

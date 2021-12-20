@@ -30,16 +30,16 @@ namespace toygb {
 		}
 	}
 
-	void AudioController::init(OperationMode mode){
-		m_mode = mode;
+	void AudioController::init(HardwareConfig& hardware){
+		m_hardware = hardware;
 		m_wavePattern = new uint8_t[IO_WAVEPATTERN_SIZE];
 
-		m_wavePatternMapping = new WaveMemoryMapping(m_wavePattern, m_mode);
+		m_wavePatternMapping = new WaveMemoryMapping(m_wavePattern, m_hardware);
 		m_control = new AudioControlMapping();
-		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_mode);
-		m_channels[1] = new AudioToneMapping(1, m_control, m_mode);
-		m_channels[2] = new AudioWaveMapping(2, m_control, m_wavePatternMapping, m_mode);
-		m_channels[3] = new AudioNoiseMapping(3, m_control, m_mode);
+		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_hardware);
+		m_channels[1] = new AudioToneMapping(1, m_control, m_hardware);
+		m_channels[2] = new AudioWaveMapping(2, m_control, m_wavePatternMapping, m_hardware);
+		m_channels[3] = new AudioNoiseMapping(3, m_control, m_hardware);
 	}
 
 	void AudioController::configureMemory(MemoryMap* memory) {
@@ -73,6 +73,9 @@ namespace toygb {
 	bool AudioController::getSamples(int16_t* buffer){
 		for (int i = 0; i < 2*OUTPUT_BUFFER_SAMPLES; i++)
 			buffer[i] = 0;
+
+		if (!m_control->audioEnable)
+			return true;
 
 		float* channelBuffers[4];
 		for (int channel = 0; channel < 4; channel++){

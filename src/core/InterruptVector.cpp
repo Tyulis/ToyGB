@@ -6,9 +6,9 @@ namespace toygb {
 
 	}
 
-	void InterruptVector::init(OperationMode mode) {
-		m_enable = new InterruptRegisterMapping();
-		m_request = new InterruptRegisterMapping();
+	void InterruptVector::init(HardwareConfig& hardware) {
+		m_enable = new InterruptRegisterMapping(true);
+		m_request = new InterruptRegisterMapping(false);
 		m_master = true;
 	}
 

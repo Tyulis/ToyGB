@@ -1,4 +1,5 @@
 #include "ui/Interface.hpp"
+#include <iostream>
 
 #define PIXEL_SIZE 4
 #define WINDOW_WIDTH LCD_WIDTH*PIXEL_SIZE
@@ -33,13 +34,6 @@ namespace toygb {
 		window.setFramerateLimit(60);
 		while (window.isOpen()) {
 			sf::Event event;
-			while (window.pollEvent(event)) {
-				if (event.type == sf::Event::Closed){
-					window.close();
-					m_audioStream.stop();
-					m_stopping = true;
-				}
-			}
 
 			updateJoypad();
 			updateGraphics(pixels);
@@ -49,14 +43,23 @@ namespace toygb {
 			window.clear();
 			window.draw(screen);
 			window.display();
+
+			while (window.pollEvent(event)) {
+				if (event.type == sf::Event::Closed){
+					window.close();
+					m_audioStream.stop();
+					m_stopping = true;
+					break;
+				}
+			}
 		}
 	}
 
 	void Interface::updateJoypad(){
-		m_joypad->setButton(JoypadButton::Up, sf::Keyboard::isKeyPressed(sf::Keyboard::Up));
-		m_joypad->setButton(JoypadButton::Down, sf::Keyboard::isKeyPressed(sf::Keyboard::Down));
-		m_joypad->setButton(JoypadButton::Left, sf::Keyboard::isKeyPressed(sf::Keyboard::Left));
-		m_joypad->setButton(JoypadButton::Right, sf::Keyboard::isKeyPressed(sf::Keyboard::Right));
+		m_joypad->setButton(JoypadButton::Up, sf::Keyboard::isKeyPressed(sf::Keyboard::Z));
+		m_joypad->setButton(JoypadButton::Down, sf::Keyboard::isKeyPressed(sf::Keyboard::S));
+		m_joypad->setButton(JoypadButton::Left, sf::Keyboard::isKeyPressed(sf::Keyboard::Q));
+		m_joypad->setButton(JoypadButton::Right, sf::Keyboard::isKeyPressed(sf::Keyboard::D));
 		m_joypad->setButton(JoypadButton::A, sf::Keyboard::isKeyPressed(sf::Keyboard::K));
 		m_joypad->setButton(JoypadButton::B, sf::Keyboard::isKeyPressed(sf::Keyboard::L));
 		m_joypad->setButton(JoypadButton::Start, sf::Keyboard::isKeyPressed(sf::Keyboard::O));

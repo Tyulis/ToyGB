@@ -10,9 +10,9 @@ namespace toygb {
 		if (m_oamDmaMapping != nullptr) delete m_oamDmaMapping;
 	}
 
-	void DMAController::init(OperationMode mode){
-		m_mode = mode;
-		m_oamDmaMapping = new OAMDMAMapping(mode);
+	void DMAController::init(HardwareConfig& hardware){
+		m_hardware = hardware;
+		m_oamDmaMapping = new OAMDMAMapping(hardware);
 	}
 
 	void DMAController::configureMemory(MemoryMap* memory){

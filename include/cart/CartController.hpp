@@ -3,7 +3,8 @@
 
 #include <fstream>
 #include <string>
-#include "core/OperationMode.hpp"
+
+#include "core/hardware.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
 
@@ -25,7 +26,7 @@ namespace toygb {
 
 			void init(std::string romfile, std::string ramfile);
 			void configureMemory(MemoryMap* memory);
-			OperationMode getAutoOperationMode();
+			HardwareConfig getDefaultHardwareConfig();
 			void save();
 
 		private:

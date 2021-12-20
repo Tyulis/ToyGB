@@ -1,7 +1,7 @@
 #ifndef _MEMORY_MAPPING_TIMERMAPPING_HPP
 #define _MEMORY_MAPPING_TIMERMAPPING_HPP
 
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMapping.hpp"
@@ -11,7 +11,7 @@
 namespace toygb {
 	class TimerMapping : public MemoryMapping {
 		public:
-			TimerMapping(OperationMode mode, InterruptVector* interrupt);
+			TimerMapping(HardwareConfig& hardware, InterruptVector* interrupt);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -27,7 +27,7 @@ namespace toygb {
 		private:
 			void checkTimerIncrements(uint16_t previousValue, uint16_t newValue);
 
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 			InterruptVector* m_interrupt;
 
 			uint16_t m_internalCounter;

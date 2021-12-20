@@ -5,8 +5,8 @@
 #define WAVE_NOT_READABLE 0xFFFF
 
 namespace toygb {
-	WaveMemoryMapping::WaveMemoryMapping(uint8_t* array, OperationMode mode) : ArrayMemoryMapping(array) {
-		m_mode = mode;
+	WaveMemoryMapping::WaveMemoryMapping(uint8_t* array, HardwareConfig& hardware) : ArrayMemoryMapping(array) {
+		m_hardware = hardware;
 		m_playing = false;
 		m_readIndex = WAVE_NOT_READABLE;
 		m_readCounter = 0;

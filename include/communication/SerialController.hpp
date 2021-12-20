@@ -2,7 +2,7 @@
 #define _COMMUNICATION_SERIALCONTROLLER_HPP
 
 #include "util/error.hpp"
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
@@ -15,11 +15,11 @@ namespace toygb {
 			SerialController();
 			~SerialController();
 
-			void init(OperationMode mode, InterruptVector* interrupt);
+			void init(HardwareConfig& hardware, InterruptVector* interrupt);
 			void configureMemory(MemoryMap* memory);
 
 		private:
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 			InterruptVector* m_interrupt;
 			SerialTransferMapping* m_mapping;
 

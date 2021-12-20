@@ -5,6 +5,11 @@ namespace toygb {
 		m_sampleBuffer = new int16_t[2*OUTPUT_BUFFER_SAMPLES];
 	}
 
+	GBAudioStream::~GBAudioStream() {
+		if (m_sampleBuffer != nullptr) delete[] m_sampleBuffer;
+		m_sampleBuffer = nullptr;
+	}
+
 	void GBAudioStream::init(AudioController* controller){
 		m_controller = controller;
 		initialize(2, OUTPUT_SAMPLE_FREQUENCY);

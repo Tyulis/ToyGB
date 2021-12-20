@@ -27,6 +27,8 @@ namespace toygb {
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
 
+			MemoryMapping* getMapping(uint16_t address);
+
 			class Node {
 				public:
 					Node();

@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "core/hardware.hpp"
+
 namespace toygb {
 	class GameboyConfig {
 		public:
@@ -10,6 +12,11 @@ namespace toygb {
 
 			std::string romfile;
 			std::string ramfile;
+
+			ConsoleModel console;
+			OperationMode mode;
+			SystemRevision system;
+
 			bool disassemble;
 	};
 }

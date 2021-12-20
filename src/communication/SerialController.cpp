@@ -10,10 +10,10 @@ namespace toygb {
 		if (m_mapping != nullptr) delete m_mapping;
 	}
 
-	void SerialController::init(OperationMode mode, InterruptVector* interrupt){
-		m_mode = mode;
+	void SerialController::init(HardwareConfig& hardware, InterruptVector* interrupt){
+		m_hardware = hardware;
 		m_interrupt = interrupt;
-		m_mapping = new SerialTransferMapping(mode);
+		m_mapping = new SerialTransferMapping(hardware);
 	}
 
 	void SerialController::configureMemory(MemoryMap* memory) {

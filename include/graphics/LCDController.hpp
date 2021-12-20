@@ -7,7 +7,7 @@
 
 #include "util/component.hpp"
 #include "core/timing.hpp"
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/mapping/OAMMapping.hpp"
@@ -31,7 +31,7 @@ namespace toygb {
 
 			void configureMemory(MemoryMap* memory);
 
-			void init(OperationMode mode, InterruptVector* interrupt);
+			void init(HardwareConfig& hardware, InterruptVector* interrupt);
 			GBComponent run();
 
 			uint16_t* pixels();
@@ -39,11 +39,11 @@ namespace toygb {
 		private:
 			class ObjectSelectionComparator {
 				public:
-					ObjectSelectionComparator(OperationMode mode, LCDMemoryMapping* oam);
+					ObjectSelectionComparator(HardwareConfig& hardware, LCDMemoryMapping* oam);
 					bool operator()(const uint16_t& address1, const uint16_t& address2);
 
 				private:
-					OperationMode m_mode;
+					HardwareConfig m_hardware;
 					LCDMemoryMapping* m_oamMapping;
 			};
 
@@ -72,7 +72,7 @@ namespace toygb {
 			bool runObjectFetcher(int line, int dot);
 			void renderPixel(int line, int dot);
 
-			OperationMode m_mode;
+			HardwareConfig m_hardware;
 			InterruptVector* m_interrupt;
 
 			HDMAMapping* m_hdma;

@@ -7,7 +7,7 @@
 #define OFFSET_CONTROL  IO_CH4_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
+	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
 		length = 0x3F;
 
 		initialEnvelopeVolume = 0;
@@ -45,7 +45,7 @@ namespace toygb {
 	}
 
 	void AudioNoiseMapping::set(uint16_t address, uint8_t value){
-		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
+		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_LENGTH)){
 			switch (address) {
 				case OFFSET_LENGTH: length = 64 - (value & 0x3F); break;
 				case OFFSET_ENVELOPE:

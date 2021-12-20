@@ -4,25 +4,37 @@
 namespace toygb {
 	Gameboy::Gameboy(GameboyConfig& config):
 		m_config(config), m_cpu(config.disassemble), m_lcd(),
-		m_interrupt(), m_audio(), m_cart(), m_serial(), m_dma(){
+		m_interrupt(), m_audio(), m_cart(), m_serial(), m_dma(),
+		m_hardware(config.mode, config.console, config.system) {
 	}
 
-	void Gameboy::init(OperationMode mode){
+	void Gameboy::main() {
 		m_cart.init(m_config.romfile, m_config.ramfile);
-		if (mode == OperationMode::Auto) {
-			mode = m_cart.getAutoOperationMode();
-		}
 
-		m_mode = mode;
+		HardwareConfig cartConfig = m_cart.getDefaultHardwareConfig();
+		if (m_hardware.mode() != cartConfig.mode() && m_hardware.mode() != OperationMode::Auto)
+			std::cerr << "Override operation mode : default was " << std::to_string(cartConfig.mode()) << ", set " << std::to_string(m_hardware.mode());
+		if (m_hardware.mode() == OperationMode::Auto)
+			m_hardware.setOperationMode(cartConfig.mode());
+
+		if (m_hardware.console() != cartConfig.console() && m_hardware.console() != ConsoleModel::Auto)
+			std::cerr << "Override console model : default was " << std::to_string(cartConfig.console()) << ", set " << std::to_string(m_hardware.console());
+		if (m_hardware.console() == ConsoleModel::Auto)
+			m_hardware.setConsoleModel(cartConfig.console());
+
+		if (m_hardware.system() != cartConfig.system() && m_hardware.system() != SystemRevision::Auto)
+			std::cerr << "Override console model : default was " << std::to_string(cartConfig.system()) << ", set " << std::to_string(m_hardware.system());
+		if (m_hardware.system() == SystemRevision::Auto)
+			m_hardware.setSystemRevision(cartConfig.system());
 
 		// Initialize components
-		m_interrupt.init(mode);
-		m_cpu.init(mode, &m_interrupt);
-		m_lcd.init(mode, &m_interrupt);
-		m_audio.init(mode);
-		m_joypad.init(mode, &m_interrupt);
-		m_serial.init(mode, &m_interrupt);
-		m_dma.init(mode);
+		m_interrupt.init(m_hardware);
+		m_cpu.init(m_hardware, &m_interrupt);
+		m_lcd.init(m_hardware, &m_interrupt);
+		m_audio.init(m_hardware);
+		m_joypad.init(m_hardware, &m_interrupt);
+		m_serial.init(m_hardware, &m_interrupt);
+		m_dma.init(m_hardware);
 
 		// Build the memory map
 		m_memory = MemoryMap();
@@ -36,10 +48,6 @@ namespace toygb {
 		m_dma.configureMemory(&m_memory);
 		m_memory.build();
 
-		//std::cout << oh8(m_memory.get(0x0144)) << " " << oh8(m_memory.get(0xFF40)) << " " << oh8(m_memory.get(0x0180)) << std::endl;
-	}
-
-	void Gameboy::main() {
 		std::thread uiThread(&runInterface, &m_interface, &m_lcd, &m_audio, &m_joypad);
 
 		GBComponent cpuComponent = m_cpu.run(&m_memory, &m_dma);

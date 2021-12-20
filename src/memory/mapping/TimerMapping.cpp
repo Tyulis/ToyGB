@@ -13,8 +13,8 @@ namespace toygb {
 	const int TIMA_TRIGGER_BITS[] = {9, 3, 5, 7};
 	const int DIV_TRIGGER_BIT = 7;
 
-	TimerMapping::TimerMapping(OperationMode mode, InterruptVector* interrupt) {
-		m_mode = mode;
+	TimerMapping::TimerMapping(HardwareConfig& hardware, InterruptVector* interrupt) {
+		m_hardware = hardware;
 		m_interrupt = interrupt;
 
 		counter = 0x00;

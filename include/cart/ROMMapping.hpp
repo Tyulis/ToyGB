@@ -5,7 +5,7 @@
 #include <fstream>
 
 #include "util/error.hpp"
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "memory/MemoryMapping.hpp"
 
 
@@ -19,7 +19,7 @@ namespace toygb {
 			virtual void set(uint16_t address, uint8_t value) = 0;
 
 			virtual MemoryMapping* getRAM() = 0;
-			OperationMode getAutoOperationMode();
+			HardwareConfig getDefaultHardwareConfig();
 			bool hasRAM() const;
 			bool hasBattery() const;
 

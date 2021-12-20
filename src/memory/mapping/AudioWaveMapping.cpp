@@ -8,7 +8,7 @@
 #define OFFSET_CONTROL IO_CH3_CONTROL - OFFSET_START
 
 namespace toygb {
-	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, WaveMemoryMapping* wavePatternMapping, OperationMode mode) : AudioChannelMapping(channel, control, mode) {
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, WaveMemoryMapping* wavePatternMapping, HardwareConfig& hardware) : AudioChannelMapping(channel, control, hardware) {
 		m_wavePatternMapping = wavePatternMapping;
 
 		enable = false;
@@ -36,7 +36,7 @@ namespace toygb {
 	}
 
 	void AudioWaveMapping::set(uint16_t address, uint8_t value){
-		if (powered || (m_mode == OperationMode::DMG && address == OFFSET_LENGTH)){
+		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_LENGTH)){
 			switch (address) {
 				case OFFSET_ENABLE:
 					enable = (value >> 7) & 1;

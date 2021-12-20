@@ -1,7 +1,7 @@
 #ifndef _CORE_INTERRUPTVECTOR_HPP
 #define _CORE_INTERRUPTVECTOR_HPP
 
-#include "core/OperationMode.hpp"
+#include "core/hardware.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
@@ -23,7 +23,7 @@ namespace toygb {
 		public:
 			InterruptVector();
 
-			void init(OperationMode mode);
+			void init(HardwareConfig& mode);
 			void configureMemory(MemoryMap* memory);
 
 			Interrupt getInterrupt();
