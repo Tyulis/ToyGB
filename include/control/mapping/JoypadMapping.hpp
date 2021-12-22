@@ -6,6 +6,8 @@
 
 
 namespace toygb {
+	/** Enumerate joypad buttons
+	 * The integer values are arbitrary and just used as indices in the JoypadMapping::status array */
 	enum class JoypadButton: int {
 		Up    = 0, Down   = 1,
 		Left  = 2, Right  = 3,
@@ -20,12 +22,14 @@ namespace toygb {
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
 
+			/** Set a button status */
 			void setButton(JoypadButton button, bool pressed);
 
-			bool selectButtons;
-			bool selectDirections;
+			// Warning : all these bits’ logic is 0 = selected/pressed, 1 = not selected/not pressed
+			bool selectButtons;     // Select action buttons row (register JOYP, bit 5)
+			bool selectDirections;  // Select direction buttons row (register JOYP, bit 4)
 
-			bool status[8];
+			bool status[8];         // Buttons’ statuses, used to compose register JOYP, bits 0-3
 	};
 }
 

@@ -1,12 +1,12 @@
-#ifndef _MEMORY_MAPPING_AUDIOWAVEMAPPING_HPP
-#define _MEMORY_MAPPING_AUDIOWAVEMAPPING_HPP
+#ifndef _AUDIO_MAPPING_AUDIOWAVEMAPPING_HPP
+#define _AUDIO_MAPPING_AUDIOWAVEMAPPING_HPP
 
 #include "audio/timing.hpp"
 #include "core/hardware.hpp"
 #include "memory/Constants.hpp"
-#include "memory/mapping/AudioChannelMapping.hpp"
-#include "memory/mapping/AudioControlMapping.hpp"
-#include "memory/mapping/WaveMemoryMapping.hpp"
+#include "audio/mapping/AudioChannelMapping.hpp"
+#include "audio/mapping/AudioControlMapping.hpp"
+#include "audio/mapping/WaveMemoryMapping.hpp"
 #include "util/error.hpp"
 
 

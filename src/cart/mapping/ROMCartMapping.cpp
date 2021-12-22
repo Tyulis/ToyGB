@@ -5,6 +5,7 @@
 #define CARTTYPE_ROM_RAM_BATTERY 0x09
 
 namespace toygb {
+	// Initialize the memory mapping
 	ROMCartMapping::ROMCartMapping(uint8_t carttype, std::string romfile, std::string ramfile) : ROMMapping(carttype, romfile, ramfile) {
 		switch (carttype){
 			case CARTTYPE_ROM: setCartFeatures(false, false); break;
@@ -14,28 +15,27 @@ namespace toygb {
 
 		loadCartData();
 
-		if (m_ramData != nullptr){
+		if (m_ramData != nullptr)
 			m_ramMapping = new ArrayMemoryMapping(m_ramData);
-		} else {
+		else
 			m_ramMapping = nullptr;
-		}
 	}
 
-	ROMCartMapping::~ROMCartMapping(){
+	ROMCartMapping::~ROMCartMapping() {
 
 	}
 
 
 
-	MemoryMapping* ROMCartMapping::getRAM(){
+	MemoryMapping* ROMCartMapping::getRAM() {
 		return m_ramMapping;
 	}
 
-	uint8_t ROMCartMapping::get(uint16_t address){
+	uint8_t ROMCartMapping::get(uint16_t address) {
 		return m_romData[address];
 	}
 
-	void ROMCartMapping::set(uint16_t address, uint8_t value){
+	void ROMCartMapping::set(uint16_t address, uint8_t value) {
 		// nop
 	}
 }

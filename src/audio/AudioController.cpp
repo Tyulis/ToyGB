@@ -58,40 +58,51 @@ namespace toygb {
 
 #define dot() co_await std::suspend_always()
 
-	GBComponent AudioController::run(){
+	// Main component loop (implemented as a coroutine)
+	GBComponent AudioController::run() {
 		while (true){
-			for (int index = 0; index < 4; index++){
+			for (int index = 0; index < 4; index++) {  // Update each channel
 				AudioChannelMapping* channel = m_channels[index];
-				if (m_control->audioEnable){
-					if (!channel->powered)
+				if (m_control->audioEnable) {
+					if (!channel->powered)  // Enable set but not powered : audio controller just got powered on
 						channel->powerOn();
 					channel->update();
-				} else if (channel->powered){
+				} else if (channel->powered) {  // Enable clear but powered : audio controller just got powered off
 					channel->powerOff();
 				}
 			}
-			dot();
-			dot();
+
+			// The APU updates every 2 clocks
+			dot(); dot();
 		}
 	}
 
-	bool AudioController::getSamples(int16_t* buffer){
+	// Get the mixed samples if available
+	bool AudioController::getSamples(int16_t* buffer) {
+		// Clear the sample buffer first
 		for (int i = 0; i < 2*OUTPUT_BUFFER_SAMPLES; i++)
 			buffer[i] = 0;
 
+		// The APU is powered off, so just return the buffer filled with zeros
 		if (!m_control->audioEnable)
 			return true;
 
+		// Get each channel’s buffer
 		float* channelBuffers[4];
-		for (int channel = 0; channel < 4; channel++){
+		for (int channel = 0; channel < 4; channel++) {
 			if ((channelBuffers[channel] = m_channels[channel]->getBuffer()) == nullptr)
-				return false;
+				return false;  // Channel returned nullptr -> not enough samples generated for the moment
 		}
 
+		// Mix samples
 		for (int channel = 0; channel < 4; channel++) {
-			for (int sample = 0; sample < OUTPUT_BUFFER_SAMPLES; sample++){
-				float leftValue = (m_control->output2Channels[channel]) ? (m_control->output2Level+1) * channelBuffers[channel][sample] / 8 : 0;
+			for (int sample = 0; sample < OUTPUT_BUFFER_SAMPLES; sample++) {
+				// Output 2 is left, output 1 is right
+				//                 if output is enabled for the channel  : output volume               * sample value     / output level is in range 0-7 -> 8
+				float leftValue =  (m_control->output2Channels[channel]) ? (m_control->output2Level+1) * channelBuffers[channel][sample] / 8 : 0;
 				float rightValue = (m_control->output1Channels[channel]) ? (m_control->output1Level+1) * channelBuffers[channel][sample] / 8 : 0;
+
+				// Our output buffer has left first
 				buffer[2*sample] += int16_t(leftValue * 2400);
 				buffer[2*sample+1] += int16_t(rightValue * 2400);
 			}

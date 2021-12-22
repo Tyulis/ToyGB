@@ -1,15 +1,17 @@
 #ifndef _COMMUNICATION_SERIALCONTROLLER_HPP
 #define _COMMUNICATION_SERIALCONTROLLER_HPP
 
-#include "util/error.hpp"
+#include "communication/mapping/SerialTransferMapping.hpp"
 #include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
-#include "memory/mapping/SerialTransferMapping.hpp"
+#include "util/error.hpp"
 
 
 namespace toygb {
+	/** Serial communications components
+	 * TODO : Implement actual communications ? Currently this is just a stub to have a working interface to the CPU */
 	class SerialController {
 		public:
 			SerialController();

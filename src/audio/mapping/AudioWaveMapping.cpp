@@ -1,4 +1,4 @@
-#include "memory/mapping/AudioWaveMapping.hpp"
+#include "audio/mapping/AudioWaveMapping.hpp"
 
 #define OFFSET_START IO_CH3_ENABLE
 #define OFFSET_ENABLE  IO_CH3_ENABLE - OFFSET_START

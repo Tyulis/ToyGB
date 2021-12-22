@@ -5,6 +5,8 @@
 
 
 namespace toygb {
+	/** Here is some fine C++ coroutine boilerplate code
+	 * This handles the coroutine handle and promise for the different GB components */
 	class GBComponent {
 		public:
 			struct promise_type {

@@ -2,18 +2,22 @@
 
 
 namespace toygb {
+	// Initialize the memory mapping
 	ROMMapping::ROMMapping(uint8_t carttype, std::string romfile, std::string ramfile) {
 		m_cartType = carttype;
 		m_romFile = romfile;
 		m_ramFile = ramfile;
 	}
 
-	ROMMapping::~ROMMapping(){
+	ROMMapping::~ROMMapping() {
 		if (m_romData != nullptr) delete[] m_romData;
 		if (m_ramData != nullptr) delete[] m_ramData;
+		m_romData = nullptr;
+		m_ramData = nullptr;
 	}
 
-	HardwareConfig ROMMapping::getDefaultHardwareConfig() {
+	// Build an automatic hardware configuration to run this ROM, based on its header
+	HardwareConfig ROMMapping::getDefaultHardwareConfig() const {
 		return HardwareConfig(OperationMode::DMG, ConsoleModel::DMG, SystemRevision::DMG_C);  // TODO
 		/* if (m_romdata[0x0143] & 0x80){
 			return OperationMode::CGB;
@@ -30,25 +34,31 @@ namespace toygb {
 		return m_hasBattery;
 	}
 
-	void ROMMapping::setCartFeatures(bool hasRAM, bool hasBattery){
+	// Set cartridge feature flags based on the cartridge type identifier
+	void ROMMapping::setCartFeatures(bool hasRAM, bool hasBattery) {
 		m_hasRAM = hasRAM;
 		m_hasBattery = hasBattery;
 	}
 
-	void ROMMapping::loadCartData(){
+	// Load the cartridge data from ROM and save files, and dimension ROM and RAM data in memory
+	void ROMMapping::loadCartData() {
+		// Open the ROM file
 		std::ifstream rom(m_romFile, std::ifstream::in | std::ifstream::binary);
-		if (!rom.is_open()){
+		if (!rom.is_open()) {
 			std::stringstream errstream;
 			errstream << "ROM file " << m_romFile << " not found";
 			throw EmulationError(errstream.str());
 		}
 
+		// Read 0x0148 (ROM size exponent) and 0x0149 (RAM size identifier)
 		rom.seekg(0x0148);
 		uint8_t sizeExponents[2];
 		rom.read(reinterpret_cast<char*>(sizeExponents), 2*sizeof(uint8_t));
 
 		m_romSize = 0x8000 << sizeExponents[0];
-		switch (sizeExponents[1]){
+
+		// Dimension the RAM
+		switch (sizeExponents[1]) {
 			case 0x00: m_ramSize = 0; break;
 			case 0x02: m_ramSize = 0x2000; break;
 			case 0x03: m_ramSize = 0x8000; break;
@@ -57,27 +67,31 @@ namespace toygb {
 			default: m_ramSize = 0; break;
 		}
 
+		// Read the ROM data from the file into memory
 		m_romData = new uint8_t[m_romSize];
 		rom.seekg(0);
 		rom.read(reinterpret_cast<char*>(m_romData), m_romSize);
 		rom.close();
 
-		if (m_hasRAM){
-			if (m_hasBattery){
+		// Create RAM array
+		if (m_hasRAM) {
+			// Some homebrew ROMs expect RAM but don’t set any size, so we set it to a single bank of cartridge RAM (0x2000) by default
+			// A real gameboy would not care (those values in the header were probably only for emulators used for testing anyway)
+			if (m_ramSize == 0) {
+				std::cerr << "Warning : cart type (" << oh8(m_cartType) << ") indicates cart RAM but with size zero." << std::endl;
+				m_ramSize = 0x2000;
+			}
+
+			m_ramData = new uint8_t[m_ramSize];
+
+			// Load RAM content from the save file if it already exists
+			if (m_hasBattery) {
 				std::ifstream ram(m_ramFile, std::ifstream::in | std::ifstream::binary);
-				if (ram.is_open()){
+				if (ram.is_open()) {
 					m_ramData = new uint8_t[m_ramSize];
 					ram.read(reinterpret_cast<char*>(m_ramData), m_ramSize);
 					ram.close();
-				} else {
-					m_ramData = new uint8_t[m_ramSize];
 				}
-			} else {
-				if (m_ramSize == 0) {
-					std::cerr << "Warning : cart type (" << oh8(m_cartType) << ") indicates cart RAM but with size zero." << std::endl;
-					m_ramSize = 0x2000;
-				}
-				m_ramData = new uint8_t[m_ramSize];
 			}
 		} else {
 			m_ramData = nullptr;

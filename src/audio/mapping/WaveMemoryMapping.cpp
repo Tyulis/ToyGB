@@ -1,6 +1,5 @@
-#include "memory/mapping/WaveMemoryMapping.hpp"
-#include <iostream>
-#include "util/error.hpp"
+#include "audio/mapping/WaveMemoryMapping.hpp"
+
 
 #define WAVE_NOT_READABLE 0xFFFF
 

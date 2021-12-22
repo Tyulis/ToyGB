@@ -4,6 +4,7 @@
 #define CARTTYPE_MBC2_BATTERY 0x06
 
 namespace toygb {
+	// TODO : Not implemented
 	MBC2CartMapping::MBC2CartMapping(uint8_t carttype, std::string romfile, std::string ramfile) : ROMMapping(carttype, romfile, ramfile) {
 		switch (carttype){
 			case CARTTYPE_MBC2: setCartFeatures(false, false); break;
@@ -12,26 +13,25 @@ namespace toygb {
 
 		loadCartData();
 
-		if (m_ramData != nullptr){
+		if (m_ramData != nullptr)
 			m_ramMapping = new ArrayMemoryMapping(m_ramData);
-		} else {
+		else
 			m_ramMapping = nullptr;
-		}
 	}
 
-	MBC2CartMapping::~MBC2CartMapping(){
+	MBC2CartMapping::~MBC2CartMapping() {
 
 	}
 
-	MemoryMapping* MBC2CartMapping::getRAM(){
+	MemoryMapping* MBC2CartMapping::getRAM() {
 		return m_ramMapping;
 	}
 
-	uint8_t MBC2CartMapping::get(uint16_t address){
+	uint8_t MBC2CartMapping::get(uint16_t address) {
 		return m_romData[address];
 	}
 
-	void MBC2CartMapping::set(uint16_t address, uint8_t value){
+	void MBC2CartMapping::set(uint16_t address, uint8_t value) {
 		// nop
 	}
 }

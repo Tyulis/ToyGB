@@ -1,4 +1,4 @@
-#include "memory/mapping/AudioToneSweepMapping.hpp"
+#include "audio/mapping/AudioToneSweepMapping.hpp"
 
 #define OFFSET_START IO_CH1_SWEEP
 #define OFFSET_SWEEP    IO_CH1_SWEEP - OFFSET_START
@@ -6,6 +6,25 @@
 #define OFFSET_ENVELOPE IO_CH1_ENVELOPE - OFFSET_START
 #define OFFSET_FREQLOW  IO_CH1_FREQLOW - OFFSET_START
 #define OFFSET_CONTROL  IO_CH1_CONTROL - OFFSET_START
+
+/** Tone channel control IO registers mapping
+
+(Access is R for read-only, W for write-only, B for both, - for none)
+Abs. addr. | Rel. addr. | Name | Access   | Content
+      FF10 |       0000 | NR10 | -BBBBBBB | Frequency sweep control : 
+           |            |      |          |
+      FF16 |       0000 | NR21 | BBWWWWWW | Pattern and length control WWLLLLLL
+           |            |      |          | - W (bit 6-7) : Wave pattern duty (0-3)
+           |            |      |          | - L (bit 0-5) : Set the length counter (0-64)
+      FF17 |       0001 | NR22 | BBBBBBBB | Volume envelope control : VVVVDPPP
+           |            |      |          | - V (bit 4-7) : Initial volume envelope (0-15)
+           |            |      |          | - D (bit 3) : Envelope direction (0 = decrease, 1 = increase)
+           |            |      |          | - P (bit 0-2) : Envelope update period (0-7)
+      FF18 |       0002 | NR23 | WWWWWWWW | Lower 8 bits of the frequency control
+      FF19 |       0003 | NR24 | WB---WWW | Channel enable control : SL---FFF
+           |            |      |          | - S (bit 7) : Trigger the channel operation (Set to 1 to start)
+           |            |      |          | - L (bit 6) : Enable the length counter (0 = disabled, 1 = counting, stops the channel when it reaches zero)
+           |            |      |          | - F (bits 0-2) : Higher 3 bits of the frequency control */
 
 namespace toygb {
 	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
@@ -139,7 +158,7 @@ namespace toygb {
 				m_envelopeFrameCounter = (envelopeSweep == 0 ? 8 : envelopeSweep);
 				if (envelopeDirection && m_envelopeVolume < 15)
 					m_envelopeVolume += 1;
-				else if (m_envelopeVolume > 0)
+				else if (!envelopeDirection && m_envelopeVolume > 0)
 					m_envelopeVolume -= 1;
 			}
 		}

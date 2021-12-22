@@ -1,5 +1,5 @@
-#ifndef _MEMORY_MAPPING_WAVEMEMORYMAPPING_HPP
-#define _MEMORY_MAPPING_WAVEMEMORYMAPPING_HPP
+#ifndef _AUDIO_MAPPING_WAVEMEMORYMAPPING_HPP
+#define _AUDIO_MAPPING_WAVEMEMORYMAPPING_HPP
 
 #include "core/hardware.hpp"
 #include "memory/mapping/ArrayMemoryMapping.hpp"

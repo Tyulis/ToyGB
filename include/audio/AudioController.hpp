@@ -1,18 +1,20 @@
 #ifndef _AUDIO_AUDIOCONTROLLER_HPP
 #define _AUDIO_AUDIOCONTROLLER_HPP
 
+// Reference for almost everything in the audio controller : https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
+
+#include "audio/mapping/AudioChannelMapping.hpp"
+#include "audio/mapping/AudioToneSweepMapping.hpp"
+#include "audio/mapping/AudioToneMapping.hpp"
+#include "audio/mapping/AudioWaveMapping.hpp"
+#include "audio/mapping/AudioNoiseMapping.hpp"
+#include "audio/mapping/AudioControlMapping.hpp"
+#include "audio/mapping/AudioDebugMapping.hpp"
+#include "audio/mapping/WaveMemoryMapping.hpp"
 #include "core/timing.hpp"
 #include "core/hardware.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
-#include "memory/mapping/AudioChannelMapping.hpp"
-#include "memory/mapping/AudioToneSweepMapping.hpp"
-#include "memory/mapping/AudioToneMapping.hpp"
-#include "memory/mapping/AudioWaveMapping.hpp"
-#include "memory/mapping/AudioNoiseMapping.hpp"
-#include "memory/mapping/AudioControlMapping.hpp"
-#include "memory/mapping/AudioDebugMapping.hpp"
-#include "memory/mapping/WaveMemoryMapping.hpp"
 #include "util/component.hpp"
 
 
@@ -38,7 +40,7 @@ namespace toygb {
 		private:
 			HardwareConfig m_hardware;
 
-			uint8_t* m_wavePattern;
+			uint8_t* m_wavePattern;  // Wave RAM
 
 			AudioChannelMapping* m_channels[4];
 			AudioControlMapping* m_control;
