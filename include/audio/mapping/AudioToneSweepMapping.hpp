@@ -28,22 +28,22 @@ namespace toygb {
 			uint8_t length;           // Sound length counter (0-64) (register NR11, bits 0-5)
 
 			// NR12 : Volume envelope control
-			uint8_t initialEnvelopeVolume;  // Initial envelope volume value (0-15) (register NR22, bits 4-7)
+			uint8_t initialEnvelopeVolume;  // Initial envelope volume value (0-15) (register NR12, bits 4-7)
 			bool envelopeDirection;         // Envelope direction (0 = decrease volume, 1 = increase)
-			uint8_t envelopePeriod;         // Envelope period (envelope volume is recalculated every `envelopePeriod` frames, 0 disables envelope) (register NR42, bits 0-2)
+			uint8_t envelopePeriod;         // Envelope period (envelope volume is recalculated every `envelopePeriod` frames, 0 disables envelope) (register NR12, bits 0-2)
 
 			// NR13 + NR14.0-2 : Sound frequency control
 			uint16_t frequency;  // The channel state is updated every 2*(2048 - `frequency`)
 
 			// NR14 : Channel control
-			bool enableLength;  // Enables length counter operation (1 = enable, channel stops when length counter reaches zero, 0 = disable) (register NR44, bit 6)
+			bool enableLength;  // Enables length counter operation (1 = enable, channel stops when length counter reaches zero, 0 = disable) (register NR14, bit 6)
 
 		protected:
 			void reset();  // Called when a channel restart is requested via NR14.7
+			uint16_t calculateFrequencySweep();  // Perform a sweep frequency calculation and overflow check
 
 			// AudioChannelMapping overrides
 			float buildSample();
-			uint16_t calculateFrequencySweep();
 			void onPowerOn();
 			void onPowerOff();
 			void onUpdate();

@@ -17,6 +17,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
            |            |      |          | - V (bit 4-7) : Initial volume envelope (0-15)
            |            |      |          | - D (bit 3) : Envelope direction (0 = decrease, 1 = increase)
            |            |      |          | - P (bit 0-2) : Envelope update period (0-7)
+           |            |      |          | The digital-to-analog circuit is controlled by bits 3-7 of NR22, and disables the channel if they are all zero
       FF18 |       0002 | NR23 | WWWWWWWW | Lower 8 bits of the frequency control
       FF19 |       0003 | NR24 | WB---WWW | Channel enable control : SL---FFF
            |            |      |          | - S (bit 7) : Trigger the channel operation (Set to 1 to start)
@@ -90,11 +91,11 @@ namespace toygb {
 					frequency = (frequency & 0x0700) | value;  // Set only the lower 8 of the 11 bits
 					break;
 				case OFFSET_CONTROL: {  // NR44
-					bool wasEnabled = stopSelect;
-					stopSelect = (value >> 6) & 1;
+					bool wasEnabled = enableLength;
+					enableLength = (value >> 6) & 1;
 
 					// Enabling length counter in first half of the length period (next frame does not clock length) clocks length once
-					if (!wasEnabled && stopSelect && m_frameSequencer % 2 == 0 && length > 0)
+					if (!wasEnabled && enableLength && m_frameSequencer % 2 == 0 && length > 0)
 						onLengthFrame();
 
 					frequency = (frequency & 0x00FF) | ((value & 0x07) << 8);  // Set only the higher 3 of the 11 bits
@@ -125,7 +126,8 @@ namespace toygb {
 				disable();
 		}
 	}
-
+	
+	// Called at every envelope frame
 	void AudioToneMapping::onEnvelopeFrame() {
 		if (envelopePeriod != 0) {  // Envelope does not update if the period is zero
 			m_envelopeFrameCounter = (m_envelopeFrameCounter + 1) % envelopePeriod;
@@ -147,7 +149,7 @@ namespace toygb {
 
 	// Restart the channel
 	void AudioToneMapping::reset() {
-		// Only start if DAC is enabled
+		// Only start if DAC is enabled (higher 5 bits of NR22)
 		if (initialEnvelopeVolume != 0 || envelopeDirection != 0)
 			start();
 

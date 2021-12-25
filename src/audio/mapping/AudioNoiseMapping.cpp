@@ -19,6 +19,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
            |            |      |          | - S (bit 4-7) : Noise generation period shift
            |            |      |          | - W (bit 3) : LFSR used width (0 = 15 bits, 1 = 7 bits)
 		   |            |      |          | - P (bit 0-2) : Base generation period value (the period in APU cycles is NOISE_PERIOD_BASES[P] << S)
+           |            |      |          | The digital-to-analog circuit is controlled by bits 3-7 of NR22, and disables the channel if they are all zero
       FF23 |       0003 | NR44 | WB------ | Channel enable control : SL------
            |            |      |          | - S (bit 7) : Trigger the channel operation (Set to 1 to start)
            |            |      |          | - L (bit 6) : Enable the length counter (0 = disabled, 1 = counting, stops the channel when it reaches zero) */

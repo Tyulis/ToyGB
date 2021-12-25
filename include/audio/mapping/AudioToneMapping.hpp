@@ -25,13 +25,13 @@ namespace toygb {
 			// NR22 : Envelope control
 			uint8_t initialEnvelopeVolume;  // Initial envelope volume value (0-15) (register NR22, bits 4-7)
 			bool envelopeDirection;         // Envelope direction (0 = decrease volume, 1 = increase)
-			uint8_t envelopePeriod;         // Envelope period (envelope volume is recalculated every `envelopePeriod` frames, 0 disables envelope) (register NR42, bits 0-2)
+			uint8_t envelopePeriod;         // Envelope period (envelope volume is recalculated every `envelopePeriod` frames, 0 disables envelope) (register NR22, bits 0-2)
 
 			// NR43 + NR44.0-2 : Base clock frequency
 			uint16_t frequency;  // The channel state is updated every 2*(2048 - `frequency`)
 
 			// NR44 : Channel control
-			bool enableLength;  // Enables length counter operation (1 = enable, channel stops when length counter reaches zero, 0 = disable) (register NR44, bit 6)
+			bool enableLength;  // Enables length counter operation (1 = enable, channel stops when length counter reaches zero, 0 = disable) (register NR24, bit 6)
 
 		protected:
 			void reset();  // Called when a channel restart is requested via NR24.7
