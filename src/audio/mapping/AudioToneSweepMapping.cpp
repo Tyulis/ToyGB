@@ -11,7 +11,7 @@
 
 (Access is R for read-only, W for write-only, B for both, - for none)
 Abs. addr. | Rel. addr. | Name | Access   | Content
-      FF10 |       0000 | NR10 | -BBBBBBB | Frequency sweep control : 
+      FF10 |       0000 | NR10 | -BBBBBBB | Frequency sweep control :
            |            |      |          |
       FF11 |       0000 | NR21 | BBWWWWWW | Pattern and length control WWLLLLLL
            |            |      |          | - W (bit 6-7) : Wave pattern duty (0-3)
@@ -31,7 +31,7 @@ namespace toygb {
 	// Wave pattern duties, NR21.6-7 is the index in this array
 	// The channel digital output cycles through the bits in those sequences, from left to right
 	const uint8_t TONE_WAVEPATTERNS[4] = {0b00000001, 0b10000001, 0b10000111, 0b01111110};
-	
+
 	// Initialize the channel
 	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
 	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
@@ -115,7 +115,7 @@ namespace toygb {
 				case OFFSET_CONTROL: {  // NR14
 					bool wasEnabled = enableLength;
 					enableLength = (value >> 6) & 1;
-					
+
 					// Enabling length counter in first half of the length period (next frame does not clock length) clocks length once
 					if (!wasEnabled && enableLength && m_frameSequencer % 2 == 0 && length > 0)
 						onLengthFrame();
@@ -154,7 +154,7 @@ namespace toygb {
 			m_sweepFrameCounter -= 1;
 			if (m_sweepFrameCounter <= 0) {  // Every `sweepPeriod` sweep frames
 				m_sweepFrameCounter = (sweepPeriod == 0 ? 8 : sweepPeriod);  // A period of 0 makes the frequency sweep tick every 8 sweep frames
-				if (m_sweepEnabled && sweepTime != 0){
+				if (m_sweepEnabled && sweepPeriod != 0){
 					// Perform the first frequency recalculation
 					uint16_t newFrequency = calculateFrequencySweep();
 					if (newFrequency < 2048 && sweepShift != 0) {  // No overflow
@@ -204,7 +204,7 @@ namespace toygb {
 
 		return newFrequency;
 	}
-	
+
 	// Resqart the channel operation
 	void AudioToneSweepMapping::reset() {
 		// Only start if DAC is enabled

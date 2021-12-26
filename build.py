@@ -3,7 +3,7 @@ import os
 
 CC = "g++"
 LDFLAGS = "-lm -pthread -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio"
-CFLAGS = "-Wall -Wextra -Wno-unused-parameter -gdwarf-2 -fcoroutines -I./include"
+CFLAGS = "-Wall -Wextra -Wno-unused-parameter -g -fcoroutines -I./include"
 
 objects = []
 for path, dirs, files in os.walk("src"):

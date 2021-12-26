@@ -1,35 +1,73 @@
 #include "core/CPU.hpp"
 
-#define reg_b m_registers[0]
-#define reg_c m_registers[1]
-#define reg_d m_registers[2]
-#define reg_e m_registers[3]
-#define reg_h m_registers[4]
-#define reg_l m_registers[5]
-#define reg_f m_registers[6]
-#define reg_a m_registers[7]
+// Opcode identifiers for the main 8-bits registers
+#define reg_id_b 0
+#define reg_id_c 1
+#define reg_id_d 2
+#define reg_id_e 3
+#define reg_id_h 4
+#define reg_id_l 5
+#define reg_id_f 6
+#define reg_id_a 7
 
+// Shortcuts for the main 8-bits registers. Can be directly assigned to.
+#define reg_b m_registers[reg_id_b]
+#define reg_c m_registers[reg_id_c]
+#define reg_d m_registers[reg_id_d]
+#define reg_e m_registers[reg_id_e]
+#define reg_h m_registers[reg_id_h]
+#define reg_l m_registers[reg_id_l]
+#define reg_f m_registers[reg_id_f]
+#define reg_a m_registers[reg_id_a]
+
+// Opcode identifiers for the coupled 16-bits registers
+#define reg_id_bc 0
+#define reg_id_de 1
+#define reg_id_hl 2
+#define reg_id_sp 3
+
+// Shortcuts for the coupled 16-bits registers values. Can NOT be directly assigned to
 #define reg_bc ((reg_b << 8) | reg_c)
 #define reg_de ((reg_d << 8) | reg_e)
 #define reg_hl ((reg_h << 8) | reg_l)
 #define reg_af ((reg_a << 8) | reg_f)
 #define reg_sp m_sp
 
+// Shortcuts for the status flags values. Can NOT be directly assigned to.
 #define flag_z ((reg_f >> 7) & 1)
 #define flag_n ((reg_f >> 6) & 1)
 #define flag_h ((reg_f >> 5) & 1)
 #define flag_c ((reg_f >> 4) & 1)
 
+// Bitmasks to get each flag from the f register
 #define mask_flag_z 0b10000000
 #define mask_flag_n 0b01000000
 #define mask_flag_h 0b00100000
 #define mask_flag_c 0b00010000
+#define mask_flags (mask_flag_z | mask_flag_n | mask_flag_h | mask_flag_c)
 
+// Special value to tell setFlags(...) to leave a flag unchanged
 #define UNAFFECTED 0xFF
 
 
+// DETAILS ABOUT THE CARRY (c) AND HALF-CARRY FLAG (h) CALCULATION :
+// For 8-bits operations, the half-carry flag is whether a carry have been carried from the lower to the upper half of the byte
+// Here, it is calculated in a rather simple way : compare the new value of the lower nibble with its former value
+// For increasing operations (inc, add, adc : flag n = 0), it is h = (new & 0x0F) < (old & 0x0F), because if there was a carry from the lower to the upper nibble
+// the lower nibble always end up with a value lower than before (because it's new = old + operand - 0x10, with old and operand < 0x10 so operand - 0x10 < 0),
+// and without half-carry, as it is an increasing operation the value is always higher (or equal if the operand's lower nibble is 0) than before, so the logic holds
+// Conversely, for decreasing operations (dec, sub, sbc, cp), the logic is reversed : h = (new & 0x0F) > (old & 0x0F)
+// With no half-carry, the new value must be lower or equal than the old one
+// With a half-carry, the new value is new = old - operand + 0x10 with old and operand < 0x10, so -operand + 0x10 > 0, thus the new value is always higher than the previous one.
+
+// Calculate the new H flag (half-carry) value from the previous and new value of the accumulator. _INC for increasing operations (inc, add, adc), _DEC for decreasing (dec, sub, sbc, cp)
+#define HALF_CARRY_INC(oldvalue, newvalue) ((newvalue & 0x0F) < (oldvalue & 0x0F))
+#define HALF_CARRY_DEC(oldvalue, newvalue) ((newvalue & 0x0F) > (oldvalue & 0x0F))
+
+
 namespace toygb {
-	CPU::CPU(){
+	// Initialize the component with null values, the actual initialization is in CPU::init
+	CPU::CPU() {
 		m_logDisassembly = false;
 
 		m_hram = nullptr;
@@ -40,7 +78,7 @@ namespace toygb {
 		m_hramMapping = nullptr;
 	}
 
-	CPU::CPU(bool disassemble){
+	CPU::CPU(bool disassemble) {
 		m_logDisassembly = disassemble;
 
 		m_hram = nullptr;
@@ -52,32 +90,38 @@ namespace toygb {
 		m_hramMapping = nullptr;
 	}
 
-	CPU::~CPU(){
+	CPU::~CPU() {
 		if (m_hram != nullptr) delete[] m_hram;
 		if (m_wram != nullptr) delete[] m_wram;
+		m_hram = m_wram = nullptr;
 
 		if (m_hramMapping != nullptr) delete m_hramMapping;
 		if (m_wramMapping != nullptr) delete m_wramMapping;
 		if (m_wramBankMapping != nullptr) delete m_wramBankMapping;
 		if (m_timer != nullptr) delete m_timer;
+		m_hramMapping = nullptr;
+		m_wramMapping = nullptr;
+		m_wramBankMapping = nullptr;
+		m_timer = nullptr;
 	}
 
-	void CPU::init(HardwareConfig& hardware, InterruptVector* interrupt){
+	// Initialize the component
+	void CPU::init(HardwareConfig& hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 		m_hram = new uint8_t[HRAM_SIZE];
 
-		switch (hardware.mode()){
-			case OperationMode::DMG:
+		switch (hardware.mode()) {
+			case OperationMode::DMG:  // DMG mode : only one WRAM bank
 				m_wram = new uint8_t[WRAM_SIZE]; break;
-			case OperationMode::CGB:
+			case OperationMode::CGB:  // CGB mode : 2 switchable WRAM banks
 				m_wram = new uint8_t[WRAM_BANK_SIZE * WRAM_BANK_NUM]; break;
 			case OperationMode::Auto:
 				throw EmulationError("OperationMode::Auto given to CPU");
 		}
 
 		m_hramMapping = new ArrayMemoryMapping(m_hram);
-		switch (hardware.mode()){
+		switch (hardware.mode()) {
 			case OperationMode::DMG:
 				m_wramMapping = new ArrayMemoryMapping(m_wram);
 				break;
@@ -92,6 +136,7 @@ namespace toygb {
 		m_timer = new TimerMapping(hardware, interrupt);
 	}
 
+	// Configure the memory mappings associated with the component
 	void CPU::configureMemory(MemoryMap* memory) {
 		memory->add(HRAM_OFFSET, HRAM_OFFSET + HRAM_SIZE - 1, m_hramMapping);
 
@@ -99,11 +144,12 @@ namespace toygb {
 			memory->add(IO_WRAM_BANK, IO_WRAM_BANK, m_wramBankMapping);
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
-		memory->add(ECHO_OFFSET, ECHO_OFFSET + ECHO_SIZE - 1, m_wramMapping);
+		memory->add(ECHO_OFFSET, ECHO_OFFSET + ECHO_SIZE - 1, m_wramMapping);  // Same mapping at a different address range to emulate WRAM echo
 
 		memory->add(IO_TIMER_DIVIDER, IO_TIMER_CONTROL, m_timer);
 	}
 
+// Wait till the next CPU cycle (4 clocks)
 #define cycle() co_await std::suspend_always(); \
 				co_await std::suspend_always(); \
 				co_await std::suspend_always(); \
@@ -112,38 +158,44 @@ namespace toygb {
 				incrementTimer(4);
 
 
-	GBComponent CPU::run(MemoryMap* memory, DMAController* dma){
+	// Main CPU loop, as a coroutine
+	GBComponent CPU::run(MemoryMap* memory, DMAController* dma) {
 		m_memory = memory;
 		m_dma = dma;
-		initRegisters();
+		initRegisters();  // TODO : Add bootroms
 
 		// Start CPU operation
 		uint8_t opcode = m_memory->get(m_pc++);  // Start with first opcode already fetched
 
 		try {
-			while (true){
+			while (true) {
 				int cycles = 0;
-				if (m_ei_scheduled){
+
+				// EI has a 1-cycle delay before actually activating the interrupts
+				if (m_ei_scheduled) {
 					m_ei_scheduled = false;
 					m_interrupt->setMaster(true);
 				}
 
+				// Interrupt management
 				Interrupt interrupt = m_interrupt->getInterrupt();
-				if (interrupt != Interrupt::None){
-					if (m_halted){
+				if (interrupt != Interrupt::None) {  // There is a requested and active interrupt (IE + IF, IME is still not checked)
+					if (m_halted) {  // Get out of halt mode, even if IME is not set
 						m_halted = false;
-						//opcode = memoryRead(m_pc++); cycle();
 					}
 
 					// Jump to interrupt vector only when IME is set
-					if (m_interrupt->getMaster()){
+					if (m_interrupt->getMaster()) {
 						cycle(); cycle();
 						m_interrupt->resetRequest(interrupt);
-						m_interrupt->setMaster(false);
+						m_interrupt->setMaster(false);  // Interrupts are disabled before jumping to the interrupt vector
+
+						// Push PC onto the stack before jumping
 						m_sp -= 1;
 						memoryWrite(m_sp--, (m_pc - 1) >> 8); cycle();
 						memoryWrite(m_sp, (m_pc - 1) & 0xFF); cycle();
 
+						// Standard interrupt vectors
 						switch (interrupt){
 							case Interrupt::VBlank:  m_pc = 0x0040; break;
 							case Interrupt::LCDStat: m_pc = 0x0048; break;
@@ -152,354 +204,523 @@ namespace toygb {
 							case Interrupt::Joypad:  m_pc = 0x0060; break;
 							case Interrupt::None: break;
 						}
-						opcode = memoryRead(m_pc++); cycle();
+						opcode = memoryRead(m_pc++); cycle();  // Fetch the next opcode
 						continue;
 					}
 				}
 
 				uint16_t basePC = m_pc - 1;
-				// m_instructionCount += 1;
 
-				// 00 opcodes
 				if (!m_halted && !m_stopped){
 					if (m_logDisassembly) logDisassembly(basePC);
 
-					if (opcode == 0b00000000){  // 00 000000 = nop
+					// Opcode description :
+					// Binary opcode | hex opcodes | mnemonic | description | CPU cycles (*4 for clocks) | flag changes (znhc, 0 is reset, 1 is set, - is unaffected, z/n/h/c = it depends, x = depends on the actual instruction)
+					// Here, a cycle is always taken to fetch the next opcode at the end of the loop code, so a single-cycle instruction code will not contain any cycle(), and a multi-cycle instruction will have one less than necessary
+					// It would have been nice to split this in individual functions, but as we need to tick the clock (= suspend the coroutine) at specific times, we need to do all this in the body of the coroutine
+					// Here timings are more-or-less what they should (that is, a cycle for each memory access, there might be sub-CPU cycle timing issues but as of now it seems to be okay), other sub-instruction technicalities that happen entirely within the CPU shouldn't be a problem anyway
+					// FIXME : Tick the cycle before or after the memory access ? Currently, after.
+					// The Gameboy CPU is little-endian : in memory, 16-bits values are stored lower byte first (| --- | low | high | --- |)
+
+					////////// Opcodes in 0b00xxxxxx : Mostly control, 16-bits operations, inc, dec and utilities
+
+					// 00 000000 | 0x00 | nop | Do nothing for a cycle | 1 | ----
+					if (opcode == 0b00000000) {
 						// nop
-					} else if (opcode == 0b00010000){  // 00 01 0000 = stop
+					}
+
+					// 00 01 0000 | 0x10 | stop | Stop the clock to get into a very low-power mode (or to switch to CGB double-speed mode) | 2 | ----
+					// TODO : Not implemented
+					else if (opcode == 0b00010000) {
 						/*uint8_t value =*/ memoryRead(m_pc++); cycle(); // TODO : Invalid stop values ?
-						m_timer->resetDivider();
-						// TODO
-					} else if ((opcode & 0b11100111) == 0b00100000){  // 001 cc 000 = jr cc, e
+						m_timer->resetDivider();  // Stopping resets the timers
+					}
+
+					// 001 cc 000 | 0x20, 0x28, 0x30, 0x38 | jr [nz, z, nc, c], s8 | Conditional relative jump, by a number of bytes given by the given signed value | 3 (jump) / 2 (condition is false, not jump) | ----
+					else if ((opcode & 0b11100111) == 0b00100000) {
 						uint8_t condition = (opcode >> 3) & 3;
-						int8_t diff = int8_t(memoryRead(m_pc++)); cycle();
-						if (checkCondition(condition)){
-							m_pc += diff;
+						int8_t diff = int8_t(memoryRead(m_pc++)); cycle();  // Get the signed displacement
+						if (checkCondition(condition)) {
+							m_pc += diff;  // The displacement is from the value of PC AFTER fetching both the JR opcode and its operand
 							cycle();
 						}
-					} else if (opcode == 0b00000001){  // 00 00 0001 = ld bc, nn
-						uint16_t low = memoryRead(m_pc++); cycle();
-						uint16_t high = memoryRead(m_pc++); cycle();
-						reg_b = high; reg_c = low;
-					} else if (opcode == 0b00010001){  // 00 01 0001 = ld de, nn
-						uint16_t low = memoryRead(m_pc++); cycle();
-						uint16_t high = memoryRead(m_pc++); cycle();
-						reg_d = high; reg_e = low;
-					} else if (opcode == 0b00100001){  // 00 10 0001 = ld hl, nn
-						uint16_t low = memoryRead(m_pc++); cycle();
-						uint16_t high = memoryRead(m_pc++); cycle();
-						reg_h = high; reg_l = low;
-					} else if (opcode == 0b00110001){  // 00 11 0001 = ld sp, nn
-						uint16_t low = memoryRead(m_pc++); cycle();
-						uint16_t high = memoryRead(m_pc++); cycle();
-						uint16_t value = (high << 8) | low;
-						m_sp = value;
-					} else if (opcode == 0b00000010){  // 00 00 0010 = ld (bc), a
-						memoryWrite(reg_bc, reg_a); cycle();
-					} else if (opcode == 0b00010010){  // 00 01 0010 = ld (de), a
-						memoryWrite(reg_de, reg_a); cycle();
-					} else if (opcode == 0b00100010){  // 00 10 0010 = ldi (hl), a
+					}
+
+					// 00 rr 0001 | 0x01, 0x11, 0x21, 0x31 | ld rr, u16 | Load an immediate 16-bits value into a 16-bits register | 3 | ----
+					else if ((opcode & 0b11001111) == 0b00000001) {
+						uint8_t low = memoryRead(m_pc++); cycle();
+						uint8_t high = memoryRead(m_pc++); cycle();
+						uint8_t identifier = (opcode >> 4) & 0b11;
+						set16(identifier, high, low);
+					}
+
+					// 00 10 0010 | 0x22 | ldi (hl), a / ld (hl+), a | Load the value of A into the memory address given by HL, then increment HL by 1 | 2 | ----
+					else if (opcode == 0b00100010) {
 						memoryWrite(reg_hl, reg_a); cycle();
 						increment16(&reg_h, &reg_l);
-					} else if (opcode == 0b00110010){  // 00 11 0010 = ldd (hl), a
+					}
+
+					// 00 11 0010 | 0x32 | ldd (hl, a) / ld (hl-), a | Load the value of A into the memory address given by HL, then decrement HL by 1 | 2 | ----
+					else if (opcode == 0b00110010) {
 						memoryWrite(reg_hl, reg_a); cycle();
 						decrement16(&reg_h, &reg_l);
-					} else if (opcode == 0b00000011){  // 00 00 0011 = inc bc
+					}
+
+					// 00 rr 0010 | 0x02, 0x12 | ld (rr), a | Load the value of A into the memory address given by BC or DE | 2 | ----
+					else if ((opcode & 0b11101111) == 0b00000010) {  // 00 00 0010 = ld (bc), a
+						uint8_t identifier = (opcode >> 4) & 0b11;  // BC and DE use standard identifiers, those that should have been HL and SP are ldi and ldd and are handled separately
+						uint16_t address = get16(identifier);
+						memoryWrite(address, reg_a); cycle();
+					}
+
+					// Those are handled directly instead of using the identifier and make it generic, to handle OAM corruption properly (TODO)
+					// 00 00 0011 | 0x03 | inc bc | Increment the 16-bits value of BC by 1 | 2 | ----
+					else if (opcode == 0b00000011) {
 						cycle();
 						increment16(&reg_b, &reg_c);
-					} else if (opcode == 0b00010011){  // 00 01 0011 = inc de
+					}
+
+					// 00 01 0011 | 0x13 | inc de | Increment the 16-bits value of DE by 1 | 2 | ----
+					else if (opcode == 0b00010011) {
 						cycle();
 						increment16(&reg_d, &reg_e);
-					} else if (opcode == 0b00100011){  // 00 10 0011 = inc hl
+					}
+
+					// 00 10 0011 | 0x23 | inc hl | Increment the 16-bits value of HL by 1 | 2 | ----
+					else if (opcode == 0b00100011) {  // 00 10 0011 = inc hl
 						cycle();
 						increment16(&reg_h, &reg_l);
-					} else if (opcode == 0b00110011){  // 00 11 0011 = inc sp
+					}
+
+					// 00 11 0011 | 0x33 | inc sp | Increment the value of SP by 1 | 2 | ----
+					else if (opcode == 0b00110011) {  // 00 11 0011 = inc sp
 						cycle();
 						m_sp += 1;
-					} else if (opcode == 0b00110100){  // 00 110 100 = inc (hl)
+					}
+
+					// 00 110 100 | 0x34 | inc (hl) | Increment the value at the memory address given by HL by 1 | 3 | z0h-
+					else if (opcode == 0b00110100) {
 						uint8_t value = memoryRead(reg_hl); cycle();
 						uint8_t result = value + 1;
 						memoryWrite(reg_hl, result); cycle();
-						setFlags(result == 0, 0, (result & 0x0F) < (value & 0x0F), UNAFFECTED);
-					} else if ((opcode & 0b11000111) == 0b00000100){  // 00 rrr 100 = inc r
+						setFlags(result == 0, 0, HALF_CARRY_INC(value, result), UNAFFECTED);
+					}
+
+					// 00 rrr 100 | 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C | inc r | Increment the value of a register by 1 | 1 | z0h-
+					else if ((opcode & 0b11000111) == 0b00000100) {
 						uint8_t reg = (opcode >> 3) & 7;
 						uint8_t value = m_registers[reg];
 						uint8_t result = value + 1;
 						m_registers[reg] = result;
-						setFlags(result == 0, 0, (result & 0x0F) < (value & 0x0F), UNAFFECTED);
-					} else if (opcode == 0b00110101){  // 00 110 101 = dec (hl)
+						setFlags(result == 0, 0, HALF_CARRY_INC(value, result), UNAFFECTED);
+					}
+
+					// 00 110 101 | 0x35 | dec (hl) | Decrement the value at the memory address given by HL by 1 | 3 | z1h-
+					else if (opcode == 0b00110101) {
 						uint8_t value = memoryRead(reg_hl); cycle();
 						uint8_t result = value - 1;
 						memoryWrite(reg_hl, result); cycle();
-						setFlags(result == 0, 1, (result & 0x0F) > (value & 0x0F), UNAFFECTED);
-					} else if ((opcode & 0b11000111) == 0b00000101){  // 00 rrr 101 = dec r
+						setFlags(result == 0, 1, HALF_CARRY_DEC(value, result), UNAFFECTED);
+					}
+
+					// 00 rrr 101 | 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x3D | dec r | Decrement the value of a register by 1 | 1 | z1h-
+					else if ((opcode & 0b11000111) == 0b00000101) {
 						uint8_t reg = (opcode >> 3) & 7;
 						uint8_t value = m_registers[reg];
 						uint8_t result = value - 1;
 						m_registers[reg] = result;
-						setFlags(result == 0, 1, (result & 0x0F) > (value & 0x0F), UNAFFECTED);
-					} else if (opcode == 0b00110110){  // 00 110 110 = ld (hl), n
+						setFlags(result == 0, 1, HALF_CARRY_DEC(value, result), UNAFFECTED);
+					}
+
+					// 00 110 110 | 0x36 | ld (hl), u8 | Load an immediate value into the memory address given by HL | 3 | ----
+					else if (opcode == 0b00110110) {
 						uint8_t value = memoryRead(m_pc++); cycle();
 						memoryWrite(reg_hl, value); cycle();
-					} else if ((opcode & 0b11000111) == 0b00000110){  // 00 rrr 110 = ld r, n
+					}
+
+					// 00 rrr 110 | 0x06, 0x0E, 0x16, 0x1E, 0x26, 0x2E, 0x3E | ld r, u8 | Load an immediate value into a register | 2 | ----
+					else if ((opcode & 0b11000111) == 0b00000110) {
 						uint8_t value = memoryRead(m_pc++); cycle();
 						uint8_t destreg = (opcode >> 3) & 7;
 						m_registers[destreg] = value;
-					} else if (opcode == 0b00000111){  // 00 00 0111 = rlca
+					}
+
+					// 00 00 0111 | 0x07 | rlca | Rotate the accumulator's bits left (c 76543210 -> 7 65432107) | 1 | 000c
+					else if (opcode == 0b00000111) {
 						reg_a = (reg_a << 1) | (reg_a >> 7);
 						setFlags(0, 0, 0, reg_a & 1);
-					} else if (opcode == 0b00010111){  // 00 01 0111 = rla
+					}
+
+					// 00 01 0111 | 0x17 | rla | Rotate the accumulator and carry bits left (c 76543210 -> 7 6543210c) | 1 | 000c
+					else if (opcode == 0b00010111) {
 						bool newcarry = reg_a >> 7;
 						reg_a = (reg_a << 1) | flag_c;
 						setFlags(0, 0, 0, newcarry);
-					} else if (opcode == 0b00100111){  // 00 10 0111 = daa
+					}
+
+					// 00 10 0111 | 0x27 | daa | For Binary-Coded Decimal value (e.g 0x75 for the decimal value 75), adjust the value back to BCD after an arithmetical operation with another BCD operands | 1 | z-0c
+					//                         | Example (decimal : 75 + 19 = 94) : 0x75 + 0x19 = 0x8E -- daa -> 0x94
+					else if (opcode == 0b00100111) {
 						applyDAA();
-					} else if (opcode == 0b00110111){  // 00 11 0111 = scf
+					}
+
+					// 00 11 0111 | 0x37 | scf | Set the carry flag | 1 | -001
+					else if (opcode == 0b00110111) {
 						reg_f |= mask_flag_c;  // set carry
 						reg_f &= ~(mask_flag_n | mask_flag_h);  // clear n and h flags
-					} else if (opcode == 0b00001000){  // 00 00 1000 = ld (nn), sp
+						//setFlags(UNAFFECTED, 0, 0, 1);
+					}
+
+					// 00 00 1000 | 0x08 | ld (u16), sp | Load the value of SP into a 16-bits immediate address | 5 | ----
+					else if (opcode == 0b00001000) {
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
 						uint16_t address = (high << 8) | low;
 						memoryWrite(address, m_sp & 0xFF); cycle();
 						memoryWrite(address + 1, m_sp >> 8); cycle();
-					} else if (opcode == 0b00011000){  // 00 01 1000 = jr e
+					}
+
+					// 00 01 1000 | 0x18 | jr s8 | Unconditional relative jump, by a number of bytes given by an immediate signed displacement | 3 | ----
+					else if (opcode == 0b00011000) {  // 00 01 1000 = jr e
 						int8_t diff = int8_t(memoryRead(m_pc++)); cycle();
-						m_pc += diff;
+						m_pc += diff;  // The displacement is from the value of PC AFTER fetching both the JR opcode and its operand
 						cycle();
-					} else if (opcode == 0b00001001){  // 00 00 1001 = add hl, bc
-						uint16_t result = reg_hl + reg_bc; cycle();
+					}
+
+					// 00 rr 1001 | 0x09, 0x19, 0x29, 0x39 | add hl, rr | Add the value of a 16-register to HL | 2 | -0hc
+					else if ((opcode & 0b11001111) == 0b00001001) {
+						uint8_t identifier = (opcode >> 4) & 0b11;
+						uint16_t result = reg_hl + get16(identifier); cycle();
+						// Internally, it is a shorthand for add l, c ; adc h, b ; so flags are set for the upper bytes
 						setFlags(UNAFFECTED, 0, (result & 0x0FFF) < (reg_hl & 0x0FFF), result < reg_hl);
 						reg_h = result >> 8;
 						reg_l = result & 0xFF;
-					} else if (opcode == 0b00011001){  // 00 01 1001 = add hl, de
-						uint16_t result = reg_hl + reg_de; cycle();
-						setFlags(UNAFFECTED, 0, (result & 0x0FFF) < (reg_hl & 0x0FFF), result < reg_hl);
-						reg_h = result >> 8;
-						reg_l = result & 0xFF;
-					} else if (opcode == 0b00101001){  // 00 10 1001 = add hl, hl
-						uint16_t result = reg_hl + reg_hl; cycle();
-						setFlags(UNAFFECTED, 0, (result & 0x0FFF) < (reg_hl & 0x0FFF), result < reg_hl);
-						reg_h = result >> 8;
-						reg_l = result & 0xFF;
-					} else if (opcode == 0b00111001){  // 00 11 1001 = add hl, sp
-						uint16_t result = reg_hl + m_sp; cycle();
-						setFlags(UNAFFECTED, 0, (result & 0x0FFF) < (reg_hl & 0x0FFF), result < reg_hl);
-						reg_h = result >> 8;
-						reg_l = result & 0xFF;
-					} else if (opcode == 0b00001010){  // 00 00 1010 = ld a, (bc)
-						uint8_t value = memoryRead(reg_bc); cycle();
-						reg_a = value;
-					} else if (opcode == 0b00011010){  // 00 01 1010 = ld a, (de)
-						uint8_t value = memoryRead(reg_de); cycle();
-						reg_a = value;
-					} else if (opcode == 0b00101010){  // 00 10 1010 = ldi a, (hl)
+					}
+
+					// 00 10 1010 | 0x2A | ldi a, (hl) / ld a, (hl+) | Load the value at the address given by HL into register A, then increment HL by 1 | 2 | ----
+					else if (opcode == 0b00101010) {
 						uint8_t value = memoryRead(reg_hl); cycle();
 						increment16(&reg_h, &reg_l);
 						reg_a = value;
-					} else if (opcode == 0b00111010){  // 00 11 1010 = ldd a, (hl)
+					}
+
+					// 00 11 1010 | 0x3A | ldd a, (hl) / ld a, (hl-) | Load the value at the address given by HL into register A, then decrement HL by 1 | 2 | ----
+					else if (opcode == 0b00111010){  // 00 11 1010 = ldd a, (hl)
 						uint8_t value = memoryRead(reg_hl); cycle();
 						decrement16(&reg_h, &reg_l);
 						reg_a = value;
-					} else if (opcode == 0b00001011){  // 00 00 1011 = dec bc
+					}
+
+					// 00 rr 1010 | 0x0A, 0x1A | ld a, (rr) | Load the value at the address given by the value of a 16-bits register into A | 2 | ----
+					else if ((opcode & 0b11001111) == 0b00001010) {
+						uint8_t identifier = (opcode >> 4) & 0b11;  // BC and DE use standard identifiers, those that should have been HL and SP are ldi and ldd and are handled separately
+						uint8_t value = memoryRead(get16(identifier)); cycle();
+						reg_a = value;
+					}
+
+					// Those are handled directly instead of using the identifier and make it generic, to handle OAM corruption properly (TODO)
+					// 00 00 1011 | 0x0B | dec bc | Decrement the value of BC by 1 | 2 | ----
+					else if (opcode == 0b00001011) {
 						cycle();
 						decrement16(&reg_b, &reg_c);
-					} else if (opcode == 0b00011011){  // 00 01 1011 = dec de
+					}
+
+					// 00 01 1011 | 0x1B | dec de | Decrement the value of DE by 1 | 2 | ----
+					else if (opcode == 0b00011011) {
 						cycle();
 						decrement16(&reg_d, &reg_e);
-					} else if (opcode == 0b00101011){  // 00 10 1011 = dec hl
+					}
+
+					// 00 10 1011 | 0x2B | dec hl | Decrement the value of HL by 1 | 2 | ----
+					else if (opcode == 0b00101011) {
 						cycle();
 						decrement16(&reg_h, &reg_l);
-					} else if (opcode == 0b00111011){  // 00 11 1011 = dec sp
+					}
+
+					// 00 11 1011 | 0x3B | dec sp | Decrement the value of SP by 1 | 2 | ----
+					else if (opcode == 0b00111011) {
 						cycle();
 						m_sp -= 1;
-					} else if (opcode == 0b00001111){  // 00 00 1111 = rrca
+					}
+
+					// 00 00 1111 | 0x0F | rrca | Rotate the accumulator's bits right (76543210 c -> 07654321 0) | 1 | 000c
+					else if (opcode == 0b00001111) {
 						reg_a = (reg_a >> 1) | (reg_a << 7);
 						setFlags(0, 0, 0, reg_a >> 7);
-					} else if (opcode == 0b00011111){  // 00 01 1111 = rra
+					}
+
+					// 00 01 1111 | 0x1F | rra | Rotate the accumulator's and carry bits right (76543210 c -> c7654321 0) | 1 | 000c
+					else if (opcode == 0b00011111) {  // 00 01 1111 = rra
 						bool newcarry = reg_a & 1;
 						reg_a = (reg_a >> 1) | (flag_c << 7);
 						setFlags(0, 0, 0, newcarry);
-					} else if (opcode == 0b00101111){  // 00 10 1111 = cpl
+					}
+
+					// 00 10 1111 | 0x2F | cpl | Take the complement of the accumulator (flip all bits) | 1 | -11-
+					else if (opcode == 0b00101111) {
 						reg_a = ~reg_a;  // flip A
 						setFlags(UNAFFECTED, 1, 1, UNAFFECTED);
-					} else if (opcode == 0b00111111){  // 00 11 1111 = ccf
+					}
+
+					// 00 11 1111 | 0x3F | ccf | Take the complement of the carry flag (flip flag c) | 1 | -00c
+					else if (opcode == 0b00111111) {  // 00 11 1111 = ccf
 						reg_f ^= mask_flag_c;  // flip carry
 						setFlags(UNAFFECTED, 0, 0, UNAFFECTED);
+					}
 
+					////////// Opcodes in 0b01xxxxxx : Load instructions
 
-					// 01 opcodes
-					} else if (opcode == 0b01110110){  // 01 110 110 = halt
-						if (m_interrupt->getMaster()){
-							m_halted = true;
-						} else if (m_interrupt->getInterrupt() == Interrupt::None){
+					// 01 110 110 | 0x76 | halt | Put the CPU in halt mode (low-power mode where it does nothing) until an interrupt is requested and enabled (IE + IF, not necessarily IME) | 1 | ----
+					else if (opcode == 0b01110110) {
+						if (m_interrupt->getMaster() || m_interrupt->getInterrupt() == Interrupt::None) {
 							m_halted = true;
 						} else {
-							// Halt bug
+							// If the Interrupt Master Enable (ei/di) is clear and there is a pending interrupt (IE + IF), a hardware glitch makes it not enter halt mode and not increment PC after fetching the next instruction
 							m_haltBug = true;
 						}
-					} else if ((opcode & 0b11000111) == 0b01000110){  // 01 xxx 110 = ld x, (hl)
+					}
+
+					// 01 rrr 110 | 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E | ld r, (hl) | Load the value at the memory address given by HL into a register | 2 | ----
+					else if ((opcode & 0b11000111) == 0b01000110) {
 						uint8_t value = memoryRead(reg_hl); cycle();
 						uint8_t destreg = (opcode >> 3) & 7;
 						m_registers[destreg] = value;
-					} else if ((opcode & 0b11111000) == 0b01110000){  // 01 110 xxx = ld (hl), x
+					}
+
+					// 01 110 rrr | 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77 | ld (hl), r | Load the value of a register into memory at the address given by HL | 2 | ----
+					else if ((opcode & 0b11111000) == 0b01110000){  // 01 110 xxx = ld (hl), x
 						uint8_t sourcereg = opcode & 7;
 						memoryWrite(reg_hl, m_registers[sourcereg]); cycle();
-					} else if ((opcode & 0b11000000) == 0b01000000){  // 01 xxx yyy = ld x, y
+					}
+
+					// 01 xxx yyy | All other values in 0x40-0x7F | ld x, y | Load the value of a register into another | 1 | ----
+					else if ((opcode & 0b11000000) == 0b01000000){  // 01 xxx yyy = ld x, y
 						uint8_t sourcereg = opcode & 7;
 						uint8_t destreg = (opcode >> 3) & 7;
 						m_registers[destreg] = m_registers[sourcereg];
+					}
 
+					////////// Opcodes in 0b10xxxxxx : Arithmetical instructions : Details in CPU::accumulatorOperation
 
-					// 10 opcodes
-					} else if ((opcode & 0b11000111) == 0b10000110){  // 10 ooo 110 = <op> a, (hl)
+					// 10 ppp 110 | 0x86, 0x8E, 0x96, 0x9E, 0xA6, 0xAE, 0xB6, 0xBE | <op> a, (hl) | Do an arithmetical operation between the accumulator and the value in memory at the address given by HL and put the result back in the accumulator | 2 | xxxx
+					else if ((opcode & 0b11000111) == 0b10000110) {
 						uint8_t operation = (opcode >> 3) & 7;
 						uint8_t operand = memoryRead(reg_hl); cycle();
 						accumulatorOperation(operation, operand);
-					} else if ((opcode & 0b11000000) == 0b10000000){  // 10 ooo rrr = <op> a, r
+					}
+
+					// 10 ppp rrr | All other values in 0x80-0xBF | <op> a, r | Do an arithmetical operation between the accumulator and another register and put the result back in the accumulator | 1 | xxxx
+					else if ((opcode & 0b11000000) == 0b10000000) {  // 10 ooo rrr = <op> a, r
 						uint8_t operation = (opcode >> 3) & 7;
 						uint8_t reg = opcode & 7;
 						accumulatorOperation(operation, m_registers[reg]);
+					}
 
+					////////// Opcodes in 0b11xxxxxx : Mostly control, stack and immediate value instructions
 
-					// 11 opcodes
-					} else if ((opcode & 0b11100111) == 0b11000000){  // 110 cc 000 = ret cc
+					// 110 cc 000 | 0xC0, 0xC8, 0xD0, 0xD8 | ret [nz, z, nc, c] | Conditional return, pop the value of PC from the stack if the condition is true | 5 (return, condition is true) / 2 (false) | ----
+					else if ((opcode & 0b11100111) == 0b11000000) {
 						uint8_t condition = (opcode >> 3) & 3; cycle();
-						if (checkCondition(condition)){
+						if (checkCondition(condition)) {
 							uint16_t low = memoryRead(m_sp++); cycle();
 							uint16_t high = memoryRead(m_sp++); cycle();
 							uint16_t address = (high << 8) | low; cycle();
 							m_pc = address;
 						}
-					} else if (opcode == 0b11110000){  // 11 11 0000 = ldh a, (n)
-						uint16_t low = memoryRead(m_pc++); cycle();
-						uint16_t address = 0xFF00 | low;
-						reg_a = memoryRead(address); cycle();
-					} else if (opcode == 0b11100000){  // 11 10 0000 = ldh (n), a
+					}
+
+					// 11 10 0000 | 0xE0 | ldh (u8), a | Load the value of register A into memory at address 0xFF00 + u8 | 3 | ----
+					else if (opcode == 0b11100000) {
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t address = 0xFF00 | low;
 						memoryWrite(address, reg_a); cycle();
-					} else if (opcode == 0b11000001){  // 11 00 0001 = pop bc
-						reg_c = memoryRead(m_sp++); cycle();
-						reg_b = memoryRead(m_sp++); cycle();
-					} else if (opcode == 0b11010001){  // 11 01 0001 = pop de
-						reg_e = memoryRead(m_sp++); cycle();
-						reg_d = memoryRead(m_sp++); cycle();
-					} else if (opcode == 0b11100001){  // 11 10 0001 = pop hl
-						reg_l = memoryRead(m_sp++); cycle();
-						reg_h = memoryRead(m_sp++); cycle();
-					} else if (opcode == 0b11110001){  // 11 11 0001 = pop af
+					}
+
+					// 11 11 0000 | 0xF0 | ldh a, (u8) | Load the value at memory address 0xFF00 + u8 into register A | 3 | ----
+					else if (opcode == 0b11110000) {
+						uint16_t low = memoryRead(m_pc++); cycle();
+						uint16_t address = 0xFF00 | low;
+						reg_a = memoryRead(address); cycle();
+					}
+
+					// 11 11 0001 | 0xF1 | pop af | Pop a 16-bits value from the stack into 16-bits register AF (that replaces SP as identifier 0b11 here) | 3 | znhc
+					else if (opcode == 0b11110001) {
+						// The lower 4 bits of F are not only unused, they physically don't exist, so we need to mask them out
 						reg_f = memoryRead(m_sp++) & 0xF0; cycle();
 						reg_a = memoryRead(m_sp++); cycle();
-					} else if ((opcode & 0b11100111) == 0b11000010){  // 110 cc 010 = jp cc, nn
+					}
+
+					// 11 rr 0001 | 0xC1, 0xD1, 0xE1 | pop rr | Pop a 16-bits value from the stack into a 16-bits register | 3 | ----
+					else if ((opcode & 0b11001111) == 0b11000001) {
+						uint8_t low = memoryRead(m_sp++); cycle();
+						uint8_t high = memoryRead(m_sp++); cycle();
+						uint8_t identifier = (opcode >> 4) & 0b11;
+						set16(identifier, high, low);
+					}
+
+					// 110 cc 010 | 0xC2, 0xCA, 0xD2, 0xDA | jp [nz, z, nc, c], u16 | Conditional absolute jump, jump to an immediate 16-bits address if the condition is true | 4 (jump, condition is true) / 3 (false) | ----
+					else if ((opcode & 0b11100111) == 0b11000010) {
 						uint8_t condition = (opcode >> 3) & 3;
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
 						uint16_t address = (high << 8) | low;
-						if (checkCondition(condition)){
+						if (checkCondition(condition)) {
 							cycle();
 							m_pc = address;
 						}
-					} else if (opcode == 0b11100010){  // 11 10 0010 = ldh (c), a
+					}
+
+					// 11 10 0010 | 0xE2 | ldh (c), a | Load the value of A into the address (0xFF00 + value of the register C) | 2 | ----
+					else if (opcode == 0b11100010) {
 						uint16_t address = 0xFF00 | reg_c;
 						memoryWrite(address, reg_a); cycle();
-					} else if (opcode == 0b11110010){  // 11 11 0010 = ldh a, (c)
+					}
+
+					// 11 11 0010 | 0xF2 | ldh a, (c) | Load the value at address (0xFF00 + value of the register C) into the register A | 2 | ----
+					else if (opcode == 0b11110010) {
 						uint16_t address = 0xFF00 | reg_c;
 						reg_a = memoryRead(address); cycle();
-					} else if (opcode == 0b11000011){  // 11 00 0011 = jp nn
+					}
+
+					// 11 00 0011 | 0xC3 | jp u16 | Unconditional absolute jump to an immediate 16-bits address | 4 | ----
+					else if (opcode == 0b11000011) {
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
 						uint16_t address = (high << 8) | low;
 						cycle();
 						m_pc = address;
-					} else if (opcode == 0b11110011){  // 11 11 0011 = di
-						m_ei_scheduled = false;
+					}
+
+					// 11 11 0011 | 0xF3 | di | Immediately clear IME (Interrupts Master Enable) : Until ei or reti are executed, requested and enabled interrupts stay pending and to not trigger a jump to the interrupt vector | 1 | ----
+					else if (opcode == 0b11110011) {
+						m_ei_scheduled = false;  // Cancel a potential ei instruction executed at the previous cycle
 						m_interrupt->setMaster(false);
-					} else if ((opcode & 0b11100111) == 0b11000100){  // 110 cc 100 = call cc, nn
+					}
+
+					// 110 cc 100 | 0xC4, 0xCC, 0xD4, 0xDC | call [nz, z, nc, c], u16 | Conditonally call a subroutine at an immediate 16-bits address. If the condition is true, PC is pushed on the stack then jumps | 6 (call, condition is true) / 3 (false) | ----
+					else if ((opcode & 0b11100111) == 0b11000100) {
 						uint8_t condition = (opcode >> 3) & 3;
+						// The jump address is always loaded, regardless of the condition
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
-						if (checkCondition(condition)){
+						if (checkCondition(condition)) {
 							uint16_t address = (high << 8) | low;
 							m_sp -= 1; cycle();
 							memoryWrite(m_sp--, m_pc >> 8); cycle();
 							memoryWrite(m_sp, m_pc & 0xFF); cycle();
 							m_pc = address;
 						}
-					} else if (opcode == 0b11000101){  // 11 00 0101 = push bc
-						m_sp -= 1;
-						cycle();
-						memoryWrite(m_sp--, reg_b); cycle();
-						memoryWrite(m_sp, reg_c); cycle();
-					} else if (opcode == 0b11010101){  // 11 01 0101 = push de
-						m_sp -= 1;
-						cycle();
-						memoryWrite(m_sp--, reg_d); cycle();
-						memoryWrite(m_sp, reg_e); cycle();
-					} else if (opcode == 0b11100101){  // 11 10 0101 = push hl
-						m_sp -= 1;
-						cycle();
-						memoryWrite(m_sp--, reg_h); cycle();
-						memoryWrite(m_sp, reg_l); cycle();
-					} else if (opcode == 0b11110101){  // 11 11 0101 = push af
+					}
+
+					// 11 11 0101 | 0xF5 | push af | Push the value of the 16-bits register AF onto the stack | 4 | ----
+					else if (opcode == 0b11110101) {
 						m_sp -= 1;
 						cycle();
 						memoryWrite(m_sp--, reg_a); cycle();
 						memoryWrite(m_sp, reg_f); cycle();
-					} else if ((opcode & 0b11000111) == 0b11000110){  // 11 ooo 110 = <op> a, n
+					}
+
+					// 11 rr 0101 | 0xC5, 0xD5, 0xE5 | push rr | Push the value of a 16-bits register onto the stack | 4 | ----
+					else if ((opcode & 0b11001111) == 0b11000101) {
+						m_sp -= 1;
+						cycle();
+						uint8_t identifier = (opcode >> 4) & 0b11;
+						uint16_t value = get16(identifier);
+						memoryWrite(m_sp--, value >> 8); cycle();
+						memoryWrite(m_sp, value & 0xFF); cycle();
+					}
+
+					// 11 ppp 110 | 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE | <op> a, u8 | Perform an arithmetical operation between the accumulator and an immediate value, and put the result back into the accumulator | 2 | xxxx
+					else if ((opcode & 0b11000111) == 0b11000110) {
 						uint8_t operation = (opcode >> 3) & 7;
 						uint8_t operand = memoryRead(m_pc++); cycle();
 						accumulatorOperation(operation, operand);
-					} else if ((opcode & 0b11000111) == 0b11000111){  // 11 xxx 111 = rst xxx000
-						uint16_t address = opcode & 0b00111000;
+					}
+
+					// 11 xxx 111 | 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF | rst xx | Call a reset vector (0x0000 / 0x0008 / 0x0010 / 0x0018 / 0x0020 / 0x0028 / 0x0030 / 0x0038) | 4 | ----
+					else if ((opcode & 0b11000111) == 0b11000111) {
+						uint16_t address = opcode & 0b00111000;  // Reset routine address happens to be exactly those 3 bits shifted left by 3 bits
 						m_sp -= 1; cycle();
+						// Push PC onto the stack before jumping
 						memoryWrite(m_sp--, m_pc >> 8); cycle();
 						memoryWrite(m_sp, m_pc & 0xFF); cycle();
 						m_pc = address;
-					} else if (opcode == 0b11101000){  // 11 10 1000 = add sp, e = add sp, e
-						uint16_t operand = uint16_t(int16_t(int8_t(memoryRead(m_pc++)))); cycle();
+					}
+
+					// 11 10 1000 | 0xE8 | add sp, s8 | Add a signed 8-bits immediate value to the value of SP | 4 | 00hc
+					else if (opcode == 0b11101000) {
+						uint16_t operand = uint16_t(int16_t(int8_t(memoryRead(m_pc++)))); cycle();  // All this just converts the 8-bits two-complements operand into its 16-bits two-complements equivalent
 						uint16_t result = m_sp + operand; cycle();
+						// Flags H and C are calculated for the lower byte
 						setFlags(0, 0, (m_sp & 0x000F) + (operand & 0x000F) > 0x000F, (m_sp & 0x00FF) + (operand & 0x00FF) > 0x00FF);
 						m_sp = result; cycle();
-					} else if (opcode == 0b11111000){  // 11 11 1000 = ld hl, sp+e
-						uint16_t operand = uint16_t(int16_t(int8_t(memoryRead(m_pc++)))); cycle();
+					}
+
+					// 11 11 1000 | 0xF8 | ld hl, sp+s8 | Load the value of (SP + signed 8-bits immediate value) into HL | 3 | 00hc
+					else if (opcode == 0b11111000) {
+						uint16_t operand = uint16_t(int16_t(int8_t(memoryRead(m_pc++)))); cycle();  // All this just converts the 8-bits two-complements operand into its 16-bits two-complements equivalent
 						uint16_t result = m_sp + operand; cycle();
+						// Flags H and C are calculated for the lower byte
 						setFlags(0, 0, (m_sp & 0x000F) + (operand & 0x000F) > 0x000F, (m_sp & 0x00FF) + (operand & 0x00FF) > 0x00FF);
 						reg_h = result >> 8;
 						reg_l = result & 0xFF;
-					} else if (opcode == 0b11001001){  // 11 00 1001 = ret
+					}
+
+					// 11 00 1001 | 0xC9 | ret | Unconditionally return from a subroutine | 4 | ----
+					else if (opcode == 0b11001001) {
+						// Pop PC from the stack and jump to it
 						uint16_t low = memoryRead(m_sp++); cycle();
 						uint16_t high = memoryRead(m_sp++); cycle();
 						uint16_t address = (high << 8) | low;
 						m_pc = address; cycle();
-					} else if (opcode == 0b11011001){  // 11 01 1001 = reti
+					}
+
+					// 11 01 1001 | 0xD9 | reti | Unconditionally return from a subroutine and enable interrupts (set IME) | 4 | ----
+					else if (opcode == 0b11011001) {
+						// Pop PC from the stack and jump to it
 						uint16_t low = memoryRead(m_sp++); cycle();
 						uint16_t high = memoryRead(m_sp++); cycle();
-						uint16_t address = (high << 8) | low;
+						uint16_t address = (high << 8) | low;  // Contrary to ei, there is no additional delay for reti (there is probably one but hidden in the 4 cycles reti takes)
 						m_pc = address; cycle();
 						m_interrupt->setMaster(true);
-					} else if (opcode == 0b11101001){  // 11 10 1001 = jp hl
+					}
+
+					// 11 10 1001 | 0xE9 | jp hl | Unconditonal jump to the address given by HL | 1 | ----
+					else if (opcode == 0b11101001) {
 						m_pc = reg_hl;
-					} else if (opcode == 0b11111001){  // 11 11 1001 = ld sp, hl
+					}
+
+					// 11 11 1001 | 0xF9 | ld sp, hl | Load the value of HL into SP | 2 | ----
+					else if (opcode == 0b11111001) {
 						cycle();
-						m_sp = (reg_h << 8) | reg_l;
-					} else if (opcode == 0b11101010){  // 11 10 1010 = ld (nn), a
+						m_sp = reg_hl;
+					}
+
+					// 11 10 1010 | 0xEA | ld (u16), a | Load the value of a into an immediate memory address | 4 | ----
+					else if (opcode == 0b11101010) {
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
 						uint16_t address = (high << 8) | low;
 						memoryWrite(address, reg_a); cycle();
-					} else if (opcode == 0b11111010){  // 11 11 1010 = ld a, (nn)
+					}
+
+					// 11 11 1010 | 0xFA | ld a, (u16) | Load the value at an immediate memory address into register A | 4 | ----
+					else if (opcode == 0b11111010) {
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
 						uint16_t address = (high << 8) | low;
 						uint8_t value = memoryRead(address); cycle();
 						reg_a = value;
-					} else if (opcode == 0b11001011){  // 11 00 1011 = prefix CB
+					}
+
+					// 11 00 1011 | 0xCB | Prefix for bitwise operations, specific opcode is the next byte | 2 / 4 (with (hl)) | xxxx
+					else if (opcode == 0b11001011) {
+						// The specific opcode is 0bBBPPPRRR, with BB a block of instructions (like the normal ones), PPP the parameter within that block, and RRR the 8-bits register (or (hl) for 010) to operate onto
 						uint8_t operation = memoryRead(m_pc++); cycle();
 						uint8_t reg = operation & 7;
 
 						uint8_t operand;
-						if (reg == 0b110){
+						if (reg == 0b110) {
 							operand = memoryRead(reg_hl); cycle();
 						} else {
 							operand = m_registers[reg];
@@ -508,51 +729,91 @@ namespace toygb {
 						uint8_t result = operand;
 						uint8_t block = (operation >> 6) & 3;
 						uint8_t subop = (operation >> 3) & 7;
-						if (block == 0b00){  // 00 xxx : Bitwise operations
-							if (subop == 0b000){  // 00 000 : rlc
+
+						// Block 0b00xxxRRR : Bitwise shifts and rotations
+						if (block == 0b00) {
+							// 00 000 rrr | 0x00-0x07 | rlc r | Rotate the bits of a register left (c 76543210 -> 7 65432107)| 2/4 | z00c
+							if (subop == 0b000) {
 								result = (operand << 1) | (operand >> 7);
-								setFlags(result == 0, 0, 0, operand >> 7);
-							} else if (subop == 0b001){  // 00 001 : rrc
+								setFlags(result == 0, 0, 0, operand >> 7);  // The new carry is the bit that was shifted out
+							}
+
+							// 00 001 rrr | 0x08-0x0F | rrc r | Rotate the bits of a register right (76543210 c -> 07654321 0) | 2/4 | z00c
+							else if (subop == 0b001) {
 								result = (operand >> 1) | (operand << 7);
-								setFlags(result == 0, 0, 0, operand & 1);
-							} else if (subop == 0b010){  // 00 010 : rl
+								setFlags(result == 0, 0, 0, operand & 1);  // The new carry is the bit that got shifted out
+							}
+
+							// 00 010 rrr | 0x10-0x17 | rl r | Rotate the bits of a register and carry left (c 76543210 -> 7 6543210c) | 2/4 | z00c
+							else if (subop == 0b010) {
 								result = (operand << 1) | flag_c;
 								setFlags(result == 0, 0, 0, operand >> 7);
-							} else if (subop == 0b011){  // 00 011 : rr
+							}
+
+							// 00 011 rrr | 0x18-0x1F | rr r | Rotate the bits of a register and carry right (76543210 c -> c7654321 0) | 2/4 | z00c
+							else if (subop == 0b011) {
 								result = (operand >> 1) | (flag_c << 7);
 								setFlags(result == 0, 0, 0, operand & 1);
-							} else if (subop == 0b100){  // 00 100 : sla
+							}
+
+							// 00 100 rrr | 0x20-0x27 | sla r | Shift the bits of a register left (c mnopqrst -> m nopqrst0) | 2/4 | z00c
+							else if (subop == 0b100) {
 								result = operand << 1;
 								setFlags(result == 0, 0, 0, operand >> 7);
-							} else if (subop == 0b101){  // 00 101 : sra
+							}
+
+							// 00 101 rrr | 0x28-0x2F | sra r | Shift the bits of a register right, leaving the leftmost bit at its initial value (mnopqrst c -> mmnopqrs t) | 2/4 | z00c
+							else if (subop == 0b101) {
 								result = (operand >> 1) | (operand & 0b10000000);
 								setFlags(result == 0, 0, 0, operand & 1);
-							} else if (subop == 0b110){  // 00 110 : swap
+							}
+
+							// 00 110 rrr | 0x30-0x37 | swap r | Swap the upper and lower nibbles of a register (76543210 -> 32107654) | 2/4 | z000
+							else if (subop == 0b110) {
 								result = ((operand & 0x0F) << 4) | ((operand & 0xF0) >> 4);
 								setFlags(result == 0, 0, 0, 0);
-							} else if (subop == 0b111){  // 00 111 : srl
+							}
+
+							// 00 111 rrr | 0x38-0x3F | srl l | Shift the bits of a register right, leaving zero in the leftmost bit (mnopqrst c -> 0mnopqrs t) | 2/4 | z00c
+							else if (subop == 0b111){  // 00 111 : srl
 								result = operand >> 1;
 								setFlags(result == 0, 0, 0, operand & 1);
 							}
-						} else if (block == 0b01){  // 01 iii : bit i, r
+						}
+
+						// 01 bbb rrr | All values in 0x40-0x7F | bit b, r | Check the value of bit b of the value of a register. Bit = 0 -> flag z = 1, bit = 1 -> flag z = 0 | 2/4 | z01-
+						else if (block == 0b01) {
 							setFlags(((operand >> subop) & 1) == 0, 0, 1, UNAFFECTED);
-						} else if (block == 0b10){  // 10 iii : res i, r
-							result = operand & ~(1 << subop);
-						} else if (block == 0b11){  // 11 iii : set i, r
-							result = operand | (1 << subop);
+						}
+
+						// 10 bbb rrr | All values in 0x80-0xBF | res b, r | Reset (set to 0) bit b of the value of a register | 2/4 | ----
+						else if (block == 0b10) {
+							result = operand & ~(1 << subop);  // Mask out the given bit (like bit 2 -> 0b00000100 -> value is AND-ed by 0b11111011)
+						}
+
+						// 11 bbb rrr | All values in 0xC0-0xFF | set b, r | Set (to 1) bit b of the value of a reister | 2/4 | ----
+						else if (block == 0b11) {
+							result = operand | (1 << subop);  // Mask in the given bit
 						}
 
 
-						if (block != 0b01){  // No rewrite for bit
-							if (reg == 0b110){
+						// Write the result back to the original register (except for bit that only checks without changing the value)
+						if (block != 0b01) {
+							if (reg == 0b110) {  // 010 -> (hl)
 								memoryWrite(reg_hl, result); cycle();
 							} else {
 								m_registers[reg] = result;
 							}
 						}
-					} else if (opcode == 0b11111011){  // 11 11 1011 = ei
+					}
+
+					// 11 11 1011 | 0xFB | ei | Enable interrupts (set the Interrupt Master Enable), with a delay of 1 cycle | 1 | ----
+					else if (opcode == 0b11111011){  // 11 11 1011 = ei
 						m_ei_scheduled = true;
-					} else if (opcode == 0b11001101){  // 11 00 1101 = call nn
+					}
+
+					// 11 00 1101 | 0xCD | call u16 | Unconditionally call a subroutine at an immediate address | 6 | ----
+					else if (opcode == 0b11001101) {
 						uint16_t low = memoryRead(m_pc++); cycle();
 						uint16_t high = memoryRead(m_pc++); cycle();
 						uint16_t address = (high << 8) | low;
@@ -562,11 +823,21 @@ namespace toygb {
 						m_pc = address;
 					}
 
+					// Undefined opcodes 0xD3, 0xE3, 0xE4, 0xF4, 0xDB, 0xEB, 0xEC, 0xFC, 0xDD, 0xED, 0xFD hang the CPU (TODO : make a proper debug of this and just hang the CPU)
+					else {
+						std::stringstream errstream;
+						errstream << "Undefined opcode " << oh8(opcode);
+						throw EmulationError(errstream.str());
+					}
+
 					if (m_logDisassembly) logStatus();
 
 					opcode = memoryRead(m_pc); cycle();  // Fetch the next opcode during the last cycle of the current instruction
-					if (!m_haltBug) m_pc += 1;
-				} else {
+					if (!m_haltBug)  // When a halt instruction is executed when an interrupt is pending (IF + IE) and IME is clear, halt mode is not entered and PC is not incremented after the next fetch
+						m_pc += 1;
+					else
+						m_haltBug = false;
+				} else {  // Skip the cycle if in halt or stop mode
 					cycle();
 				}
 			}
@@ -576,9 +847,8 @@ namespace toygb {
 		}
 	}
 
+	// Initialize the CPU status with default values for the hardware, if there is no bootrom (TODO : Add bootrom support)
 	void CPU::initRegisters(){
-		// Defaults set when no bootrom is specified.
-		// TODO : add bootrom support
 		reg_sp = 0xFFFE;
 		m_pc = 0x0100;
 		switch (m_hardware.console()){
@@ -657,26 +927,30 @@ namespace toygb {
 		m_instructionCount = 0;
 	}
 
-	uint8_t CPU::memoryRead(uint16_t address){
+	// Read the value at the given absolute memory address
+	uint8_t CPU::memoryRead(uint16_t address) {
+		// Memory other than HRAM is inaccessible during OAM DMA
 		if (m_dma->isOAMDMAActive() && (address < HRAM_OFFSET || address >= IO_INTERRUPT_ENABLE))
 			return 0xFF;
 		uint8_t value = m_memory->get(address);
 		return value;
 	}
 
+	// Write a value at the given absolute memory address
 	void CPU::memoryWrite(uint16_t address, uint8_t value){
 		m_memory->set(address, value);
 	}
 
-	bool CPU::checkCondition(uint8_t condition){
-		switch (condition){
-			case 0b00:  // nz
+	// Check a jump condition, and return the result
+	bool CPU::checkCondition(uint8_t condition) {
+		switch (condition) {
+			case 0b00:  // nz : flag z must be clear
 				return !flag_z;
-			case 0b01:  // z
+			case 0b01:  // z : flag z must be set
 				return flag_z;
-			case 0b10:  // nc
+			case 0b10:  // nc : flag c must be clear
 				return !flag_c;
-			case 0b11:  // c
+			case 0b11:  // c : flag c must be set
 				return flag_c;
 		}
 
@@ -685,70 +959,73 @@ namespace toygb {
 		throw EmulationError(errstream.str());
 	}
 
-	void CPU::setFlags(uint8_t z, uint8_t n, uint8_t h, uint8_t c){
+	// Set flags to the given values. Arguments may be 0, 1, or UNAFFECTED to leave them unchanged
+	void CPU::setFlags(uint8_t z, uint8_t n, uint8_t h, uint8_t c) {
+		// Compute this simply with two masks. Example : setFlags(1, 0, UNAFFECTED, UNAFFECTED) -> reg_f = (0b01010000 | 0b1000000) & 0b10110000 = 0b11010000 & 0b10110000 = 0b10010000
 		uint8_t setmask = ((z == 1) << 7) | ((n == 1) << 6) | ((h == 1) << 5) | ((c == 1) << 4);
-		uint8_t resetmask = ~(((z == 0) << 7) | ((n == 0) << 6) | ((h == 0) << 5) | ((c == 0) << 4));
+		uint8_t resetmask = ~(((z == 0) << 7) | ((n == 0) << 6) | ((h == 0) << 5) | ((c == 0) << 4) | 0b00001111);
 		reg_f = (reg_f | setmask) & resetmask;
 	}
 
-	void CPU::accumulatorOperation(uint8_t operation, uint8_t operand){
+	// Perform an arithmetical operation between the accumulator and the given operand
+	void CPU::accumulatorOperation(uint8_t operation, uint8_t operand) {
 		uint8_t result;
-		switch (operation){
-			case 0b000:  // add
+		switch (operation) {
+			// -- 000 xxx | add a, x | Add the values of the accumulator and the operand | z0hc
+			case 0b000:
 				result = reg_a + operand;
-				//bool newhalf = (reg_a & 0x0f) + (operand & 0x0f) > 0x0f;
-				//bool newcarry = (uint16_t)reg_a + (uint16_t)operand > 0xFF;
-				setFlags(result == 0, 0, ((result & 0x0F) < (reg_a & 0x0F)), (result < reg_a));
-				//setFlags(result == 0, 0, newhalf, newcarry);
+				setFlags(result == 0, 0, HALF_CARRY_INC(reg_a, result), (result < reg_a));
 				reg_a = result;
 				break;
-			case 0b001: {  // adc
+
+			// -- 001 xxx | adc a, x | Add the values of the accumulator, the operand and the carry flag | z0hc
+			case 0b001: {
 				result = reg_a + operand + flag_c;
+				// The usual comparison logic does not work here because of the potention +1 due to the carry, so we do it the old way, checking manually if there's a carry
 				bool newhalf = (reg_a & 0x0f) + (operand & 0x0f) + flag_c > 0x0f;
 				bool newcarry = uint16_t(reg_a) + uint16_t(operand) + uint16_t(flag_c) > 0x00FF;
-				//setFlags(result == 0, 0, ((result & 0x0F) < (reg_a & 0x0F)), (result < reg_a));
 				setFlags(result == 0, 0, newhalf, newcarry);
 				reg_a = result;
 				break;
 			}
+			// -- 010 xxx | sub a, x | Substract the values of the accumulator and the operand | z1hc
 			case 0b010:  // sub
 				result = reg_a - operand;
-				//bool newhalf = (((reg_a & 0xf) - (value & 0xf)) & 0x10) != 0;
-				//bool newcarry = (uint16_t)reg_a < (uint16_t)value;
-				setFlags(result == 0, 1, ((result & 0x0F) > (reg_a & 0x0F)), (result > reg_a));
-				//setFlags(result == 0, 1, newhalf, newcarry);
+				setFlags(result == 0, 1, HALF_CARRY_DEC(reg_a, result), (result > reg_a));
 				reg_a = result;
 				break;
-			case 0b011: {  // sbc
+
+			// -- 011 xxx | sbc a, x | Substract the values of the accumulator, the operand and the carry flag | z1hc
+			case 0b011: {
 				result = reg_a - operand - flag_c;
+				// The usual comparison logic does not work here because of the potention -1 due to the carry, so we do it the old way, checking manually if there's a carry
 				bool newhalf = int8_t(reg_a & 0xf) - int8_t(operand & 0xf) - int8_t(flag_c) < 0;
 				bool newcarry = int16_t(reg_a) - int16_t(operand) - int16_t(flag_c) < 0;
-				//setFlags(result == 0, 1, ((result & 0x0F) > (reg_a & 0x0F)), (result > reg_a));
 				setFlags(result == 0, 1, newhalf, newcarry);
 				reg_a = result;
 				break;
 			}
-			case 0b100:  // and
-				result = reg_a & operand;
-				setFlags(result == 0, 0, 1, 0);
-				reg_a = result;
+			// -- 100 xxx | and a, x | Perform a bitwise AND between the accumulator and the operand | z010
+			case 0b100:
+				reg_a &= operand;
+				setFlags(reg_a == 0, 0, 1, 0);
 				break;
-			case 0b101:  // xor
-				result = reg_a ^ operand;
-				setFlags(result == 0, 0, 0, 0);
-				reg_a = result;
+
+			// -- 101 xxx | xor a, x | Perform a bitwise XOR between the accumulator and the operand | z000
+			case 0b101:
+				reg_a ^= operand;
+				setFlags(reg_a == 0, 0, 0, 0);
 				break;
-			case 0b110:  // or
-				result = reg_a | operand;
-				setFlags(result == 0, 0, 0, 0);
-				reg_a = result;
+
+			// -- 110 xxx | or a, x | Perform a bitwise OR between the accumulator and the operand | z000
+			case 0b110:
+				reg_a |= operand;
+				setFlags(reg_a == 0, 0, 0, 0);
 				break;
-			case 0b111:  // cp
+			// -- 111 xxx | cp a, x | Compare the accumulator with the operand. Basically execute a sub instruction without putting the result back in the accumulator | z1hc
+			case 0b111:
 				result = reg_a - operand;
-				//bool newhalf = (((reg_a & 0xf) - (value & 0xf)) & 0x10) != 0;
-				//bool newcarry = (uint16_t)reg_a < (uint16_t)value;
-				setFlags(result == 0, 1, ((result & 0x0F) > (reg_a & 0x0F)), (result > reg_a));
-				//setFlags(result == 0, 1, newhalf, newcarry);
+				setFlags(result == 0, 1, HALF_CARRY_DEC(reg_a, result), (result > reg_a));
 				break;
 			default:
 				std::stringstream errstream;
@@ -759,7 +1036,8 @@ namespace toygb {
 	}
 
 	// TODO : OAM glitch
-	void CPU::increment16(uint8_t* high, uint8_t* low){
+	// Increment the value of a 16-bits register by 1
+	void CPU::increment16(uint8_t* high, uint8_t* low) {
 		uint16_t value = (*high << 8) | *low;
 		value += 1;
 		*high = value >> 8;
@@ -767,15 +1045,68 @@ namespace toygb {
 	}
 
 	// TODO : OAM glitch
-	void CPU::decrement16(uint8_t* high, uint8_t* low){
+	// Decrement the value of a 16-bits register by 1
+	void CPU::decrement16(uint8_t* high, uint8_t* low) {
 		uint16_t value = (*high << 8) | *low;
 		value -= 1;
 		*high = value >> 8;
 		*low = value & 0xFF;
 	}
 
-	void CPU::applyDAA(){
-		//uint8_t high = reg_a >> 4;
+	// Get the value of a 16-bits register, as specified by the 2-bits identifier found in the opcode
+	uint16_t CPU::get16(uint8_t identifier) {
+		switch (identifier) {
+			case reg_id_bc: return reg_bc;
+			case reg_id_de: return reg_de;
+			case reg_id_hl: return reg_hl;
+			case reg_id_sp: return reg_sp;
+			default:
+				throw EmulationError("Invalid 16-bits register identifier given to CPU::get16");
+		}
+	}
+
+	// Set the value of a 16-bits register, as specified by the 2-bits identifier found in the opcode
+	void CPU::set16(uint8_t identifier, uint16_t value) {
+		if (identifier == reg_id_sp){
+			reg_sp = value;
+		} else {
+			uint8_t high = (value >> 8);
+			uint8_t low = (value & 0xFF);
+			set16(identifier, high, low);
+		}
+	}
+
+	// Set the value of a 16-bits register, as specified by the 2-bits identifier found in the opcode
+	void CPU::set16(uint8_t identifier, uint8_t high, uint8_t low) {
+		switch (identifier) {
+			case reg_id_bc:
+				reg_b = high; reg_c = low;
+				break;
+			case reg_id_de:
+				reg_d = high; reg_e = low;
+				break;
+			case reg_id_hl:
+				reg_h = high; reg_l = low;
+				break;
+			case reg_id_sp:
+				reg_sp = (high << 8) | low;
+				break;
+		}
+	}
+
+	// Execute the DAA instruction, that adjusts the result of an arithmetical operation between two Binary-Coded Decimal values back to decimal
+	// The table is as follows, here the logic has been fully reduced, contrary to the tables that are usually in documentations (that may be what the hardware is doing internally, but we are not the hardware)
+	// `-` Means regardless of that value (input), or unchanged (output)
+	// N | C | H |     A | Lower nibble of A | Value to add to the accumulator | New value of the carry flag
+	// 0 | 1 | - |     - |                 - | 0x60                            | 1
+	// 0 | - | - | >0x99 |                 - | 0x60                            | 1
+	// 0 | - | 1 |     - |                 - | 0x06                            | -
+	// 0 | - | - |     - |                >9 | 0x06                            | -
+	// 1 | 1 | 1 |     - |                 - | 0x9A                            | 1
+	// 1 | 1 | 0 |     - |                 - | 0xA0                            | 1
+	// 1 | 0 | 1 |     - |                 - | 0xFA                            | -
+	// In all other cases, the accumulator and the carry flag are left unchanged
+	void CPU::applyDAA() {
 		uint8_t low = reg_a & 0x0F;
 
 		bool newcarry = flag_c;
@@ -798,10 +1129,10 @@ namespace toygb {
 		setFlags(reg_a == 0, UNAFFECTED, 0, newcarry);
 	}
 
+	// Update the timer IO registers
 	void CPU::incrementTimer(int cycles){
 		m_timer->incrementCounter(cycles, m_stopped);
 	}
-
 
 	void CPU::logDisassembly(uint16_t position){
 		std::cout << /*m_instructionCount << " " << */ oh16(position) << " - ";

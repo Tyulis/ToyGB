@@ -126,7 +126,7 @@ namespace toygb {
 				disable();
 		}
 	}
-	
+
 	// Called at every envelope frame
 	void AudioToneMapping::onEnvelopeFrame() {
 		if (envelopePeriod != 0) {  // Envelope does not update if the period is zero
@@ -155,7 +155,7 @@ namespace toygb {
 
 		// If the length counter is set to zero, it is reloaded with maximum
 		if (length == 0) {
-			if (m_frameSequencer % 2 == 0 && stopSelect)
+			if (m_frameSequencer % 2 == 0 && enableLength)
 				length = 63;  // If length is enabled and the next frame does not clock length, maximum - 1
 			else
 				length = 64;

@@ -17,6 +17,6 @@
 #define FRAME_SEQUENCER_PERIOD (APU_CLOCK_FREQUENCY / FRAME_SEQUENCER_FREQUENCY)
 
 // Arbitrary amount of samples per buffer, empirically 1024 is not too bad with SFML
-#define OUTPUT_BUFFER_SAMPLES 1024
+#define OUTPUT_BUFFER_SAMPLES 2048
 
 #endif

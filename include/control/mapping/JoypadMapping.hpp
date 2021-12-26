@@ -1,5 +1,5 @@
-#ifndef _MEMORY_MAPPING_JOYPADMAPPING_HPP
-#define _MEMORY_MAPPING_JOYPADMAPPING_HPP
+#ifndef _CONTROL_MAPPING_JOYPADMAPPING_HPP
+#define _CONTROL_MAPPING_JOYPADMAPPING_HPP
 
 #include "util/enum.hpp"
 #include "memory/MemoryMapping.hpp"
