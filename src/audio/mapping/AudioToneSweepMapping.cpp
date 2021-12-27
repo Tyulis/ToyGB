@@ -13,16 +13,16 @@
 Abs. addr. | Rel. addr. | Name | Access   | Content
       FF10 |       0000 | NR10 | -BBBBBBB | Frequency sweep control :
            |            |      |          |
-      FF11 |       0000 | NR21 | BBWWWWWW | Pattern and length control WWLLLLLL
+      FF11 |       0001 | NR21 | BBWWWWWW | Pattern and length control WWLLLLLL
            |            |      |          | - W (bit 6-7) : Wave pattern duty (0-3)
            |            |      |          | - L (bit 0-5) : Set the length counter (0-64)
-      FF12 |       0001 | NR22 | BBBBBBBB | Volume envelope control : VVVVDPPP
+      FF12 |       0002 | NR22 | BBBBBBBB | Volume envelope control : VVVVDPPP
            |            |      |          | - V (bit 4-7) : Initial volume envelope (0-15)
            |            |      |          | - D (bit 3) : Envelope direction (0 = decrease, 1 = increase)
            |            |      |          | - P (bit 0-2) : Envelope update period (0-7)
            |            |      |          | The digital-to-analog circuit is controlled by bits 3-7 of NR22, and disables the channel if they are all zero
-      FF13 |       0002 | NR23 | WWWWWWWW | Lower 8 bits of the frequency control
-      FF14 |       0003 | NR24 | WB---WWW | Channel enable control : SL---FFF
+      FF13 |       0003 | NR23 | WWWWWWWW | Lower 8 bits of the frequency control
+      FF14 |       0004 | NR24 | WB---WWW | Channel enable control : SL---FFF
            |            |      |          | - S (bit 7) : Trigger the channel operation (Set to 1 to start)
            |            |      |          | - L (bit 6) : Enable the length counter (0 = disabled, 1 = counting, stops the channel when it reaches zero)
            |            |      |          | - F (bits 0-2) : Higher 3 bits of the frequency control */

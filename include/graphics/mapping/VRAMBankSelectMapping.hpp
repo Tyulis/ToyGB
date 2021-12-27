@@ -1,9 +1,10 @@
-#ifndef _MEMORY_MAPPING_VRAMBANKSELECTMAPPING_HPP
-#define _MEMORY_MAPPING_VRAMBANKSELECTMAPPING_HPP
+#ifndef _GRAPHICS_MAPPING_VRAMBANKSELECTMAPPING_HPP
+#define _GRAPHICS_MAPPING_VRAMBANKSELECTMAPPING_HPP
 
 #include "memory/MemoryMapping.hpp"
 
 namespace toygb {
+	/** VRAM bank selection register memory mapping */
 	class VRAMBankSelectMapping : public MemoryMapping {
 		public:
 			VRAMBankSelectMapping(uint8_t* reg);
