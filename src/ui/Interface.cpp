@@ -6,7 +6,7 @@
 #define WINDOW_HEIGHT LCD_HEIGHT*PIXEL_SIZE
 
 namespace toygb {
-	Interface::Interface(){
+	Interface::Interface() {
 		m_lcd = nullptr;
 		m_audio = nullptr;
 		m_joypad = nullptr;
@@ -14,7 +14,7 @@ namespace toygb {
 	}
 
 
-	void Interface::run(LCDController* lcd, AudioController* audio, JoypadController* joypad){
+	void Interface::run(LCDController* lcd, AudioController* audio, JoypadController* joypad) {
 		m_lcd = lcd;
 		m_audio = audio;
 		m_joypad = joypad;
@@ -45,7 +45,7 @@ namespace toygb {
 			window.display();
 
 			while (window.pollEvent(event)) {
-				if (event.type == sf::Event::Closed){
+				if (event.type == sf::Event::Closed) {
 					window.close();
 					m_audioStream.stop();
 					m_stopping = true;
@@ -55,7 +55,7 @@ namespace toygb {
 		}
 	}
 
-	void Interface::updateJoypad(){
+	void Interface::updateJoypad() {
 		m_joypad->setButton(JoypadButton::Up, sf::Keyboard::isKeyPressed(sf::Keyboard::Z));
 		m_joypad->setButton(JoypadButton::Down, sf::Keyboard::isKeyPressed(sf::Keyboard::S));
 		m_joypad->setButton(JoypadButton::Left, sf::Keyboard::isKeyPressed(sf::Keyboard::Q));
@@ -66,17 +66,17 @@ namespace toygb {
 		m_joypad->setButton(JoypadButton::Select, sf::Keyboard::isKeyPressed(sf::Keyboard::M));
 	}
 
-	void Interface::updateGraphics(sf::Uint8* pixels){
+	void Interface::updateGraphics(sf::Uint8* pixels) {
 		uint16_t* gbValues = m_lcd->pixels();
-		for (int x = 0; x < LCD_WIDTH; x++){
-			for (int y = 0; y < LCD_HEIGHT; y++){
+		for (int x = 0; x < LCD_WIDTH; x++) {
+			for (int y = 0; y < LCD_HEIGHT; y++) {
 				uint16_t gbValue = gbValues[y*LCD_WIDTH + x];
 				uint8_t red = ((gbValue & 0x1F) << 3) + 0b101;
 				uint8_t green = (((gbValue >> 5) & 0x1F) << 3) + 0b101;
 				uint8_t blue = (((gbValue >> 10) & 0x1F) << 3) + 0b101;
 				uint8_t alpha = 255;
-				for (int xpix = 0; xpix < PIXEL_SIZE; xpix++){
-					for (int ypix = 0; ypix < PIXEL_SIZE; ypix++){
+				for (int xpix = 0; xpix < PIXEL_SIZE; xpix++) {
+					for (int ypix = 0; ypix < PIXEL_SIZE; ypix++) {
 						int index = 4*((y*PIXEL_SIZE + ypix)*WINDOW_WIDTH + (x*PIXEL_SIZE + xpix));
 						pixels[index] = red;
 						pixels[index + 1] = green;
@@ -88,12 +88,12 @@ namespace toygb {
 		}
 	}
 
-	void Interface::setupAudio(){
+	void Interface::setupAudio() {
 		m_audioStream.init(m_audio);
 		m_audioStream.play();
 	}
 
-	bool Interface::isStopping(){
+	bool Interface::isStopping() {
 		return m_stopping;
 	}
 }

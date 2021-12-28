@@ -10,13 +10,13 @@ namespace toygb {
 		m_sampleBuffer = nullptr;
 	}
 
-	void GBAudioStream::init(AudioController* controller){
+	void GBAudioStream::init(AudioController* controller) {
 		m_controller = controller;
 		initialize(2, OUTPUT_SAMPLE_FREQUENCY);
 	}
 
-	bool GBAudioStream::onGetData(sf::SoundStream::Chunk& data){
-		while (!m_controller->getSamples(m_sampleBuffer));
+	bool GBAudioStream::onGetData(sf::SoundStream::Chunk& data) {
+		m_controller->getSamples(m_sampleBuffer);
 
 		data.samples = m_sampleBuffer;
 		data.sampleCount = OUTPUT_BUFFER_SAMPLES*2;

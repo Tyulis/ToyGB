@@ -129,7 +129,8 @@ namespace toygb {
 	}
 
 // Wait till the next clock in the coroutine
-#define dot() co_await std::suspend_always()
+#define clock(num) m_cyclesToSkip = num-1; \
+					co_await std::suspend_always()
 
 	// Main coroutine component. This could be better if it was split into smaller functions, but the coroutine management forces it to be in one block
 	GBComponent LCDController::run() {
@@ -186,7 +187,7 @@ namespace toygb {
 						if (yposition <= line && line < yposition + OBJECT_HEIGHTS[m_lcdControl->objectSize] && selectedSprites.size() < 10)
 							selectedSprites.push_back(oamAddress);
 
-						dot(); dot();
+						clock(2);
 					}
 					std::sort(selectedSprites.begin(), selectedSprites.end(), objComparator);
 
@@ -229,7 +230,7 @@ namespace toygb {
 
 							// The tilemap is a 32*32 array, most significant coordinate is the row
 							uint8_t tileIndex = m_vram[tileMapAddress + 32 * tileY + tileX];
-							dot(); dot();
+							clock(2);
 
 							// Get the tile data VRAM address from its index (all addresses are relative to their memory section, here relative to VRAM)
 							// Tiles 128-255 are always in 0x0800-0x0FFF, regardless of the tile data selector
@@ -246,7 +247,7 @@ namespace toygb {
 							// Retrieve the 2-byte row to render from VRAM
 							uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + indexY * 2);
 							uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + indexY * 2 + 1);  // (Little endian, upper byte is second)
-							dot(); dot(); dot(); dot(); dot(); dot();
+							clock(6);
 
 							// Each row is in two bytes, bits of each byte are interleaved to build the 2-bits color index. Indices are the x coordinate within the tile :
 							// Upper byte : u0 u1 u2 u3 u4 u5 u6 u7 |
@@ -256,7 +257,7 @@ namespace toygb {
 								LCDController::Pixel pixelData(color, BACKGROUND_PALETTE, BACKGROUND_INDEX, false);
 								backgroundQueue.push_back(pixelData);
 							}
-							dot();
+							clock(1);
 						}
 
 						////////// Fetch sprites
@@ -294,13 +295,12 @@ namespace toygb {
 										case OperationMode::Auto:
 											throw EmulationError("OperationMode::Auto given to LCD controller");
 									}
-									dot(); hblankDuration -= 1;
+									clock(1); hblankDuration -= 1;
 
 									// FIXME : Delay if the background scrolling is not a multiple of 8. This is probably not accurate at all.
 									uint8_t scrollOffset = m_lcdControl->scrollX % 8;
 									if (scrollOffset > 0 && x == 0) {
-										for (int i = 0; i < scrollOffset + 4; i++)
-											dot();
+										clock(scrollOffset + 4);
 										hblankDuration -= (scrollOffset + 4);
 									}
 
@@ -326,7 +326,7 @@ namespace toygb {
 									// Retrieve the tile data row from VRAM, much like background
 									uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + 2*yoffset);
 									uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + 2*yoffset + 1);
-									dot(); hblankDuration -= 1;
+									clock(1); hblankDuration -= 1;
 
 									// See above, bits organisation and color bits interleave are described in the same part of the background row fetching
 									for (int i = 7 - xoffset; i >= 0; i--) {
@@ -485,8 +485,7 @@ namespace toygb {
 						m_interrupt->setRequest(Interrupt::LCDStat);
 					}
 
-					for (int i = 0; i < hblankDuration; i++)
-						dot();  // TODO
+					clock(hblankDuration);  // FIXME
 
 					// If the window was rendered at some point in the current scanline, increment the window line counter
 					if (hasWindow)
@@ -510,20 +509,23 @@ namespace toygb {
 						m_interrupt->setRequest(Interrupt::LCDStat);
 
 					// Every line takes 456 clocks
-					for (int i = 0; i < 456; i++)
-						dot();  // TODO
+					clock(456);  // FIXME
 				}
 
 				// FIXME : Not sure about whether the interrupt request must be reset at the end of VBlank, common sense tells it should be but 80s hardware is not reknowned to have one
 				m_interrupt->resetRequest(Interrupt::VBlank);
 			} else {
-				dot();
+				clock(1);
 			}
 		}
 	}
 
 	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
-	bool LCDController::skip() const {
+	bool LCDController::skip() {
+		if (m_cyclesToSkip > 0) {
+			m_cyclesToSkip -= 1;
+			return true;
+		}
 		// Skip if the PPU and LCD are disabled
 		return !m_lcdControl->displayEnable;
 	}

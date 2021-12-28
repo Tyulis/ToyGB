@@ -38,7 +38,7 @@ namespace toygb {
 			GBComponent run();
 
 			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
-			bool skip() const;
+			bool skip();
 
 			uint16_t* pixels();  // Return the full pixels buffer, as a CGB RGB555 bitmap (even in DMG mode)
 
@@ -85,6 +85,8 @@ namespace toygb {
 			// The whole thing is double-buffered
 			uint16_t* m_frontBuffer;
 			uint16_t* m_backBuffer;
+
+			int m_cyclesToSkip;
 	};
 }
 

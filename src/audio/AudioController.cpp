@@ -56,7 +56,7 @@ namespace toygb {
 		memory->add(IO_UNDOCUMENTED_FF72, IO_PCM34, m_debug);
 	}
 
-#define dot() m_cyclesToSkip = 1; \
+#define clock(num) m_cyclesToSkip = num-1; \
 			  co_await std::suspend_always();
 
 	// Main component loop (implemented as a coroutine)
@@ -73,7 +73,7 @@ namespace toygb {
 				}
 			}
 
-			dot();
+			clock(2);
 		}
 	}
 
@@ -90,13 +90,6 @@ namespace toygb {
 
 	// Get the mixed samples if available
 	bool AudioController::getSamples(int16_t* buffer) {
-		// Get each channel’s buffer
-		float* channelBuffers[4];
-		for (int channel = 0; channel < 4; channel++) {
-			if ((channelBuffers[channel] = m_channels[channel]->getBuffer()) == nullptr)
-				return false;  // Channel returned nullptr -> not enough samples generated for the moment
-		}
-
 		// Clear the sample buffer first
 		for (int i = 0; i < 2*OUTPUT_BUFFER_SAMPLES; i++)
 			buffer[i] = 0;
@@ -104,6 +97,13 @@ namespace toygb {
 		// The APU is powered off, so just return the buffer filled with zeros
 		if (!m_control->audioEnable)
 			return true;
+
+		// Get each channel’s buffer
+		float* channelBuffers[4];
+		for (int channel = 0; channel < 4; channel++) {
+			if ((channelBuffers[channel] = m_channels[channel]->getBuffer()) == nullptr)
+				return false;  // Channel returned nullptr -> not enough samples generated for the moment
+		}
 
 		// Mix samples
 		for (int channel = 0; channel < 4; channel++) {

@@ -24,7 +24,7 @@ namespace toygb {
 	}
 
 // Make the coroutine wait till the next clock
-#define dot() co_await std::suspend_always()
+#define clock() co_await std::suspend_always()
 
 	// Main coroutine component
 	GBComponent DMAController::run(MemoryMap* memory) {
@@ -41,7 +41,7 @@ namespace toygb {
 					memory->set(destination, memory->get(source));
 				}
 			}
-			dot();
+			clock();
 		}
 	}
 
