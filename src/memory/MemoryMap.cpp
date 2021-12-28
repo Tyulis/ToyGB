@@ -1,49 +1,40 @@
 #include "memory/MemoryMap.hpp"
 
+// Comparison utilities
 #define min(a, b) ((a < b) ? a : b)
 #define max(a, b) ((a > b) ? a : b)
 
 namespace toygb {
-	// MemoryMap
 
+	// Initialize the memory map
 	MemoryMap::MemoryMap(){
 		m_tree = nullptr;
 	}
 
 	MemoryMap::~MemoryMap(){
-		if (m_tree != nullptr)
-			delete[] m_tree;
+		if (m_tree != nullptr) delete[] m_tree;
+		m_tree = nullptr;
 	}
 
-	void MemoryMap::add(uint16_t start, uint16_t end, MemoryMapping* mapping){
-		//std::cout << oh16(start) << " " << oh16(end) << " " << mapping << std::endl;
+	// Configure a memory mapping with its start and end absolute addresses (INCLUDED), and put it in the temporary array
+	void MemoryMap::add(uint16_t start, uint16_t end, MemoryMapping* mapping) {
 		MemoryMap::Node node(start, end, mapping);
 		m_array.push_back(node);
-		//std::cout << oh16(node.start) << " - " << oh16(node.end) << " : " << typeid(*(node.mapping)).name() << std::endl;
 	}
 
-	void MemoryMap::build(){
+	// Build the final binary search tree with all mappings configured in the array
+	void MemoryMap::build() {
 		if (m_tree != nullptr) delete[] m_tree;
-		m_tree = new MemoryMap::Node[m_array.size()];
-
-		std::sort(m_array.begin(), m_array.end(), MemoryMap::NodeComparator());
 
 		m_treesize = m_array.size();
-		buildSubtree(0, 0, m_array.size());
+		m_tree = new MemoryMap::Node[m_treesize];
 
-		/*std::cout << std::endl << std::endl;
-		for (unsigned int i = 0; i < m_array.size(); i++){
-			Node node = m_array[i];
-			std::cout << oh16(node.start) << " - " << oh16(node.end) << " : " << typeid(*(node.mapping)).name() << " " << node.mapping << std::endl;
-		}
-		std::cout << std::endl << std::endl;
-		for (unsigned int i = 0; i < m_array.size(); i++){
-			Node node = m_tree[i];
-			std::cout << oh16(node.start) << " - " << oh16(node.end) << " : " << typeid(*(node.mapping)).name() << " " << node.mapping << std::endl;
-		}*/
+		std::sort(m_array.begin(), m_array.end(), MemoryMap::NodeComparator());
+		buildSubtree(0, 0, m_array.size());
 	}
 
-	void MemoryMap::buildSubtree(int rootindex, int startindex, int endindex){
+	// Recursively build the binary search tree from the sorted temporary array
+	void MemoryMap::buildSubtree(int rootindex, int startindex, int endindex) {
 		int size = endindex - startindex;
 
 		if (size == 0) return;
@@ -65,18 +56,18 @@ namespace toygb {
 		buildSubtree(2*rootindex + 2, startindex + leftsize + 1, endindex);
 	}
 
-	MemoryMap::Node* MemoryMap::getNode(uint16_t address){
+	// Get the node to dispatch the given address to, or nullptr if none found
+	MemoryMap::Node* MemoryMap::getNode(uint16_t address) {
 		int index = 0;
 		MemoryMap::Node* found = nullptr;
 		while (found == nullptr && index < m_treesize){
 			MemoryMap::Node* node = &(m_tree[index]);
-			if (node->start <= address){
-				if (address <= node->end){
+			if (node->start <= address) {  // Node start <= searched address -> need to control the end address
+				if (address <= node->end)  // Node start <= searched address <= node end -> found
 					found = node;
-				} else {
+				else  // Node end < searched address -> search on the right (>) side
 					index = 2*index + 2;  // right
-				}
-			} else {
+			} else {  // Searched address < Node start -> search on the left (<) side
 				index = 2*index + 1;  // left
 			}
 		}
@@ -85,70 +76,65 @@ namespace toygb {
 	}
 
 
-	uint8_t MemoryMap::get(uint16_t address){
-		//std::cout << "Read from " << oh16(address);
+	// Dispatch a memory read to the corresponding memory mapping
+	uint8_t MemoryMap::get(uint16_t address) {
 		MemoryMap::Node* node = getNode(address);
 		if (node != nullptr){
-			//std::cout << " OK" << std::endl;
 			return node->mapping->get(address - node->start);
 		} else {
-			//std::cout << " Fail" << std::endl;
-			//std::stringstream errstream;
-			//errstream << "Read from unmapped memory address " << oh16(address);
-			//throw EmulationError(errstream.str());
-			std::cout << "Read from unmapped memory address " << oh16(address) << std::endl;
+			// No errors, the gameboy can read from unmapped memory addresses, it just returns nothing (0xFF)
+			// FIXME : Currently issue a warning just in case, should be a debugging parameter or something
+			std::cerr << "Read from unmapped memory address " << oh16(address) << std::endl;
 			return 0xFF;
 		}
 	}
 
-	void MemoryMap::set(uint16_t address, uint8_t value){
-		//std::cout << "Write " << oh8(value) << " to " << oh16(address);
+	// Dispatch a memory write to the corresponding memory mapping
+	void MemoryMap::set(uint16_t address, uint8_t value) {
 		MemoryMap::Node* node = getNode(address);
 		if (node != nullptr){
-			//std::cout << " OK" << std::endl;
 			return node->mapping->set(address - node->start, value);
 		} else {
-			//std::cout << " Fail" << std::endl;
-			//std::stringstream errstream;
-			//errstream << "Write to unmapped memory address : " << oh16(address);
-			//throw EmulationError(errstream.str());
+			// No errors, the gameboy can try to write to unmapped memory addresses, it just gets ignored
+			// FIXME : Currently issue a warning just in case, should be a debugging parameter or something
 			std::cout << "Write to unmapped memory address : " << oh16(address) << std::endl;
 		}
 	}
 
-	MemoryMapping* MemoryMap::getMapping(uint16_t address){
+	// Get the memory mapping that handles the given address
+	MemoryMapping* MemoryMap::getMapping(uint16_t address) {
 		MemoryMap::Node* node = getNode(address);
 		return node->mapping;
 	}
 
-	// MemoryMap::Node
+	////////// MemoryMap::Node
 
-	MemoryMap::Node::Node(){
+	MemoryMap::Node::Node() {
 		mapping = nullptr;
 	}
 
-	MemoryMap::Node::Node(uint16_t mapstart, uint16_t mapend, MemoryMapping* map){
+	MemoryMap::Node::Node(uint16_t mapstart, uint16_t mapend, MemoryMapping* map) {
 		start = mapstart;
 		end = mapend;
 		mapping = map;
 	}
 
-	MemoryMap::Node::Node(MemoryMap::Node const& copied){
+	MemoryMap::Node::Node(MemoryMap::Node const& copied) {
 		start = copied.start;
 		end = copied.end;
 		mapping = copied.mapping;
 	}
 
-	MemoryMap::Node& MemoryMap::Node::operator=(MemoryMap::Node const& copied){
+	MemoryMap::Node& MemoryMap::Node::operator=(MemoryMap::Node const& copied) {
 		start = copied.start;
 		end = copied.end;
 		mapping = copied.mapping;
 		return *this;
 	}
 
-	// MemoryMap::NodeComparator
+	////////// MemoryMap::NodeComparator
 
-	bool MemoryMap::NodeComparator::operator()(MemoryMap::Node& node1, MemoryMap::Node& node2){
+	bool MemoryMap::NodeComparator::operator()(MemoryMap::Node& node1, MemoryMap::Node& node2) {
 		return node1.start < node2.start;
 	}
 }

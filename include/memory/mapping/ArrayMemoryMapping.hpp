@@ -4,6 +4,7 @@
 #include "memory/MemoryMapping.hpp"
 
 namespace toygb {
+	/** Maps a simple array in memory */
 	class ArrayMemoryMapping : public MemoryMapping {
 		public:
 			ArrayMemoryMapping(uint8_t* array);

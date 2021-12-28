@@ -1,7 +1,7 @@
 #ifndef _MEMORY_CONSTANTS_HPP
 #define _MEMORY_CONSTANTS_HPP
 
-// Memory map
+// General memory map
 #define ROM0_OFFSET 0x0000
 #define ROM1_OFFSET 0x4000
 #define VRAM_OFFSET 0x8000
@@ -14,6 +14,7 @@
 #define HRAM_OFFSET 0xFF80
 #define IO_INTERRUPT_ENABLE 0xFFFF
 
+// Memory sections sizes
 #define ROM0_SIZE (ROM1_OFFSET - ROM0_OFFSET)
 #define ROM1_SIZE (VRAM_OFFSET - ROM1_OFFSET)
 #define ROM_SIZE (VRAM_OFFSET - ROM0_OFFSET)
@@ -26,13 +27,13 @@
 #define IO_SIZE (HRAM_OFFSET - IO_OFFSET)
 #define HRAM_SIZE (IO_INTERRUPT_ENABLE - HRAM_OFFSET)
 
-// CGB mode
+// CGB mode parameters (banked VRAM and WRAM)
 #define WRAM_BANK_NUM 8
 #define WRAM_BANK_SIZE 0x1000
 #define VRAM_BANK_NUM 2
 #define VRAM_BANK_SIZE 0x2000
 
-// IO Registers
+// IO Registers (organised by memory mapping)
 #define IO_JOYPAD            0xFF00
 
 #define IO_SERIAL_DATA       0xFF01

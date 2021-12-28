@@ -9,6 +9,7 @@
 
 
 namespace toygb {
+	/** Implementation of the DMA component */
 	class DMAController {
 		public:
 			DMAController();
@@ -17,9 +18,10 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 			void init(HardwareConfig& hardware);
 
+			/** Main loop of the component, as a coroutine */
 			GBComponent run(MemoryMap* memory);
 
-			bool isOAMDMAActive();
+			bool isOAMDMAActive();  // Tell whether an OAM DMA operation is active
 
 		private:
 			HardwareConfig m_hardware;

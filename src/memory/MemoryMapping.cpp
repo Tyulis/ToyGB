@@ -6,11 +6,13 @@ namespace toygb {
 
 	}
 
+	// Stub for future savestates
 	void MemoryMapping::load(std::istream& input) {
 
 	}
 
+	// Stub for future savestates
 	void MemoryMapping::save(std::ostream& output) {
-		
+
 	}
 }

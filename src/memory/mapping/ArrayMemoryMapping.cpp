@@ -2,15 +2,18 @@
 
 
 namespace toygb {
-	ArrayMemoryMapping::ArrayMemoryMapping(uint8_t* array){
+	// Initialize the memory mapping
+	ArrayMemoryMapping::ArrayMemoryMapping(uint8_t* array) {
 		m_array = array;
 	}
 
-	uint8_t ArrayMemoryMapping::get(uint16_t address){
+	// Get the value at the given relative address
+	uint8_t ArrayMemoryMapping::get(uint16_t address) {
 		return m_array[address];
 	}
 
-	void ArrayMemoryMapping::set(uint16_t address, uint8_t value){
+	// Set the value at the given relative address
+	void ArrayMemoryMapping::set(uint16_t address, uint8_t value) {
 		m_array[address] = value;
 	}
 }

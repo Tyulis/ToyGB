@@ -11,8 +11,10 @@
 
 (Access is R for read-only, W for write-only, B for both, - for none)
 Abs. addr. | Rel. addr. | Name | Access   | Content
-      FF10 |       0000 | NR10 | -BBBBBBB | Frequency sweep control :
-           |            |      |          |
+      FF10 |       0000 | NR10 | -BBBBBBB | Frequency sweep control : -PPPDSSS
+           |            |      |          | - P (bits 4-6) : Sweep period, number of sweep frames between every sweep update (1-7, 0 = no sweep)
+           |            |      |          | - D (bit 3) : Sweep direction (0 = increase frequency, 1 = decrease frequency)
+           |            |      |          | - S (bits 0-2) : Sweep shift, sweep frequency is updated as frequency += frequency >> shift (1-7, 0 = frequency is not updated)
       FF11 |       0001 | NR21 | BBWWWWWW | Pattern and length control WWLLLLLL
            |            |      |          | - W (bit 6-7) : Wave pattern duty (0-3)
            |            |      |          | - L (bit 0-5) : Set the length counter (0-64)
