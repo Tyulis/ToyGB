@@ -522,6 +522,12 @@ namespace toygb {
 		}
 	}
 
+	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
+	bool LCDController::skip() const {
+		// Skip if the PPU and LCD are disabled
+		return !m_lcdControl->displayEnable;
+	}
+
 	// Return a full pixel buffer in RGB555 format
 	uint16_t* LCDController::pixels() {
 		return m_frontBuffer;

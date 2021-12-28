@@ -6,26 +6,27 @@
 #include <thread>
 
 #include "GameboyConfig.hpp"
+#include "audio/AudioController.hpp"
+#include "cart/CartController.hpp"
+#include "communication/SerialController.hpp"
+#include "control/JoypadController.hpp"
 #include "core/CPU.hpp"
 #include "core/timing.hpp"
 #include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
-#include "cart/CartController.hpp"
 #include "graphics/LCDController.hpp"
-#include "audio/AudioController.hpp"
-#include "control/JoypadController.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/DMAController.hpp"
-#include "communication/SerialController.hpp"
 #include "ui/Interface.hpp"
 #include "util/error.hpp"
 
 
 namespace toygb {
+	/** Main emulator class, manages the main memory map, clock and components */
 	class Gameboy {
 		public:
 			Gameboy(GameboyConfig& config);
-			void main();
+			void main();  // Main emulator loop
 
 		private:
 			GameboyConfig m_config;

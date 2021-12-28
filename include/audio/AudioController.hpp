@@ -28,7 +28,11 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 			void init(HardwareConfig& hardware);
 
+			/** Main loop of the component, as a coroutine */
 			GBComponent run();
+
+			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
+			bool skip();
 
 			/** Read the samples for an audio buffer if available
 			 * If the amount of available samples is greater than audio/timing.hpp:OUTPUT_BUFFER_SAMPLES,
@@ -46,6 +50,8 @@ namespace toygb {
 			AudioControlMapping* m_control;
 			AudioDebugMapping* m_debug;
 			WaveMemoryMapping* m_wavePatternMapping;
+
+			int m_cyclesToSkip;
 	};
 }
 

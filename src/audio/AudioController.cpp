@@ -56,11 +56,12 @@ namespace toygb {
 		memory->add(IO_UNDOCUMENTED_FF72, IO_PCM34, m_debug);
 	}
 
-#define dot() co_await std::suspend_always()
+#define dot() m_cyclesToSkip = 1; \
+			  co_await std::suspend_always();
 
 	// Main component loop (implemented as a coroutine)
 	GBComponent AudioController::run() {
-		while (true){
+		while (true) {
 			for (int index = 0; index < 4; index++) {  // Update each channel
 				AudioChannelMapping* channel = m_channels[index];
 				if (m_control->audioEnable) {
@@ -72,13 +73,30 @@ namespace toygb {
 				}
 			}
 
-			// The APU updates every 2 clocks
-			dot(); dot();
+			dot();
 		}
+	}
+
+	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
+	bool AudioController::skip() {
+		if (m_cyclesToSkip > 0) {  // We are in-between APU cycles (= 2 clocks)
+			m_cyclesToSkip -= 1;
+			return true;
+		}
+
+		// Skip if the APU is disabled and the shutdown is already done
+		return !m_control->audioEnable && !m_channels[0]->powered && !m_channels[1]->powered && !m_channels[2]->powered && !m_channels[3]->powered;
 	}
 
 	// Get the mixed samples if available
 	bool AudioController::getSamples(int16_t* buffer) {
+		// Get each channel’s buffer
+		float* channelBuffers[4];
+		for (int channel = 0; channel < 4; channel++) {
+			if ((channelBuffers[channel] = m_channels[channel]->getBuffer()) == nullptr)
+				return false;  // Channel returned nullptr -> not enough samples generated for the moment
+		}
+
 		// Clear the sample buffer first
 		for (int i = 0; i < 2*OUTPUT_BUFFER_SAMPLES; i++)
 			buffer[i] = 0;
@@ -86,13 +104,6 @@ namespace toygb {
 		// The APU is powered off, so just return the buffer filled with zeros
 		if (!m_control->audioEnable)
 			return true;
-
-		// Get each channel’s buffer
-		float* channelBuffers[4];
-		for (int channel = 0; channel < 4; channel++) {
-			if ((channelBuffers[channel] = m_channels[channel]->getBuffer()) == nullptr)
-				return false;  // Channel returned nullptr -> not enough samples generated for the moment
-		}
 
 		// Mix samples
 		for (int channel = 0; channel < 4; channel++) {

@@ -1,7 +1,8 @@
 #include "GameboyConfig.hpp"
 
 namespace toygb {
-	GameboyConfig::GameboyConfig(){
+	// Initial, default values for the config
+	GameboyConfig::GameboyConfig() {
 		romfile = "";
 		ramfile = "";
 

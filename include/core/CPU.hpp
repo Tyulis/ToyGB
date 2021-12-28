@@ -29,6 +29,9 @@ namespace toygb {
 			/** Main CPU loop, as a coroutine */
 			GBComponent run(MemoryMap* memory, DMAController* dma);
 
+			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
+			bool skip();
+
 		private:
 			// General utilities
 			void initRegisters();                                            // Initialize the register with the hardware's defaut values (as much as possible). TODO : Add bootroms
@@ -81,6 +84,8 @@ namespace toygb {
 			int m_dividerCounter;  // Counts cycles for the DIV register timer
 
 			bool m_logDisassembly;
+
+			int m_cyclesToSkip;
 	};
 }
 

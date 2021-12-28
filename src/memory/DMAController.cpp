@@ -45,6 +45,12 @@ namespace toygb {
 		}
 	}
 
+	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
+	bool DMAController::skip() const {
+		// Skip if no DMA operation is active. TODO : HDMA
+		return !m_oamDmaMapping->active;
+	}
+
 	// Tell whether a OAM DMA operation is active
 	bool DMAController::isOAMDMAActive() {
 		return m_oamDmaMapping->active;

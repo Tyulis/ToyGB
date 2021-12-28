@@ -150,11 +150,8 @@ namespace toygb {
 	}
 
 // Wait till the next CPU cycle (4 clocks)
-#define cycle() co_await std::suspend_always(); \
+#define cycle() m_cyclesToSkip = 3; \
 				co_await std::suspend_always(); \
-				co_await std::suspend_always(); \
-				co_await std::suspend_always(); \
-				cycles += 1; \
 				incrementTimer(4);
 
 
@@ -169,8 +166,6 @@ namespace toygb {
 
 		try {
 			while (true) {
-				int cycles = 0;
-
 				// EI has a 1-cycle delay before actually activating the interrupts
 				if (m_ei_scheduled) {
 					m_ei_scheduled = false;
@@ -1132,6 +1127,16 @@ namespace toygb {
 	// Update the timer IO registers
 	void CPU::incrementTimer(int cycles){
 		m_timer->incrementCounter(cycles, m_stopped);
+	}
+
+	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
+	bool CPU::skip() {
+		if (m_cyclesToSkip > 0) {  // We are in-between CPU cycles (= 4 clocks)
+			m_cyclesToSkip -= 1;
+			return true;
+		} else {
+			return false;  // TODO : Skip when in STOP mode ?
+		}
 	}
 
 	void CPU::logDisassembly(uint16_t position){

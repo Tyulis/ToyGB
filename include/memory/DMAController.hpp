@@ -21,6 +21,9 @@ namespace toygb {
 			/** Main loop of the component, as a coroutine */
 			GBComponent run(MemoryMap* memory);
 
+			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
+			bool skip() const;
+
 			bool isOAMDMAActive();  // Tell whether an OAM DMA operation is active
 
 		private:

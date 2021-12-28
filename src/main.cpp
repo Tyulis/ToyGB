@@ -13,7 +13,8 @@
 
 using namespace toygb;
 
-OperationMode argumentOperationMode(std::string value){
+// Decode the --mode argument
+OperationMode argumentOperationMode(std::string value) {
 	std::transform(value.begin(), value.end(), value.begin(),
 		[](unsigned char c){ return std::toupper(c); });
 
@@ -26,7 +27,8 @@ OperationMode argumentOperationMode(std::string value){
 	else throw std::runtime_error("Invalid operation mode (--mode argument)");
 }
 
-SystemRevision argumentSystem(std::string value){
+// Decode the --system argument
+SystemRevision argumentSystem(std::string value) {
 	value.erase(std::remove(value.begin(), value.end(), '-'), value.end());
 	value.erase(std::remove(value.begin(), value.end(), '_'), value.end());
 
@@ -63,7 +65,8 @@ SystemRevision argumentSystem(std::string value){
 	else throw std::runtime_error("Invalid hardware platform (--system argument)");
 }
 
-ConsoleModel argumentConsole(std::string value){
+// Decode the --console argument
+ConsoleModel argumentConsole(std::string value) {
 	std::transform(value.begin(), value.end(), value.begin(),
 		[](unsigned char c){ return std::toupper(c); });
 
@@ -83,7 +86,7 @@ ConsoleModel argumentConsole(std::string value){
 	else throw std::runtime_error("Invalid console model (--console argument)");
 }
 
-void printHelp(char* argv0){
+void printHelp(char* argv0) {
 	std::cout << "Usage : " << argv0 << " romfile [arguments]" << std::endl << std::endl;
 	std::cout << "Emulation options : " << std::endl;
 	std::cout << "--save=<save file>  : Manually set save file" << std::endl;
@@ -104,7 +107,7 @@ void printHelp(char* argv0){
 
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
 	if (argc < 2) {
 		printHelp(argv[0]);
 		return 1;
@@ -117,8 +120,8 @@ int main(int argc, char** argv){
 	config.romfile = std::string(argv[1]);
 	config.ramfile = config.romfile.substr(0, config.romfile.find_last_of('.')) + ".sav";
 
-	if (argc >= 3){
-		for (int i = 2; i < argc; i++){
+	if (argc >= 3) {
+		for (int i = 2; i < argc; i++) {
 			std::string argument = std::string(argv[i]);
 			std::string key = "", value = "";
 

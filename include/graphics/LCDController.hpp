@@ -37,6 +37,9 @@ namespace toygb {
 			/** Main loop of the component, as a coroutine */
 			GBComponent run();
 
+			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
+			bool skip() const;
+
 			uint16_t* pixels();  // Return the full pixels buffer, as a CGB RGB555 bitmap (even in DMG mode)
 
 		private:
