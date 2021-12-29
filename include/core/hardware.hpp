@@ -47,6 +47,10 @@ namespace toygb {
 			SystemRevision system() const;
 			void setSystemRevision(SystemRevision revision);  // Throws an EmulationError if the config is incoherent (like a CGB CPU on a DMG)
 
+			// Bootrom presence
+			bool hasBootrom() const;
+			void setBootrom(bool bootromPresent);
+
 			// Generic console model checks
 			bool isDMGConsole() const;  // DMG, MGB
 			bool isCGBConsole() const;  // CGB
@@ -62,6 +66,7 @@ namespace toygb {
 			ConsoleModel m_console;
 			OperationMode m_mode;
 			SystemRevision m_system;
+			bool m_hasBootrom;
 	};
 }
 

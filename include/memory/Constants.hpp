@@ -92,6 +92,8 @@
 
 #define IO_VRAM_BANK         0xFF4F
 
+#define IO_BOOTROM_UNMAP     0xFF50
+
 #define IO_HDMA_SOURCELOW    0xFF51
 #define IO_HDMA_SOURCEHIGH   0xFF52
 #define IO_HDMA_DESTLOW      0xFF53

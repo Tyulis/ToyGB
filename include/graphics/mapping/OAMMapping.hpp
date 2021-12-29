@@ -10,7 +10,7 @@ namespace toygb {
 	 *  that is unrelated to OAM but it is contiguous and causes OAM corruption in the same way */
 	class OAMMapping : public LCDMemoryMapping {
 		public:
-			OAMMapping(HardwareConfig& hardware, uint8_t* array);
+			OAMMapping(HardwareConfig* hardware, uint8_t* array);
 			~OAMMapping();
 
 			// CPU access, unavailable while the PPU is accessing it
@@ -22,7 +22,7 @@ namespace toygb {
 			virtual void lcdSet(uint16_t address, uint8_t value);
 
 		protected:
-			HardwareConfig m_hardware;
+			HardwareConfig* m_hardware;
 
 			// 0xFEA0-0xFEFF area emulation
 			uint8_t* m_fea0;

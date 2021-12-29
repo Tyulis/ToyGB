@@ -26,7 +26,7 @@ namespace toygb {
 			InterruptVector();
 			~InterruptVector();
 
-			void init(HardwareConfig& mode);
+			void init();
 			void configureMemory(MemoryMap* memory);
 
 			Interrupt getInterrupt();  // Get the pending interrupt (IE + IF, regardless of IME), or Interrupt::None if there are none

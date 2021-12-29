@@ -32,12 +32,12 @@ namespace toygb {
 	}
 
 	// Initialize the component
-	void AudioController::init(HardwareConfig& hardware) {
+	void AudioController::init(HardwareConfig* hardware) {
 		m_hardware = hardware;
 		m_wavePattern = new uint8_t[IO_WAVEPATTERN_SIZE];
 
 		m_wavePatternMapping = new WaveMemoryMapping(m_wavePattern, m_hardware);
-		m_control = new AudioControlMapping();
+		m_control = new AudioControlMapping(m_hardware);
 		m_debug = new AudioDebugMapping(m_hardware);
 		m_channels[0] = new AudioToneSweepMapping(0, m_control, m_debug, m_hardware);
 		m_channels[1] = new AudioToneMapping(1, m_control, m_debug, m_hardware);

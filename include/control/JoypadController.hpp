@@ -16,14 +16,14 @@ namespace toygb {
 			JoypadController();
 			~JoypadController();
 
-			void init(HardwareConfig& hardware, InterruptVector* interrupt);
+			void init(HardwareConfig* hardware, InterruptVector* interrupt);
 			void configureMemory(MemoryMap* memory);
 
 			/** Set the given button status from the interface (JoypadButton enum is defined in control/mapping/JoypadMapping.hpp) */
 			void setButton(JoypadButton button, bool pressed);
 
 		private:
-			HardwareConfig m_hardware;
+			HardwareConfig* m_hardware;
 			InterruptVector* m_interrupt;
 
 			JoypadMapping* m_register;

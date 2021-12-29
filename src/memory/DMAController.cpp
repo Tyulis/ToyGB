@@ -13,7 +13,7 @@ namespace toygb {
 	}
 
 	// Initialize the component
-	void DMAController::init(HardwareConfig& hardware) {
+	void DMAController::init(HardwareConfig* hardware) {
 		m_hardware = hardware;
 		m_oamDmaMapping = new OAMDMAMapping(hardware);
 	}

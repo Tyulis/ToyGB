@@ -20,7 +20,7 @@ namespace toygb {
 		public:
 			/** Initialize the channel
 			 * int channel : channel index (0 = tone+sweep, 1 = tone, 2 = wave, 3 = debug) */
-			AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware);
+			AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware);
 
 			/** Unfolds an APU cycle (=2 clocks) worth of channel operation */
 			void update();
@@ -55,7 +55,7 @@ namespace toygb {
 			int m_channel;  // Channel index
 			AudioControlMapping* m_control;
 			AudioDebugMapping* m_debug;
-			HardwareConfig m_hardware;
+			HardwareConfig* m_hardware;
 
 			bool m_started;  // True if the channel is operating
 

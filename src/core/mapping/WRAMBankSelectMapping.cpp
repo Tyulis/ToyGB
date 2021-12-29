@@ -20,7 +20,7 @@ namespace toygb {
 		return *m_register;
 	}
 
-	// Get the value at the given relative address
+	// Set the value at the given relative address
 	void WRAMBankSelectMapping::set(uint16_t address, uint8_t value){
 		*m_register = value & 7;
 	}

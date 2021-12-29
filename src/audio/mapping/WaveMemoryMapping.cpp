@@ -5,7 +5,7 @@
 
 namespace toygb {
 	// Initalize the memory mapping
-	WaveMemoryMapping::WaveMemoryMapping(uint8_t* array, HardwareConfig& hardware) : ArrayMemoryMapping(array) {
+	WaveMemoryMapping::WaveMemoryMapping(uint8_t* array, HardwareConfig* hardware) : ArrayMemoryMapping(array) {
 		m_hardware = hardware;
 		m_playing = false;
 		m_readIndex = WAVE_NOT_READABLE;

@@ -14,7 +14,7 @@ namespace toygb {
 
 	// Initialize the component, with the interrupt vector as it controls the
 	// serial communication interrupt, that is not implemented for the moment
-	void SerialController::init(HardwareConfig& hardware, InterruptVector* interrupt) {
+	void SerialController::init(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 		m_mapping = new SerialTransferMapping(hardware);

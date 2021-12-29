@@ -4,7 +4,7 @@
 namespace toygb {
 	// Initialize the emulator
 	Gameboy::Gameboy(GameboyConfig& config):
-		m_config(config), m_cpu(config.disassemble), m_lcd(),
+		m_config(config), m_cpu(config), m_lcd(),
 		m_interrupt(), m_audio(), m_cart(), m_serial(), m_dma(),
 		m_hardware(config.mode, config.console, config.system) {
 	}
@@ -32,13 +32,13 @@ namespace toygb {
 			std::cerr << "Override console model : default was " << std::to_string(cartConfig.system()) << ", set " << std::to_string(m_hardware.system());
 
 		// Initialize components
-		m_interrupt.init(m_hardware);
-		m_cpu.init(m_hardware, &m_interrupt);
-		m_lcd.init(m_hardware, &m_interrupt);
-		m_audio.init(m_hardware);
-		m_joypad.init(m_hardware, &m_interrupt);
-		m_serial.init(m_hardware, &m_interrupt);
-		m_dma.init(m_hardware);
+		m_cpu.init(&m_hardware, &m_interrupt);  // Must initialize the CPU first as it checks the bootrom status
+		m_interrupt.init();
+		m_lcd.init(&m_hardware, &m_interrupt);
+		m_audio.init(&m_hardware);
+		m_joypad.init(&m_hardware, &m_interrupt);
+		m_serial.init(&m_hardware, &m_interrupt);
+		m_dma.init(&m_hardware);
 
 		// Build the memory map
 		m_memory = MemoryMap();

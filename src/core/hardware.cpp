@@ -7,6 +7,7 @@ namespace toygb {
 		m_mode = OperationMode::Auto;
 		m_console = ConsoleModel::Auto;
 		m_system = SystemRevision::Auto;
+		m_hasBootrom = false;
 	}
 
 	// Initialize the hardware configuration with custom values
@@ -14,6 +15,7 @@ namespace toygb {
 		m_mode = mode;
 		m_console = console;
 		m_system = system;
+		m_hasBootrom = false;
 	}
 
 	// Get the console model
@@ -48,6 +50,16 @@ namespace toygb {
 	void HardwareConfig::setSystemRevision(SystemRevision system) {
 		checkSystemCompatibility(m_console, system);
 		m_system = system;
+	}
+
+	// Tell whether a bootrom is set up and valid
+	bool HardwareConfig::hasBootrom() const {
+		return m_hasBootrom;
+	}
+
+	// Set whether a bootrom is set up and valid
+	void HardwareConfig::setBootrom(bool bootromPresent) {
+		m_hasBootrom = bootromPresent;
 	}
 
 	// Tell whether the console is a DMG model (DMG / MGB)

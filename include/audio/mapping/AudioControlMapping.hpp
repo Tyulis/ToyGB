@@ -1,6 +1,7 @@
 #ifndef _AUDIO_MAPPING_AUDIOCONTROLMAPPING_HPP
 #define _AUDIO_MAPPING_AUDIOCONTROLMAPPING_HPP
 
+#include "core/hardware.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMapping.hpp"
 #include "util/error.hpp"
@@ -10,7 +11,7 @@ namespace toygb {
 	/** APU control IO registers mapping */
 	class AudioControlMapping : public MemoryMapping {
 		public:
-			AudioControlMapping();
+			AudioControlMapping(HardwareConfig* hardware);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -32,6 +33,8 @@ namespace toygb {
 		private:
 			void onPowerOn();  // Called when audioEnable goes 0 -> 1
 			void onPowerOff(); // Called when audioEnable goes 1 -> 0
+
+			HardwareConfig* m_hardware;
 	};
 }
 

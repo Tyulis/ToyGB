@@ -24,10 +24,10 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 namespace toygb {
 	// The output amplitude is multiplied by WAVE_VOLUMES[outputLevel]
 	const float WAVE_VOLUMES[] = {0.0f, 1.0f, 0.5f, 0.25f};
-	
+
 	// Initialize the channel
 	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
-	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		m_wavePatternMapping = wavePatternMapping;
 
 		enable = false;
@@ -63,7 +63,7 @@ namespace toygb {
 	void AudioWaveMapping::set(uint16_t address, uint8_t value) {
 		// Ignore writes when the APU is powered off
 		// On DMG hardware, length registers are still fully writable even with the APU powered off
-		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_LENGTH)) {
+		if (powered || (m_hardware->isDMGConsole() && address == OFFSET_LENGTH)) {
 			switch (address) {
 				case OFFSET_ENABLE:  // NR30
 					enable = (value >> 7) & 1;
@@ -82,7 +82,7 @@ namespace toygb {
 				case OFFSET_CONTROL: {  // NR34
 					bool wasEnabled = enableLength;
 					enableLength = (value >> 6) & 1;
-					
+
 					// Enabling length counter in first half of the length period (next frame does not clock length) clocks length once
 					if (!wasEnabled && enableLength && m_frameSequencer % 2 == 0 && length > 0)
 						onLengthFrame();
@@ -135,7 +135,7 @@ namespace toygb {
 		// Only start if DAC is enabled
 		if (enable)
 			start();
-			
+
 		// Increment the timer by 3 on trigger to solve some wave RAM access shenanigans
 		// https://forums.nesdev.org/viewtopic.php?t=13730&p=188035
 		// (Binji gives a delay of 6 clocks, as we operate in APU cycles it's divided by 2)
@@ -166,7 +166,7 @@ namespace toygb {
 		m_sampleIndex = 1;
 		m_baseTimerCounter = 0;
 	}
-	
+
 	// Extend AudioChannelMapping::start to manage wave RAM
 	void AudioWaveMapping::start() {
 		// Trigger while the channel reads a sample : corrupt first bytes of wave RAM

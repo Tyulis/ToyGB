@@ -14,16 +14,16 @@ This is extremely revision- and hardware-dependant, so many details are probably
 
 namespace toygb {
 	// Initialize the memory mapping
-	OAMMapping::OAMMapping(HardwareConfig& hardware, uint8_t* array) : LCDMemoryMapping(array){
+	OAMMapping::OAMMapping(HardwareConfig* hardware, uint8_t* array) : LCDMemoryMapping(array){
 		m_hardware = hardware;
 		m_fea0 = nullptr;
 		m_fec0 = nullptr;
 		m_fee0 = nullptr;
 
-		if (hardware.isCGBConsole()) {
+		if (hardware->isCGBConsole()) {
 			// On CGB revision D, there are 32 fully readable and writable bytes from 0xFEA0 to 0xFEC0,
 			// then 16 readable and writable bytes that repeat starting from 0xFEC0, 0xFED0, 0xFEE0 and 0xFEF0
-			if (hardware.system() == SystemRevision::CGB_D) {
+			if (hardware->system() == SystemRevision::CGB_D) {
 				m_fea0 = new uint8_t[32];
 				for (int i = 0; i < 32; i++)
 					m_fea0[i] = 0;  // FIXME : Initialize to 0 ?
@@ -35,7 +35,7 @@ namespace toygb {
 
 			// On CGB revisions 0, B and C at least, there are 3 groups of 8 readable and writable bytes
 			// The first group repeats at 0xFEA0, 0xFEA8, 0xFEB0, 0xFEB8, the second 4 times as well on 0xFEC0-0xFEDF and the last one on 0xFEE0-0xFEFF
-			else if (hardware.system() != SystemRevision::CGB_E) {
+			else if (hardware->system() != SystemRevision::CGB_E) {
 				m_fea0 = new uint8_t[8];
 				m_fec0 = new uint8_t[8];
 				m_fee0 = new uint8_t[8];
@@ -65,12 +65,12 @@ namespace toygb {
 		else {
 			// DMG : This area returns zeros
 			// FIXME : Not verified on SGB ?
-			if (m_hardware.isDMGConsole() || m_hardware.isSGBConsole()){
+			if (m_hardware->isDMGConsole() || m_hardware->isSGBConsole()){
 				return 0x00;
 			}
 
 			// CGB revision D : 32-bytes area at 0xFEA0 and repeating 16 bytes area at 0xFEC0
-			else if (m_hardware.isCGBConsole() && m_hardware.system() == SystemRevision::CGB_D) {
+			else if (m_hardware->isCGBConsole() && m_hardware->system() == SystemRevision::CGB_D) {
 				if (address < OFFSET_FEC0)
 					return m_fea0[address - OFFSET_UNUSED];
 				else
@@ -78,7 +78,7 @@ namespace toygb {
 			}
 
 			// CGB revisions < D : Three 8 bytes groups repeating from 0xFEA0, 0xFEC0 and 0xFEE0
-			else if (m_hardware.isCGBConsole() && m_hardware.system() != SystemRevision::CGB_E) {  // CGB 0-C
+			else if (m_hardware->isCGBConsole() && m_hardware->system() != SystemRevision::CGB_E) {  // CGB 0-C
 				if (address < OFFSET_FEC0)
 					return m_fea0[(address - OFFSET_UNUSED) & 7];
 				else if (address < OFFSET_FEE0)
@@ -88,7 +88,7 @@ namespace toygb {
 			}
 
 			// On CGB revision E and AGB/AGS/GBP, this area returns the upper nibble of the address twice (like 0xFEB1 -> 0xBB)
-			else if (m_hardware.isAGBConsole() || (m_hardware.isCGBConsole() && m_hardware.system() == SystemRevision::CGB_E)) {
+			else if (m_hardware->isAGBConsole() || (m_hardware->isCGBConsole() && m_hardware->system() == SystemRevision::CGB_E)) {
 				uint8_t nibble = (address >> 4) & 0x0F;
 				return nibble | (nibble << 4);
 			}
@@ -111,7 +111,7 @@ namespace toygb {
 			// Unused 0xFEA0-0xFEFF area
 			else {
 				// CGB revision D
-				if (m_hardware.isCGBConsole() && m_hardware.system() == SystemRevision::CGB_D) {
+				if (m_hardware->isCGBConsole() && m_hardware->system() == SystemRevision::CGB_D) {
 					if (address < OFFSET_FEC0)
 						m_fea0[address - OFFSET_UNUSED] = value;
 					else
@@ -119,7 +119,7 @@ namespace toygb {
 				}
 
 				// CGB revisions < D
-				else if (m_hardware.isCGBConsole() && m_hardware.system() != SystemRevision::CGB_E) {
+				else if (m_hardware->isCGBConsole() && m_hardware->system() != SystemRevision::CGB_E) {
 					if (address < OFFSET_FEC0)
 						m_fea0[(address - OFFSET_UNUSED) & 7] = value;
 					else if (address < OFFSET_FEE0)

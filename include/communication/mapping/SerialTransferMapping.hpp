@@ -11,7 +11,7 @@ namespace toygb {
 	/** Serial port communication IO registers mapping */
 	class SerialTransferMapping : public MemoryMapping {
 		public:
-			SerialTransferMapping(HardwareConfig& m_hardware);
+			SerialTransferMapping(HardwareConfig* m_hardware);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -22,7 +22,7 @@ namespace toygb {
 			bool shiftClock;         // Clock to use (0 = external, 1 = internal) (register SC, bit 0)
 
 		private:
-			HardwareConfig m_hardware;
+			HardwareConfig* m_hardware;
 	};
 }
 

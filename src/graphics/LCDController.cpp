@@ -42,7 +42,7 @@ namespace toygb {
 		m_backBuffer = nullptr;
 	}
 
-	LCDController::~LCDController(){
+	LCDController::~LCDController() {
 		if (m_vram != nullptr) delete[] m_vram;
 		if (m_oam != nullptr) delete[] m_oam;
 
@@ -71,7 +71,7 @@ namespace toygb {
 	}
 
 	// Initialize the component
-	void LCDController::init(HardwareConfig& hardware, InterruptVector* interrupt) {
+	void LCDController::init(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 
@@ -79,15 +79,15 @@ namespace toygb {
 		for (int i = 0; i < OAM_SIZE; i++)  // FIXME : Clear OAM at boot ?
 			m_oam[i] = 0;
 
-		switch (hardware.mode()) {
+		switch (hardware->mode()) {
 			case OperationMode::DMG:
 				m_vram = new uint8_t[VRAM_SIZE];
-				for (int i = 0; i < VRAM_SIZE; i++)  // FIXME : Clear VRAM at boot ?
+				for (int i = 0; i < VRAM_SIZE; i++)  // The bootrom clears VRAM
 					m_vram[i] = 0;
 				break;
 			case OperationMode::CGB:
 				m_vram = new uint8_t[VRAM_BANK_SIZE * VRAM_BANK_NUM];
-				for (int i = 0; i < VRAM_BANK_SIZE * VRAM_BANK_NUM; i++)  // FIXME : Clear VRAM at boot ?
+				for (int i = 0; i < VRAM_BANK_SIZE * VRAM_BANK_NUM; i++)
 					m_vram[i] = 0;
 				break;
 			case OperationMode::Auto:
@@ -96,7 +96,7 @@ namespace toygb {
 		m_vramBank = 0;
 
 		m_oamMapping = new OAMMapping(hardware, m_oam);
-		m_lcdControl = new LCDControlMapping();
+		m_lcdControl = new LCDControlMapping(hardware);
 		m_dmgPalette = new DMGPaletteMapping();
 	}
 
@@ -106,7 +106,7 @@ namespace toygb {
 		memory->add(IO_LCD_CONTROL, IO_COORD_COMPARE, m_lcdControl);
 		memory->add(IO_BG_PALETTE, IO_WINDOW_X, m_dmgPalette);
 
-		switch (m_hardware.mode()) {
+		switch (m_hardware->mode()) {
 			case OperationMode::DMG:
 				m_vramMapping = new LCDMemoryMapping(m_vram);
 				break;
@@ -267,7 +267,7 @@ namespace toygb {
 							// In DMG mode, lower X coordinate gets priority, so a sprite already being drawn can not be overridden by a later one
 							// In CGB mode, lower OAM position gets priority, so a sprite already being drawn can be overridden if a next one has a lower oam address
 							// FIXME : Here we only check the immediately next one. If several sprites are in range, can a sprite 2 positions later preempt the current one ?
-							bool pushSprite = objectQueue.empty() || (m_hardware.mode() == OperationMode::CGB && selectedSprites.front() < objectQueue.front().oamAddress);
+							bool pushSprite = objectQueue.empty() || (m_hardware->mode() == OperationMode::CGB && selectedSprites.front() < objectQueue.front().oamAddress);
 							if (pushSprite) {
 								objectQueue.clear();
 								uint16_t spriteToPush;
@@ -280,7 +280,7 @@ namespace toygb {
 								// Check whether the next sprite must be rendered at the current X coordinate (only need to check the next one as selectedSprites is sorted by X coordinate).
 								// As always, OAM gives X + 8, so -8 everywhere to get the actual position on the screen (and the end position is OAM X coordinate - 8 + 8 = OAM X coordinate)
 								if (!selectedSprites.empty() && x >= m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 && x < m_oamMapping->lcdGet(selectedSprites.front() + 1)) {
-									switch (m_hardware.mode()) {
+									switch (m_hardware->mode()) {
 										case OperationMode::DMG:  // DMG mode : No problem, priority goes to the lowest X coordinate, so the first in selectedSprites
 											spriteToPush = selectedSprites.front();
 											selectedSprites.pop_front();
@@ -341,7 +341,7 @@ namespace toygb {
 
 										// Get which palette to use from the OAM control byte
 										uint8_t palette;
-										switch (m_hardware.mode()) {
+										switch (m_hardware->mode()) {
 											case OperationMode::DMG:  // DMG mode : set by bit 4 of the control byte (0 = OBP0, 1 = OBP1)
 												palette = (control >> 4) & 1;
 												break;
@@ -376,7 +376,7 @@ namespace toygb {
 						// In DMG mode, if the LCDC.0 is clear, background is disabled so everything not covered by sprites is blank
 						// In CGB mode, this does only affect the background-to-object priority, that is handled later on
 						uint8_t colorValue;
-						if (m_hardware.mode() == OperationMode::DMG && !m_lcdControl->backgroundDisplay)
+						if (m_hardware->mode() == OperationMode::DMG && !m_lcdControl->backgroundDisplay)
 							colorValue = COLORVALUE_BLANK;
 						else
 							colorValue = backgroundPixel.color;
@@ -449,7 +449,7 @@ namespace toygb {
 						}
 
 						// DMG mode : Resolve with monochrome palettes (BGP / OBP0 / OBP1) and use the associated default RGB555 color
-						else if (m_hardware.mode() == OperationMode::DMG) {
+						else if (m_hardware->mode() == OperationMode::DMG) {
 							if (colorPalette == BACKGROUND_PALETTE)
 								colorResult = DMG_PALETTE[m_dmgPalette->backgroundPalette[colorValue]];
 							else if (colorPalette == 0)
@@ -459,7 +459,7 @@ namespace toygb {
 						}
 
 						// CGB mode : Resolve with CGB palettes (BCPD / OCPD)
-						else if (m_hardware.mode() == OperationMode::CGB) {
+						else if (m_hardware->mode() == OperationMode::CGB) {
 							// Calculate the index in the palette data array
 							int paletteIndex = colorPalette * 4 + colorValue;
 							if (elementIndex == BACKGROUND_INDEX)
@@ -539,7 +539,7 @@ namespace toygb {
 	////////// LCDController::ObjectSelectionComparator
 	// FIXME : Vestigial parameters
 
-	LCDController::ObjectSelectionComparator::ObjectSelectionComparator(HardwareConfig& hardware, LCDMemoryMapping* oam) {
+	LCDController::ObjectSelectionComparator::ObjectSelectionComparator(HardwareConfig* hardware, LCDMemoryMapping* oam) {
 		m_hardware = hardware;
 		m_oamMapping = oam;
 	}

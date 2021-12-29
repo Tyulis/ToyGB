@@ -11,6 +11,7 @@ namespace toygb {
 		public:
 			GameboyConfig();
 
+			std::string bootrom;  // Bootrom file path
 			std::string romfile;  // ROM file path
 			std::string ramfile;  // Save file path
 

@@ -36,7 +36,7 @@ namespace toygb {
 
 	// Initialize the channel
 	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
-	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		sweepPeriod = 0;
 		sweepDirection = false;
 		sweepShift = 0;
@@ -88,7 +88,7 @@ namespace toygb {
 	void AudioToneSweepMapping::set(uint16_t address, uint8_t value){
 		// Ignore writes when the APU is powered off
 		// On DMG hardware, length registers are still fully writable even with the APU powered off
-		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_PATTERN)) {
+		if (powered || (m_hardware->isDMGConsole() && address == OFFSET_PATTERN)) {
 			switch (address) {
 				case OFFSET_SWEEP:  // NR10
 					sweepPeriod = (value >> 4) & 7;

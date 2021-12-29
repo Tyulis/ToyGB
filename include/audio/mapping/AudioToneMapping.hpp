@@ -13,7 +13,7 @@ namespace toygb {
 	/** Tone (square wave) channel memory mapping and operation (channel 2) */
 	class AudioToneMapping : public AudioChannelMapping {
 		public:
-			AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware);
+			AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);

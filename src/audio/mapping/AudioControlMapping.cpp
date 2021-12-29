@@ -22,7 +22,9 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
            |            |      |          | - C (bits 0-3) : Audio channels status (for each channel, 1 = playing, 0 = idle). Channels are in order (bit 0 = channel 1, bit 3 = channel 4) */
 
 namespace toygb {
-	AudioControlMapping::AudioControlMapping() {
+	AudioControlMapping::AudioControlMapping(HardwareConfig* hardware) {
+		m_hardware = hardware;
+
 		// Default values at boot
 		vinOutput1 = false;
 		vinOutput2 = false;
@@ -38,7 +40,7 @@ namespace toygb {
 		output2Channels[2] = true;
 		output2Channels[3] = true;
 
-		audioEnable = true;
+		audioEnable = !m_hardware->hasBootrom();  // The gameboy apparently starts with the APU disabled, the bootrom enables it later
 		channelEnable[0] = false;
 		channelEnable[1] = false;
 		channelEnable[2] = false;

@@ -16,14 +16,14 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	SerialTransferMapping::SerialTransferMapping(HardwareConfig& hardware) {
+	SerialTransferMapping::SerialTransferMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
 
 		// Default register values (SB = 0x00, SC = 0x7E on non-CGB, 0x7F on CGB-enabled)
 		transferData = 0x00;
 		transferStartFlag = false;
 		clockSpeed = true;
-		shiftClock = hardware.isCGBCapable();  // Startup value is 0 on DMG models, 1 on CGB and AGB models
+		shiftClock = hardware->isCGBCapable();  // Startup value is 0 on DMG models, 1 on CGB and AGB models
 	}
 
 	// Get the value at the given relative address
@@ -32,7 +32,7 @@ namespace toygb {
 			case OFFSET_DATA:  // SB
 				return transferData;
 			case OFFSET_CONTROL:  // SC
-				return (transferStartFlag << 7) | ((m_hardware.mode() == OperationMode::CGB ? clockSpeed : 1) << 1) | shiftClock | 0x7C;
+				return (transferStartFlag << 7) | ((m_hardware->mode() == OperationMode::CGB ? clockSpeed : 1) << 1) | shiftClock | 0x7C;
 		}
 		std::stringstream errstream;
 		errstream << "Wrong memory mapping : " << oh16(address);
@@ -47,7 +47,7 @@ namespace toygb {
 				break;
 			case OFFSET_CONTROL:  // SC
 				transferStartFlag = (value >> 7) & 1;
-				if (m_hardware.mode() == OperationMode::CGB)
+				if (m_hardware->mode() == OperationMode::CGB)
 					clockSpeed = (value >> 1) & 1;
 				shiftClock = value & 1;
 				break;

@@ -32,7 +32,7 @@ namespace toygb {
 
 	// Initialize the channel
 	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
-	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		wavePatternDuty = 0;
 		length = 0x3F;
 
@@ -72,7 +72,7 @@ namespace toygb {
 	void AudioToneMapping::set(uint16_t address, uint8_t value) {
 		// Ignore writes when the APU is powered off
 		// On DMG hardware, length registers are still fully writable even with the APU powered off
-		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_PATTERN)) {
+		if (powered || (m_hardware->isDMGConsole() && address == OFFSET_PATTERN)) {
 			switch (address) {
 				case OFFSET_PATTERN:  // NR41
 					if (powered)

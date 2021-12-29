@@ -3,7 +3,7 @@
 
 namespace toygb {
 	// Initialize the base channel
-	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware){
+	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware){
 		m_channel = channel;
 		m_control = control;
 		m_debug = debug;

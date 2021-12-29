@@ -129,19 +129,21 @@ int main(int argc, char** argv) {
 			 	key = argument;
 			} else {
 				key = argument.substr(0, argument.find_last_of('='));
-				value = argument.substr(argument.find_last_of('='));
+				value = argument.substr(argument.find_last_of('=') + 1);
 			}
 
-			if (key == "--disassemble"){
+			if (key == "--disassemble") {
 				config.disassemble = true;
-			} else if (key == "--mode"){
+			} else if (key == "--mode") {
 				config.mode = argumentOperationMode(value);
-			} else if (key == "--system"){
+			} else if (key == "--system") {
 				config.system = argumentSystem(value);
-			} else if (key == "--console"){
+			} else if (key == "--console") {
 				config.console = argumentConsole(value);
-			} else if (key == "--save"){
+			} else if (key == "--save") {
 				config.ramfile = value;
+			} else if (key == "--bootrom") {
+				config.bootrom = value;
 			}
 		}
 	}

@@ -40,7 +40,7 @@ namespace toygb {
 	const int TIMA_TRIGGER_BITS[] = {9, 3, 5, 7};
 
 	// Initialize the memory mapping with initial values
-	TimerMapping::TimerMapping(HardwareConfig& hardware, InterruptVector* interrupt) {
+	TimerMapping::TimerMapping(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 

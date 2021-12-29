@@ -68,21 +68,21 @@
 namespace toygb {
 	// Initialize the component with null values, the actual initialization is in CPU::init
 	CPU::CPU() {
-		m_logDisassembly = false;
-
 		m_hram = nullptr;
 		m_wram = nullptr;
+		m_bootrom = nullptr;
 
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
 		m_hramMapping = nullptr;
 	}
 
-	CPU::CPU(bool disassemble) {
-		m_logDisassembly = disassemble;
+	CPU::CPU(GameboyConfig& config) {
+		m_config = config;
 
 		m_hram = nullptr;
 		m_wram = nullptr;
+		m_bootrom = nullptr;
 
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
@@ -93,7 +93,8 @@ namespace toygb {
 	CPU::~CPU() {
 		if (m_hram != nullptr) delete[] m_hram;
 		if (m_wram != nullptr) delete[] m_wram;
-		m_hram = m_wram = nullptr;
+		if (m_bootrom != nullptr) delete[] m_bootrom;
+		m_hram = m_wram = m_bootrom = nullptr;
 
 		if (m_hramMapping != nullptr) delete m_hramMapping;
 		if (m_wramMapping != nullptr) delete m_wramMapping;
@@ -106,12 +107,12 @@ namespace toygb {
 	}
 
 	// Initialize the component
-	void CPU::init(HardwareConfig& hardware, InterruptVector* interrupt) {
+	void CPU::init(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 		m_hram = new uint8_t[HRAM_SIZE];
 
-		switch (hardware.mode()) {
+		switch (hardware->mode()) {
 			case OperationMode::DMG:  // DMG mode : only one WRAM bank
 				m_wram = new uint8_t[WRAM_SIZE]; break;
 			case OperationMode::CGB:  // CGB mode : 2 switchable WRAM banks
@@ -120,8 +121,13 @@ namespace toygb {
 				throw EmulationError("OperationMode::Auto given to CPU");
 		}
 
+		// Default behaviour : no bootrom, initial registers value will be set by the emulator on startup. loadBootrom() resets m_bootromUnmapped if a bootrom is set
+		m_bootromSize = 0;
+		m_bootromUnmapped = true;
+		m_bootromDisableMapping = new BootromDisableMapping(&m_bootromUnmapped);
+
 		m_hramMapping = new ArrayMemoryMapping(m_hram);
-		switch (hardware.mode()) {
+		switch (hardware->mode()) {
 			case OperationMode::DMG:
 				m_wramMapping = new ArrayMemoryMapping(m_wram);
 				break;
@@ -134,13 +140,20 @@ namespace toygb {
 		}
 
 		m_timer = new TimerMapping(hardware, interrupt);
+
+		// Load the bootrom if set
+		if (m_config.bootrom != "") {
+			if (loadBootrom(m_config.bootrom))  // Bootrom loading succeeded, go into bootrom mode
+				m_hardware->setBootrom(true);  // Still a reference, CPU must be initialized before everything else such that the bootrom mode is transferred to others too
+		}
 	}
 
 	// Configure the memory mappings associated with the component
 	void CPU::configureMemory(MemoryMap* memory) {
 		memory->add(HRAM_OFFSET, HRAM_OFFSET + HRAM_SIZE - 1, m_hramMapping);
 
-		if (m_hardware.mode() == OperationMode::CGB) {
+		memory->add(IO_BOOTROM_UNMAP, IO_BOOTROM_UNMAP, m_bootromDisableMapping);
+		if (m_hardware->mode() == OperationMode::CGB) {
 			memory->add(IO_WRAM_BANK, IO_WRAM_BANK, m_wramBankMapping);
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
@@ -162,10 +175,18 @@ namespace toygb {
 	GBComponent CPU::run(MemoryMap* memory, DMAController* dma) {
 		m_memory = memory;
 		m_dma = dma;
-		initRegisters();  // TODO : Add bootroms
+		if (m_bootromUnmapped)  // Bootrom unmapped flag already set -> no-bootrom mode, initialize the register with relatively-good-but-not-perfect values and skip right to 0x0100
+			initRegisters();
+		else  // Bootrom mode, start execution from 0x0000
+			m_pc = 0x0000;
+
+		m_ei_scheduled = false;
+		m_haltBug = false;
+		m_halted = false;
+		m_stopped = false;
 
 		// Start CPU operation
-		uint8_t opcode = m_memory->get(m_pc++);  // Start with first opcode already fetched
+		uint8_t opcode = memoryRead(m_pc++);  // Start with first opcode already fetched
 
 		try {
 			while (true) {
@@ -210,7 +231,7 @@ namespace toygb {
 				uint16_t basePC = m_pc - 1;
 
 				if (!m_halted && !m_stopped){
-					if (m_logDisassembly) logDisassembly(basePC);
+					if (m_config.disassemble) logDisassembly(basePC);
 
 					// Opcode description :
 					// Binary opcode | hex opcodes | mnemonic | description | CPU cycles (*4 for clocks) | flag changes (znhc, 0 is reset, 1 is set, - is unaffected, z/n/h/c = it depends, x = depends on the actual instruction)
@@ -828,7 +849,7 @@ namespace toygb {
 						throw EmulationError(errstream.str());
 					}
 
-					if (m_logDisassembly) logStatus();
+					if (m_config.disassemble) logStatus();
 
 					opcode = memoryRead(m_pc); cycle(1);  // Fetch the next opcode during the last cycle of the current instruction
 					if (!m_haltBug)  // When a halt instruction is executed when an interrupt is pending (IF + IE) and IME is clear, halt mode is not entered and PC is not incremented after the next fetch
@@ -845,13 +866,38 @@ namespace toygb {
 		}
 	}
 
-	// Initialize the CPU status with default values for the hardware, if there is no bootrom (TODO : Add bootrom support)
-	void CPU::initRegisters(){
+	// Load the bootrom into memory and tell whether it was successful
+	bool CPU::loadBootrom(std::string filename) {
+		// Checking file existence
+		std::filesystem::path filepath(filename);
+		if (!std::filesystem::exists(filepath)) {
+			std::cerr << "Bootrom file " << filename << " not found, reverting to no-bootrom mode" << std::endl;
+			return false;
+		}
+		// All this to get the file size
+		m_bootromSize = std::filesystem::file_size(filepath);
+
+		std::ifstream bootromFile(filename, std::ifstream::in | std::ifstream::binary);
+		if (!std::filesystem::exists(filepath)) {
+			std::cerr << "Bootrom file " << filename << " could not be opened, reverting to no-bootrom mode" << std::endl;
+			return false;
+		}
+
+		// Everything looks good, we can now switch into bootrom mode
+		m_bootromUnmapped = false;
+		m_bootrom = new uint8_t[m_bootromSize];
+		bootromFile.read(reinterpret_cast<char*>(m_bootrom), m_bootromSize);
+		bootromFile.close();
+		return true;
+	}
+
+	// Initialize the CPU status with default values for the hardware, if there is no bootrom
+	void CPU::initRegisters() {
 		reg_sp = 0xFFFE;
 		m_pc = 0x0100;
-		switch (m_hardware.console()){
+		switch (m_hardware->console()){
 			case ConsoleModel::DMG:
-				if (m_hardware.system() == SystemRevision::DMG_0){
+				if (m_hardware->system() == SystemRevision::DMG_0){
 					reg_a = 0x01; reg_f = 0x00;
 					reg_b = 0xFF; reg_c = 0x13;
 					reg_d = 0x00; reg_e = 0xC1;
@@ -886,7 +932,7 @@ namespace toygb {
 				break;
 
 			case ConsoleModel::CGB:
-				if (m_hardware.mode() == OperationMode::DMG){
+				if (m_hardware->mode() == OperationMode::DMG){
 					reg_a = 0x11; reg_f = 0x80;
 					reg_b = 0x00; reg_c = 0x00;  // b depends on the cartridge
 					reg_d = 0x00; reg_e = 0x08;
@@ -902,7 +948,7 @@ namespace toygb {
 			case ConsoleModel::AGB:
 			case ConsoleModel::AGS:
 			case ConsoleModel::GBP:
-				if (m_hardware.mode() == OperationMode::DMG){
+				if (m_hardware->mode() == OperationMode::DMG){
 					reg_a = 0x11; reg_f = 0x00;  // f depends on the cartridge
 					reg_b = 0x01; reg_c = 0x00;  // b depends on the cartridge
 					reg_d = 0x00; reg_e = 0x08;
@@ -917,12 +963,6 @@ namespace toygb {
 			case ConsoleModel::Auto:
 				throw EmulationError("ConsoleModel::Auto given to CPU");
 		}
-
-		m_ei_scheduled = false;
-		m_haltBug = false;
-		m_halted = false;
-		m_stopped = false;
-		m_instructionCount = 0;
 	}
 
 	// Read the value at the given absolute memory address
@@ -930,11 +970,18 @@ namespace toygb {
 		// Memory other than HRAM is inaccessible during OAM DMA
 		if (m_dma->isOAMDMAActive() && (address < HRAM_OFFSET || address >= IO_INTERRUPT_ENABLE))
 			return 0xFF;
-		uint8_t value = m_memory->get(address);
-		return value;
+
+		// Overlaying the bootrom with our memory mapping system would be a pain
+		// As only the CPU uses the ROM area (except the DMA component but AFAIK there's no DMA in the bootroms), it makes no difference to just hack it right there
+		// CGB bootroms are larger than 0x0100, so they are mapped over 0x0000-0x00FF, leave the cartridge on 0x0100-0x01FF and mapped after 0x0200
+		if (!m_bootromUnmapped && (address < 0x0100 || (address >= 0x0200 && address < m_bootromSize)))
+			return m_bootrom[address];
+
+		return m_memory->get(address);
 	}
 
 	// Write a value at the given absolute memory address
+	// FIXME : While the bootrom is mapped, are writes in its area fully ignored or are they still sent to the MBC ?
 	void CPU::memoryWrite(uint16_t address, uint8_t value) {
 		m_memory->set(address, value);
 	}
@@ -1143,11 +1190,11 @@ namespace toygb {
 	}
 
 	void CPU::logDisassembly(uint16_t position){
-		std::cout << /*m_instructionCount << " " << */ oh16(position) << " - ";
+		std::cout << oh16(position) << " - ";
 
-		uint8_t opcode = m_memory->get(position);
-		uint8_t low = m_memory->get(position + 1);
-		uint8_t high = m_memory->get(position + 2);
+		uint8_t opcode = memoryRead(position);
+		uint8_t low = memoryRead(position + 1);
+		uint8_t high = memoryRead(position + 2);
 		uint16_t value = (high << 8) | low;
 		std::cout << oh8(opcode) << " ";
 
@@ -1756,7 +1803,7 @@ namespace toygb {
 
 	void CPU::logStatus(){
 		std::cout << "\t\taf: " << oh16(reg_af) << ", bc: " << oh16(reg_bc) << ", de: " << oh16(reg_de) << ", hl: " << oh16(reg_hl) << ", sp: " << oh16(reg_sp);
-		std::cout << ", (hl): " << oh8(m_memory->get(reg_hl));
+		std::cout << ", (hl): " << oh8(memoryRead(reg_hl));
 		/*std::cout << "\t\tstack: ";
 		for (uint16_t pointer = m_sp; pointer < 0xFFF4; pointer += 2){
 			uint16_t low = m_memory->get(pointer);

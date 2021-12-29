@@ -23,7 +23,7 @@ Abs. addr. | Rel. addr. | Name  | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	AudioDebugMapping::AudioDebugMapping(HardwareConfig& hardware) {
+	AudioDebugMapping::AudioDebugMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
 
 		// Those start at 0
@@ -39,12 +39,12 @@ namespace toygb {
 
 	// Get the value at the given relative address
 	uint8_t AudioDebugMapping::get(uint16_t address) {
-		if (m_hardware.isCGBConsole()) {  // FIXME : CGB-only or CGB-enabled ?
+		if (m_hardware->isCGBConsole()) {  // FIXME : CGB-only or CGB-enabled ?
 			switch (address) {
 				case OFFSET_FF72: return m_ff72;
 				case OFFSET_FF73: return m_ff73;
 				case OFFSET_FF74:  // FF74 is CGB-mode only
-					if (m_hardware.mode() == OperationMode::CGB)
+					if (m_hardware->mode() == OperationMode::CGB)
 						return m_ff74;
 					else
 						return 0xFF;
@@ -62,12 +62,12 @@ namespace toygb {
 
 	// Set the value at the given relative address
 	void AudioDebugMapping::set(uint16_t address, uint8_t value) {
-		if (m_hardware.isCGBConsole()) {
+		if (m_hardware->isCGBConsole()) {
 			switch (address) {
 				case OFFSET_FF72: m_ff72 = value; break;
 				case OFFSET_FF73: m_ff73 = value; break;
 				case OFFSET_FF74:
-					if (m_hardware.mode() == OperationMode::CGB)
+					if (m_hardware->mode() == OperationMode::CGB)
 						m_ff74 = value;
 					break;
 				case OFFSET_FF75: m_ff75 = value & 0x70; break;

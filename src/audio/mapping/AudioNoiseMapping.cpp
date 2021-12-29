@@ -31,7 +31,7 @@ namespace toygb {
 
 	// Initialize the channel.
 	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
-	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig& hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		length = 0x3F;
 
 		initialEnvelopeVolume = 0;
@@ -75,7 +75,7 @@ namespace toygb {
 	void AudioNoiseMapping::set(uint16_t address, uint8_t value) {
 		// Ignore writes when the APU is powered off
 		// On DMG hardware, length registers are still fully writable even with the APU powered off
-		if (powered || (m_hardware.isDMGConsole() && address == OFFSET_LENGTH)) {
+		if (powered || (m_hardware->isDMGConsole() && address == OFFSET_LENGTH)) {
 			switch (address) {
 				case OFFSET_LENGTH:  // NR41
 					length = 64 - (value & 0x3F);

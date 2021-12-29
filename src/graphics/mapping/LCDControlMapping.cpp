@@ -39,9 +39,11 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping with initial values
-	LCDControlMapping::LCDControlMapping() {
+	LCDControlMapping::LCDControlMapping(HardwareConfig* hardware) {
+		m_hardware = hardware;
+
 		// LCDC
-		displayEnable = true;
+		displayEnable = !m_hardware->hasBootrom();  // The gameboy apparently stats with the LCD disabled, it is enabled later by the bootrom
 		windowTilemapSelect = false;
 		windowEnable = false;
 		backgroundDataSelect = true;

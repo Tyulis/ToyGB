@@ -3,6 +3,7 @@
 namespace toygb {
 	// Initial, default values for the config
 	GameboyConfig::GameboyConfig() {
+		bootrom = "";
 		romfile = "";
 		ramfile = "";
 

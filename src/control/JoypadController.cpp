@@ -14,7 +14,7 @@ namespace toygb {
 	}
 
 	// Initialize the component, with the interrupt register as it controls the joypad interrupt (TODO : currently not implemented)
-	void JoypadController::init(HardwareConfig& hardware, InterruptVector* interrupt) {
+	void JoypadController::init(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 		m_register = new JoypadMapping();

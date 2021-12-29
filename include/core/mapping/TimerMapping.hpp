@@ -12,7 +12,7 @@ namespace toygb {
 	/** Timer IO registers memory mapping */
 	class TimerMapping : public MemoryMapping {
 		public:
-			TimerMapping(HardwareConfig& hardware, InterruptVector* interrupt);
+			TimerMapping(HardwareConfig* hardware, InterruptVector* interrupt);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -28,7 +28,7 @@ namespace toygb {
 		private:
 			void checkTimerIncrements(uint16_t previousValue, uint16_t newValue);  // Check for values to increment within a clocks increment
 
-			HardwareConfig m_hardware;
+			HardwareConfig* m_hardware;
 			InterruptVector* m_interrupt;
 
 			uint16_t m_internalCounter;  // Internal time counter, that counts clock ticks

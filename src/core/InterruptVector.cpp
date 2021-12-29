@@ -16,7 +16,7 @@ namespace toygb {
 	}
 
 	// Initialize the interrupt vector
-	void InterruptVector::init(HardwareConfig& hardware) {
+	void InterruptVector::init() {
 		m_enable = new InterruptRegisterMapping(true);
 		m_request = new InterruptRegisterMapping(false);
 		m_master = true;
