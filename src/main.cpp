@@ -1,4 +1,5 @@
 #include <string>
+#include <fstream>
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -9,6 +10,8 @@
 #include "GameboyConfig.hpp"
 #include "core/hardware.hpp"
 #include "util/error.hpp"
+
+#include "debug/assembler.hpp"
 
 
 using namespace toygb;
@@ -86,6 +89,44 @@ ConsoleModel argumentConsole(std::string value) {
 	else throw std::runtime_error("Invalid console model (--console argument)");
 }
 
+int assembleFile(std::string filename, std::string outname) {
+	if (filename.empty()) {
+		std::cerr << "No input file !" << std::endl;
+		return 3;
+	}
+
+	std::ifstream file(filename, std::ifstream::in | std::ifstream::binary);
+	if (!file.is_open()) {
+		std::cerr << "Input file could not be opened" << std::endl;
+		return 4;
+	}
+	std::string code;
+	code.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+	file.close();
+
+	std::vector<uint8_t> assembled = assemble(code);
+	uint8_t* output = new uint8_t[assembled.size()];
+	std::copy(assembled.begin(), assembled.end(), output);
+
+	std::ofstream outfile(outname, std::ofstream::out | std::ofstream::binary);
+	if (!outfile.is_open()) {
+		std::cerr << "Output file could not be opened" << std::endl;
+		return 4;
+	}
+	outfile.write(reinterpret_cast<char*>(output), assembled.size());
+	return 0;
+}
+
+int disassembleFile(std::string filename, std::string outname) {
+	if (filename.empty()) {
+		std::cerr << "No input file !" << std::endl;
+		return 3;
+	}
+	std::cerr << "Not implemented :)" << std::endl;
+	return 5;
+
+}
+
 void printHelp(char* argv0) {
 	std::cout << "Usage : " << argv0 << " romfile [arguments]" << std::endl << std::endl;
 	std::cout << "Emulation options : " << std::endl;
@@ -103,8 +144,10 @@ void printHelp(char* argv0) {
 	std::cout << "\t          SGB, SGB2" << std::endl;
 	std::cout << "\tAliases : DMG = DMG-C, CGB = CGB-E, AGB = AGB-A, GBP = AGB-A" << std::endl;
 	std::cout << std::endl << "Debug options : " << std::endl;
-	std::cout << "--disassemble : Print disassembly to console" << std::endl;
-
+	std::cout << "--status : Print disassembly to console" << std::endl;
+	std::cout << std::endl << "Assemble options : " << std::endl;
+	std::cout << "--assemble=<file>    : Assemble a Gameboy assembler source code, output file name must be given as the romfile argument" << std::endl;
+	std::cout << "--disassemble=<file> : Disassemble Gameboy machine code into assembler, output file name must be given as the romfile argument" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -132,7 +175,7 @@ int main(int argc, char** argv) {
 				value = argument.substr(argument.find_last_of('=') + 1);
 			}
 
-			if (key == "--disassemble") {
+			if (key == "--status") {
 				config.disassemble = true;
 			} else if (key == "--mode") {
 				config.mode = argumentOperationMode(value);
@@ -144,6 +187,12 @@ int main(int argc, char** argv) {
 				config.ramfile = value;
 			} else if (key == "--bootrom") {
 				config.bootrom = value;
+			}
+			// Assembler usage
+			else if (key == "--assemble") {
+				return assembleFile(value, config.romfile);
+			} else if (key == "--disassemble") {
+				return disassembleFile(value, config.romfile);
 			}
 		}
 	}

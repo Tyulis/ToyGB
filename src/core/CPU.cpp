@@ -110,8 +110,19 @@ namespace toygb {
 	void CPU::init(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
-		m_hram = new uint8_t[HRAM_SIZE];
 
+		// Default behaviour : no bootrom, initial registers value will be set by the emulator on startup. loadBootrom() resets m_bootromUnmapped if a bootrom is set
+		m_bootromSize = 0;
+		m_bootromUnmapped = true;
+		m_bootromDisableMapping = new BootromDisableMapping(&m_bootromUnmapped);
+
+		// Load the bootrom if set
+		if (m_config.bootrom != "") {
+			if (loadBootrom(m_config.bootrom))  // Bootrom loading succeeded, go into bootrom mode
+				m_hardware->setBootrom(true);  // CPU must be initialized before everything else such that the bootrom mode is transferred to others too
+		}
+
+		m_hram = new uint8_t[HRAM_SIZE];
 		switch (hardware->mode()) {
 			case OperationMode::DMG:  // DMG mode : only one WRAM bank
 				m_wram = new uint8_t[WRAM_SIZE]; break;
@@ -120,11 +131,6 @@ namespace toygb {
 			case OperationMode::Auto:
 				throw EmulationError("OperationMode::Auto given to CPU");
 		}
-
-		// Default behaviour : no bootrom, initial registers value will be set by the emulator on startup. loadBootrom() resets m_bootromUnmapped if a bootrom is set
-		m_bootromSize = 0;
-		m_bootromUnmapped = true;
-		m_bootromDisableMapping = new BootromDisableMapping(&m_bootromUnmapped);
 
 		m_hramMapping = new ArrayMemoryMapping(m_hram);
 		switch (hardware->mode()) {
@@ -140,12 +146,6 @@ namespace toygb {
 		}
 
 		m_timer = new TimerMapping(hardware, interrupt);
-
-		// Load the bootrom if set
-		if (m_config.bootrom != "") {
-			if (loadBootrom(m_config.bootrom))  // Bootrom loading succeeded, go into bootrom mode
-				m_hardware->setBootrom(true);  // Still a reference, CPU must be initialized before everything else such that the bootrom mode is transferred to others too
-		}
 	}
 
 	// Configure the memory mappings associated with the component
@@ -469,7 +469,7 @@ namespace toygb {
 					}
 
 					// 00 01 1111 | 0x1F | rra | Rotate the accumulator's and carry bits right (76543210 c -> c7654321 0) | 1 | 000c
-					else if (opcode == 0b00011111) {  // 00 01 1111 = rra
+					else if (opcode == 0b00011111) {
 						bool newcarry = reg_a & 1;
 						reg_a = (reg_a >> 1) | (flag_c << 7);
 						setFlags(0, 0, 0, newcarry);
@@ -482,7 +482,7 @@ namespace toygb {
 					}
 
 					// 00 11 1111 | 0x3F | ccf | Take the complement of the carry flag (flip flag c) | 1 | -00c
-					else if (opcode == 0b00111111) {  // 00 11 1111 = ccf
+					else if (opcode == 0b00111111) {
 						reg_f ^= mask_flag_c;  // flip carry
 						setFlags(UNAFFECTED, 0, 0, UNAFFECTED);
 					}
@@ -507,13 +507,13 @@ namespace toygb {
 					}
 
 					// 01 110 rrr | 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77 | ld (hl), r | Load the value of a register into memory at the address given by HL | 2 | ----
-					else if ((opcode & 0b11111000) == 0b01110000){  // 01 110 xxx = ld (hl), x
+					else if ((opcode & 0b11111000) == 0b01110000){
 						uint8_t sourcereg = opcode & 7;
 						memoryWrite(reg_hl, m_registers[sourcereg]); cycle(1);
 					}
 
-					// 01 xxx yyy | All other values in 0x40-0x7F | ld x, y | Load the value of a register into another | 1 | ----
-					else if ((opcode & 0b11000000) == 0b01000000){  // 01 xxx yyy = ld x, y
+					// 01 xxx yyy | All other values in 0x40-0x7F | ld x, y | Load the value of register y into register x | 1 | ----
+					else if ((opcode & 0b11000000) == 0b01000000){
 						uint8_t sourcereg = opcode & 7;
 						uint8_t destreg = (opcode >> 3) & 7;
 						m_registers[destreg] = m_registers[sourcereg];
@@ -529,7 +529,7 @@ namespace toygb {
 					}
 
 					// 10 ppp rrr | All other values in 0x80-0xBF | <op> a, r | Do an arithmetical operation between the accumulator and another register and put the result back in the accumulator | 1 | xxxx
-					else if ((opcode & 0b11000000) == 0b10000000) {  // 10 ooo rrr = <op> a, r
+					else if ((opcode & 0b11000000) == 0b10000000) {
 						uint8_t operation = (opcode >> 3) & 7;
 						uint8_t reg = opcode & 7;
 						accumulatorOperation(operation, m_registers[reg]);
@@ -810,7 +810,7 @@ namespace toygb {
 							result = operand & ~(1 << subop);  // Mask out the given bit (like bit 2 -> 0b00000100 -> value is AND-ed by 0b11111011)
 						}
 
-						// 11 bbb rrr | All values in 0xC0-0xFF | set b, r | Set (to 1) bit b of the value of a reister | 2/4 | ----
+						// 11 bbb rrr | All values in 0xC0-0xFF | set b, r | Set (to 1) bit b of the value of a register | 2/4 | ----
 						else if (block == 0b11) {
 							result = operand | (1 << subop);  // Mask in the given bit
 						}
@@ -827,7 +827,7 @@ namespace toygb {
 					}
 
 					// 11 11 1011 | 0xFB | ei | Enable interrupts (set the Interrupt Master Enable), with a delay of 1 cycle | 1 | ----
-					else if (opcode == 0b11111011){  // 11 11 1011 = ei
+					else if (opcode == 0b11111011) {
 						m_ei_scheduled = true;
 					}
 

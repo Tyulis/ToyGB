@@ -62,6 +62,7 @@ namespace toygb {
 
 	// Set the value at the given relative address
 	void AudioDebugMapping::set(uint16_t address, uint8_t value) {
+		std::cout << "Write " << oh8(value) << " to " << oh16(OFFSET_START + address) << std::endl;
 		if (m_hardware->isCGBConsole()) {
 			switch (address) {
 				case OFFSET_FF72: m_ff72 = value; break;

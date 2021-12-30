@@ -51,6 +51,9 @@ namespace toygb {
 			bool hasBootrom() const;
 			void setBootrom(bool bootromPresent);
 
+			// Set the remaining Auto settings
+			void setAutoConfig();
+
 			// Generic console model checks
 			bool isDMGConsole() const;  // DMG, MGB
 			bool isCGBConsole() const;  // CGB
@@ -62,6 +65,11 @@ namespace toygb {
 		private:
 			void checkModeCompatibility(ConsoleModel console, OperationMode mode);
 			void checkSystemCompatibility(ConsoleModel console, SystemRevision system);
+
+			OperationMode defaultOperationMode(ConsoleModel model);
+			ConsoleModel defaultConsoleModel(OperationMode mode);
+			ConsoleModel defaultConsoleModel(SystemRevision system);
+			SystemRevision defaultSystemRevision(ConsoleModel console);
 
 			ConsoleModel m_console;
 			OperationMode m_mode;

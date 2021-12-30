@@ -62,6 +62,11 @@ namespace toygb {
 			case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E:
 				m_romMapping = new MBC5CartMapping(carttype, romfile, ramfile);
 				break;
+
+			default:
+				std::cerr << "Unknown cart type found at 0x0147 in ROM header : " << oh8(carttype) << ", defaulting to no-MBC ROM" << std::endl;
+				m_romMapping = new ROMCartMapping(carttype, romfile, ramfile);
+				break;
 		}
 
 		// Get the RAM mapping, if any

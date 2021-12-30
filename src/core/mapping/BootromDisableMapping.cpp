@@ -4,7 +4,7 @@
 
 (Access is R for read-only, W for write-only, B for both, - for none)
 Abs. addr. | Rel. addr. | Name | Access   | Content
-      FF50 |       0000 | BOOT | -------B | When clear, the bootrom is mapped at 0x0000, setting it to 1 disables the bootrom
+      FF50 |       0000 | BANK | -------B | When clear, the bootrom is mapped at 0x0000, setting it to 1 disables the bootrom
            |            |      |          | Any write is OR-ed with the current value of the register, effectively locking the register to 1 after setting it */
 
 

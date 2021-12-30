@@ -31,8 +31,14 @@ namespace toygb {
 		else if (m_hardware.system() != cartConfig.system())
 			std::cerr << "Override console model : default was " << std::to_string(cartConfig.system()) << ", set " << std::to_string(m_hardware.system());
 
+		m_hardware.setAutoConfig();
+
 		// Initialize components
 		m_cpu.init(&m_hardware, &m_interrupt);  // Must initialize the CPU first as it checks the bootrom status
+
+		if (m_hardware.hasBootrom() && m_hardware.isCGBCapable())
+			m_hardware.setOperationMode(OperationMode::CGB);
+
 		m_interrupt.init();
 		m_lcd.init(&m_hardware, &m_interrupt);
 		m_audio.init(&m_hardware);

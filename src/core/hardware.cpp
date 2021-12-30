@@ -60,6 +60,54 @@ namespace toygb {
 	// Set whether a bootrom is set up and valid
 	void HardwareConfig::setBootrom(bool bootromPresent) {
 		m_hasBootrom = bootromPresent;
+
+		// CGB-capable models always start in CGB-mode, the bootrom sets DMG-compatibility mode itself by writing to KEY0
+		if (m_hasBootrom && isCGBCapable())
+			m_mode = OperationMode::CGB;
+	}
+
+	// Set the remaining auto settings
+	void HardwareConfig::setAutoConfig() {
+		// Nothing set : default CGB mode
+		if (m_mode == OperationMode::Auto && m_console == ConsoleModel::Auto && m_system == SystemRevision::Auto) {
+			m_mode = OperationMode::CGB;
+			m_console = ConsoleModel::CGB;
+			m_system = SystemRevision::CGB_E;
+		}
+
+		// Console set : set the operation mode and system revision accordingly
+		else if (m_mode == OperationMode::Auto && m_system == SystemRevision::Auto) {
+			m_mode = defaultOperationMode(m_console);
+			m_system = defaultSystemRevision(m_console);
+		}
+
+		// Operation mode set
+		else if (m_console == ConsoleModel::Auto && m_system == SystemRevision::Auto) {
+			m_console = defaultConsoleModel(m_mode);
+			m_system = defaultSystemRevision(m_console);
+		}
+
+		// System revision set
+		else if (m_mode == OperationMode::Auto && m_console == ConsoleModel::Auto) {
+			m_console = defaultConsoleModel(m_system);
+			m_mode = defaultOperationMode(m_console);
+		}
+
+		// Console and system set
+		else if (m_mode == OperationMode::Auto) {
+			m_mode = defaultOperationMode(m_console);
+		}
+
+		// Mode and system set
+		else if (m_console == ConsoleModel::Auto) {
+			m_console = defaultConsoleModel(m_system);
+			checkModeCompatibility(m_console, m_mode);
+		}
+
+		// Mode and console set
+		else if (m_system == SystemRevision::Auto) {
+			m_system = defaultSystemRevision(m_console);
+		}
 	}
 
 	// Tell whether the console is a DMG model (DMG / MGB)
@@ -165,6 +213,74 @@ namespace toygb {
 		}
 	}
 
+	// Get a default operation mode for the given console
+	OperationMode HardwareConfig::defaultOperationMode(ConsoleModel console) {
+		if (m_console == ConsoleModel::CGB || m_console == ConsoleModel::AGB || m_console == ConsoleModel::AGS || m_console == ConsoleModel::GBP)
+			return OperationMode::CGB;
+		else
+			return OperationMode::DMG;
+	}
+
+	// Get a default console for the given operation mode
+	ConsoleModel HardwareConfig::defaultConsoleModel(OperationMode mode) {
+		if (mode == OperationMode::CGB)
+			return ConsoleModel::CGB;
+		else
+			return ConsoleModel::DMG;
+	}
+
+	// Get the console associated to the given SoC revision
+	ConsoleModel HardwareConfig::defaultConsoleModel(SystemRevision system) {
+		switch (system) {
+			case SystemRevision::DMG_0:
+			case SystemRevision::DMG_A:
+			case SystemRevision::DMG_B:
+			case SystemRevision::DMG_C:
+				return ConsoleModel::DMG;
+			case SystemRevision::MGB:
+				return ConsoleModel::MGB;
+			case SystemRevision::CGB_0:
+			case SystemRevision::CGB_A:
+			case SystemRevision::CGB_B:
+			case SystemRevision::CGB_C:
+			case SystemRevision::CGB_D:
+			case SystemRevision::CGB_E:
+				return ConsoleModel::CGB;
+			case SystemRevision::AGB_0:
+			case SystemRevision::AGB_A:
+			case SystemRevision::AGB_AE:
+				return ConsoleModel::AGB;
+			case SystemRevision::AGB_B:
+			case SystemRevision::AGB_BE:
+				return ConsoleModel::AGS;
+			case SystemRevision::SGB:
+				return ConsoleModel::SGB;
+			case SystemRevision::SGB2:
+				return ConsoleModel::SGB2;
+			default:
+				std::stringstream errstream;
+				errstream << "Can not determine a default console from system revision " << std::to_string(system);
+				throw EmulationError(errstream.str());
+		}
+	}
+
+	// Get a default system revision for the given console
+	SystemRevision HardwareConfig::defaultSystemRevision(ConsoleModel console) {
+		switch (console) {
+			case ConsoleModel::DMG: return SystemRevision::DMG_C;
+			case ConsoleModel::MGB: return SystemRevision::MGB;
+			case ConsoleModel::CGB: return SystemRevision::CGB_E;
+			case ConsoleModel::AGB: return SystemRevision::AGB_A;
+			case ConsoleModel::AGS: return SystemRevision::AGB_B;
+			case ConsoleModel::GBP: return SystemRevision::AGB_A;
+			case ConsoleModel::SGB: return SystemRevision::SGB;
+			case ConsoleModel::SGB2: return SystemRevision::SGB2;
+			default:
+				std::stringstream errstream;
+				errstream << "Can not determine a default system revision from console " << std::to_string(console);
+				throw EmulationError(errstream.str());
+		}
+	}
 }
 
 
