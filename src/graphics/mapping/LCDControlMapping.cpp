@@ -42,8 +42,30 @@ namespace toygb {
 	LCDControlMapping::LCDControlMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
 
-		displayEnable = false;  // The PPU is disabled on startup and will be enabled by the bootrom
+		// LCDC
+		displayEnable = !m_hardware->hasBootrom();  // The gameboy apparently stats with the LCD disabled, it is enabled later by the bootrom
+		windowTilemapSelect = false;
+		windowEnable = false;
+		backgroundDataSelect = true;
+		backgroundTilemapSelect = false;
+		objectSize = false;
+		objectEnable = false;
+		backgroundDisplay = true;
+
+		// STAT
+		lycInterrupt = false;
+		oamInterrupt = false;
+		vblankInterrupt = false;
+		hblankInterrupt = false;
+		modeFlag = 0;
+
+		// Scrolling
+		scrollY = 0x00;
+		scrollX = 0x00;
+
+		// Coordinate
 		coordY = 0x00;
+		coordYCompare = 0x00;
 	}
 
 	// Get the value at the given relative address

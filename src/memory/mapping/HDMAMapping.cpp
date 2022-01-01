@@ -25,7 +25,11 @@ Abs. addr. | Rel. addr. | Name  | Access   | Content
 namespace toygb {
 	// Initialize the memory mapping with its initial values
 	HDMAMapping::HDMAMapping() {
-		
+		source = 0x0000;
+		dest = 0x0000;
+		type = false;
+		length = 0x0000;
+		active = false;
 	}
 
 	// Get the value at the given relative address

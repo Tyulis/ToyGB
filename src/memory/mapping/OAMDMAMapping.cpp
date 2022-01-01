@@ -13,6 +13,7 @@ namespace toygb {
 	OAMDMAMapping::OAMDMAMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
 		active = false;
+		sourceAddress = hardware->isCGBCapable() ? 0x00 : 0xFF;
 	}
 
 	// Get the value at the given relative address

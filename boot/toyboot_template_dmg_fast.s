@@ -29,7 +29,7 @@
 ; as references for initial register values and timing-related values
 ; https://github.com/Gekkio/mooneye-test-suite/
 ; This stub bootrom makes ToyGB pass those two tests, that does not mean it's cycle-accurate
-; But at least it's within a few dozens CPU cycles from a right timing
+; But at least it's within a few dozens CPU cycles from a relatively right timing
 
 
 start:

@@ -827,7 +827,7 @@ namespace toygb {
 	static std::string resolveIncludes(std::string code, std::string filename) {
 		std::stringstream codestream(code);
 		std::string line;
-		int lineno;
+		int lineno = 0;
 		std::string composedCode = "";
 		std::filesystem::path basepath(filename);
 

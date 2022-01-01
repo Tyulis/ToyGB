@@ -28,6 +28,13 @@ namespace toygb {
 	// Initialize the channel
 	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		m_wavePatternMapping = wavePatternMapping;
+
+		enable = false;
+		length = 0xFF;
+		outputLevel = 0;
+		frequency = 0x07FF;
+		enableLength = false;
+
 		m_baseTimerCounter = 0;
 		m_sampleIndex = 0;
 	}

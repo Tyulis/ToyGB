@@ -18,20 +18,22 @@ namespace toygb {
 		HardwareConfig cartConfig = m_cart.getDefaultHardwareConfig();
 		if (m_hardware.mode() == OperationMode::Auto)
 			m_hardware.setOperationMode(cartConfig.mode());
-		else if (m_hardware.mode() != cartConfig.mode())
-			std::cerr << "Override operation mode : default was " << std::to_string(cartConfig.mode()) << ", set " << std::to_string(m_hardware.mode());
+		else if (m_hardware.mode() != cartConfig.mode() && cartConfig.mode() != OperationMode::Auto)
+			std::cerr << "Override operation mode : default was " << std::to_string(cartConfig.mode()) << ", set " << std::to_string(m_hardware.mode()) << std::endl;;
 
 		if (m_hardware.console() == ConsoleModel::Auto)
 			m_hardware.setConsoleModel(cartConfig.console());
-		else if (m_hardware.console() != cartConfig.console())
-			std::cerr << "Override console model : default was " << std::to_string(cartConfig.console()) << ", set " << std::to_string(m_hardware.console());
+		else if (m_hardware.console() != cartConfig.console() && cartConfig.console() != ConsoleModel::Auto)
+			std::cerr << "Override console model : default was " << std::to_string(cartConfig.console()) << ", set " << std::to_string(m_hardware.console()) << std::endl;
 
 		if (m_hardware.system() == SystemRevision::Auto)
 			m_hardware.setSystemRevision(cartConfig.system());
-		else if (m_hardware.system() != cartConfig.system())
-			std::cerr << "Override console model : default was " << std::to_string(cartConfig.system()) << ", set " << std::to_string(m_hardware.system());
+		else if (m_hardware.system() != cartConfig.system() && cartConfig.system() != SystemRevision::Auto)
+			std::cerr << "Override console model : default was " << std::to_string(cartConfig.system()) << ", set " << std::to_string(m_hardware.system()) << std::endl;
 
 		m_hardware.setAutoConfig();
+
+		std::cout << "Hardware config : mode " << std::to_string(m_hardware.mode()) << ", console " << std::to_string(m_hardware.console()) << ", system " << std::to_string(m_hardware.system()) << std::endl;
 
 		// Initialize components
 		m_cpu.init(&m_hardware, &m_interrupt);  // Must initialize the CPU first as it checks the bootrom status

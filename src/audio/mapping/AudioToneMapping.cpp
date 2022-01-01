@@ -32,6 +32,16 @@ namespace toygb {
 
 	// Initialize the channel
 	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+		wavePatternDuty = 0;
+		length = 0x3F;
+
+		initialEnvelopeVolume = 0;
+		envelopeDirection = false;
+		envelopePeriod = 0;
+
+		frequency = 0x07FF;
+		enableLength = false;
+
 		m_dutyPointer = 0;
 		m_baseTimerCounter = 0;
 		m_envelopeFrameCounter = 0;

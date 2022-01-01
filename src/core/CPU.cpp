@@ -70,7 +70,6 @@ namespace toygb {
 	CPU::CPU() {
 		m_hram = nullptr;
 		m_wram = nullptr;
-		m_bootrom = nullptr;
 
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
@@ -82,7 +81,6 @@ namespace toygb {
 
 		m_hram = nullptr;
 		m_wram = nullptr;
-		m_bootrom = nullptr;
 
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
@@ -93,8 +91,8 @@ namespace toygb {
 	CPU::~CPU() {
 		if (m_hram != nullptr) delete[] m_hram;
 		if (m_wram != nullptr) delete[] m_wram;
-		if (m_bootrom != nullptr) delete[] m_bootrom;
-		m_hram = m_wram = m_bootrom = nullptr;
+		if (m_bootrom.size > 0) delete[] m_bootrom.bootrom;
+		m_hram = m_wram = nullptr;
 
 		if (m_hramMapping != nullptr) delete m_hramMapping;
 		if (m_wramMapping != nullptr) delete m_wramMapping;
@@ -112,15 +110,12 @@ namespace toygb {
 		m_interrupt = interrupt;
 
 		// Default behaviour : no bootrom, initial registers value will be set by the emulator on startup. loadBootrom() resets m_bootromUnmapped if a bootrom is set
-		m_bootromSize = 0;
 		m_bootromUnmapped = true;
 		m_bootromDisableMapping = new BootromDisableMapping(&m_bootromUnmapped);
 
 		// Load the bootrom if set
-		if (m_config.bootrom != "") {
-			if (loadBootrom(m_config.bootrom))  // Bootrom loading succeeded, go into bootrom mode
-				m_hardware->setBootrom(true);  // CPU must be initialized before everything else such that the bootrom mode is transferred to others too
-		}
+		bool hasBootrom = loadBootrom(m_config.bootrom);
+		m_hardware->setBootrom(hasBootrom);  // CPU must be initialized before everything else such that the bootrom mode is transferred to others too
 
 		m_hram = new uint8_t[HRAM_SIZE];
 		switch (hardware->mode()) {
@@ -175,10 +170,6 @@ namespace toygb {
 	GBComponent CPU::run(MemoryMap* memory, DMAController* dma) {
 		m_memory = memory;
 		m_dma = dma;
-		if (m_bootromUnmapped)  // Bootrom unmapped flag already set -> no-bootrom mode, initialize the register with relatively-good-but-not-perfect values and skip right to 0x0100
-			initRegisters();
-		else  // Bootrom mode, start execution from 0x0000
-			m_pc = 0x0000;
 
 		m_ei_scheduled = false;
 		m_haltBug = false;
@@ -868,27 +859,21 @@ namespace toygb {
 
 	// Load the bootrom into memory and tell whether it was successful
 	bool CPU::loadBootrom(std::string filename) {
-		// Checking file existence
-		std::filesystem::path filepath(filename);
-		if (!std::filesystem::exists(filepath)) {
-			std::cerr << "Bootrom file " << filename << " not found, reverting to no-bootrom mode" << std::endl;
-			return false;
-		}
-		// All this to get the file size
-		m_bootromSize = std::filesystem::file_size(filepath);
+		if (filename.empty())
+			m_bootrom = getBootrom(m_config, m_hardware);
+		else
+			m_bootrom = getBootrom(filename);
 
-		std::ifstream bootromFile(filename, std::ifstream::in | std::ifstream::binary);
-		if (!std::filesystem::exists(filepath)) {
-			std::cerr << "Bootrom file " << filename << " could not be opened, reverting to no-bootrom mode" << std::endl;
+		// Could not load the bootrom,
+		if (m_bootrom.size < 0) {
+			m_bootromUnmapped = true;
+			initRegisters();
 			return false;
+		} else {
+			m_bootromUnmapped = false;
+			m_pc = 0x0000;
+			return true;
 		}
-
-		// Everything looks good, we can now switch into bootrom mode
-		m_bootromUnmapped = false;
-		m_bootrom = new uint8_t[m_bootromSize];
-		bootromFile.read(reinterpret_cast<char*>(m_bootrom), m_bootromSize);
-		bootromFile.close();
-		return true;
 	}
 
 	// Initialize the CPU status with default values for the hardware, if there is no bootrom
@@ -974,8 +959,8 @@ namespace toygb {
 		// Overlaying the bootrom with our memory mapping system would be a pain
 		// As only the CPU uses the ROM area (except the DMA component but AFAIK there's no DMA in the bootroms), it makes no difference to just hack it right there
 		// CGB bootroms are larger than 0x0100, so they are mapped over 0x0000-0x00FF, leave the cartridge on 0x0100-0x01FF and mapped after 0x0200
-		if (!m_bootromUnmapped && (address < 0x0100 || (address >= 0x0200 && address < m_bootromSize)))
-			return m_bootrom[address];
+		if (!m_bootromUnmapped && (address < 0x0100 || (address >= 0x0200 && address < m_bootrom.size)))
+			return m_bootrom.bootrom[address];
 
 		return m_memory->get(address);
 	}

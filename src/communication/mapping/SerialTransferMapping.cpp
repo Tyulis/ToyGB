@@ -18,6 +18,12 @@ namespace toygb {
 	// Initialize the memory mapping
 	SerialTransferMapping::SerialTransferMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
+
+		// Default register values (SB = 0x00, SC = 0x7E on non-CGB, 0x7F on CGB-enabled)
+		transferData = 0x00;
+		transferStartFlag = false;
+		clockSpeed = true;
+		shiftClock = hardware->isCGBCapable();  // Startup value is 0 on DMG models, 1 on CGB and AGB models
 	}
 
 	// Get the value at the given relative address

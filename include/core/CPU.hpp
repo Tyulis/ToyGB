@@ -1,11 +1,9 @@
 #ifndef _CORE_CPU_HPP
 #define _CORE_CPU_HPP
 
-#include <fstream>
-#include <filesystem>
-
 #include "GameboyConfig.hpp"
 #include "core/timing.hpp"
+#include "core/bootroms.hpp"
 #include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
 #include "core/mapping/TimerMapping.hpp"
@@ -69,7 +67,6 @@ namespace toygb {
 
 			uint8_t* m_wram;     // WRAM data array (mapped on 0xC000-0xDFFF)
 			uint8_t* m_hram;     // HRAM data array (mapped on 0xFF80-0xFFFE)
-			uint8_t* m_bootrom;  // Bootrom data (first mapped on 0x0000-0x0100 + 0x0200-)
 
 			MemoryMapping* m_hramMapping;                    // HRAM memory mapping
 			MemoryMapping* m_wramMapping;                    // WRAM memory mapping
@@ -78,7 +75,7 @@ namespace toygb {
 			WRAMBankSelectMapping* m_wramBankMapping;        // For CGB mode, WRAM bank select IO register (register SVBK, 0xFF70)
 
 			uint8_t m_wramBank;      // WRAM bank that is currently mapped
-			int m_bootromSize;       // Size of the bootrom (as given by the bootrom file size)
+			bootrom_t m_bootrom;     // Bootrom data (first mapped on 0x0000-0x0100 + 0x0200-)
 			bool m_bootromUnmapped;  // Whether the bootrom is unmapped
 
 			uint8_t m_registers[8];      // Main CPU registers, index is the register identifier in opcodes [b, c, d, e, h, l, f, a]

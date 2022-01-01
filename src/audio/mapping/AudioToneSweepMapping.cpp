@@ -36,6 +36,20 @@ namespace toygb {
 
 	// Initialize the channel
 	AudioToneSweepMapping::AudioToneSweepMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+		sweepPeriod = 0;
+		sweepDirection = false;
+		sweepShift = 0;
+
+		wavePatternDuty = 2;
+		length = 0x3F;
+
+		initialEnvelopeVolume = 0x0F;
+		envelopeDirection = false;
+		envelopePeriod = 3;
+
+		frequency = 0x07FF;
+		enableLength = false;
+
 		m_dutyPointer = 0;
 		m_baseTimerCounter = 0;
 		m_outputTimerCounter = 0;

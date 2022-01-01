@@ -30,6 +30,16 @@ namespace toygb {
 	// Initialize the memory with its initial values
 	CGBPaletteMapping::CGBPaletteMapping() {
 		accessible = true;
+
+		objectIndex = 0x3F;
+		objectAutoIncrement = true;
+		for (int i = 0; i < 8; i++)  // By default the bootrom initializes all palettes to white
+			objectPalettes[i] = 0x7FFF;
+
+		backgroundIndex = 0x3F;
+		backgroundAutoIncrement = true;
+		for (int i = 0; i < 8; i++)
+			backgroundPalettes[i] = 0x7FFF;
 	}
 
 	// Get the value at the given relative address

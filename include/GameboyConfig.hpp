@@ -6,7 +6,8 @@
 #include "core/hardware.hpp"
 
 namespace toygb {
-	/** Holds the emulator configuration */
+	/** Holds the emulator configuration
+	 *  TODO : Use a proper config file */
 	class GameboyConfig {
 		public:
 			GameboyConfig();
@@ -20,6 +21,16 @@ namespace toygb {
 			SystemRevision system;  // CPU revision to emulate, defaults to SystemRevision::Auto
 
 			bool disassemble;
+
+			// Default boot ROM files
+			std::string defaultBootDMG0;
+			std::string defaultBootDMG;
+			std::string defaultBootMGB;
+			std::string defaultBootCGB0;
+			std::string defaultBootCGB;
+			std::string defaultBootAGB;
+			std::string defaultBootSGB;
+			std::string defaultBootSGB2;
 	};
 }
 

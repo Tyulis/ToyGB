@@ -24,7 +24,27 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 namespace toygb {
 	AudioControlMapping::AudioControlMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
-		audioEnable = false;  // The APU is disabled on startup (the bootrom initializes it)
+
+		// Default values at boot
+		vinOutput1 = false;
+		vinOutput2 = false;
+		output1Level = 7;
+		output2Level = 7;
+
+		output1Channels[0] = true;
+		output1Channels[1] = true;
+		output1Channels[2] = false;
+		output1Channels[3] = false;
+		output2Channels[0] = true;
+		output2Channels[1] = true;
+		output2Channels[2] = true;
+		output2Channels[3] = true;
+
+		audioEnable = !m_hardware->hasBootrom();  // The gameboy apparently starts with the APU disabled, the bootrom enables it
+		channelEnable[0] = false;
+		channelEnable[1] = false;
+		channelEnable[2] = false;
+		channelEnable[3] = false;
 	}
 
 	// Get the value at the given relative address
