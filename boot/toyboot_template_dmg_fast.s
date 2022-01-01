@@ -21,7 +21,7 @@
 ; SOFTWARE.
 
 
-; This is intended to be an open-source bootstrap ROM for the DMG
+; This is intended to be an open-source bootstrap ROM for the DMG, DMG0 and MGB
 ; It does not perform any particular check on the ROM :
 ; It does not check the logo, nor the header checksum or whatever
 ; This is not intended to be accurate or anything, just to set things up more or less as they should be
@@ -29,7 +29,7 @@
 ; as references for initial register values and timing-related values
 ; https://github.com/Gekkio/mooneye-test-suite/
 ; This stub bootrom makes ToyGB pass those two tests, that does not mean it's cycle-accurate
-; But at least it's within a few dozens CPU cycles from a relatively right timing
+; But at least it's a relatively good timing within a few dozens CPU cycles.
 
 
 start:
