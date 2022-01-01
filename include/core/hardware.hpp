@@ -51,6 +51,14 @@ namespace toygb {
 			bool hasBootrom() const;
 			void setBootrom(bool bootromPresent);
 
+			// Bootrom mapping status
+			bool bootromUnmapped() const;
+			void setBootromStatus(bool unmapped);
+
+			// Speed mode
+			bool doubleSpeed() const;
+			void setDoubleSpeedMode(bool isDoubleSpeed);
+
 			// Set the remaining Auto settings
 			void setAutoConfig();
 
@@ -75,6 +83,8 @@ namespace toygb {
 			OperationMode m_mode;
 			SystemRevision m_system;
 			bool m_hasBootrom;
+			bool m_bootromUnmapped;
+			bool m_doubleSpeed;
 	};
 }
 

@@ -113,12 +113,12 @@ namespace toygb {
 
 			case OperationMode::CGB:
 				m_hdma = new HDMAMapping();
-				m_cgbPalette = new CGBPaletteMapping();
+				m_cgbPalette = new CGBPaletteMapping(m_hardware);
 				m_vramBankMapping = new VRAMBankSelectMapping(&m_vramBank);
 				m_vramMapping = new LCDBankedMemoryMapping(&m_vramBank, VRAM_BANK_SIZE, m_vram);
 
 				memory->add(IO_HDMA_SOURCELOW, IO_HDMA_SETTINGS, m_hdma);
-				memory->add(IO_BGPALETTE_INDEX, IO_OBJPALETTE_DATA, m_cgbPalette);
+				memory->add(IO_BGPALETTE_INDEX, IO_OBJPRIORITY, m_cgbPalette);
 				memory->add(IO_VRAM_BANK, IO_VRAM_BANK, m_vramBankMapping);
 				break;
 

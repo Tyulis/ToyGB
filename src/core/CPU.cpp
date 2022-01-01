@@ -74,6 +74,8 @@ namespace toygb {
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
 		m_hramMapping = nullptr;
+		m_wramBankMapping = nullptr;
+		m_systemControlMapping = nullptr;
 	}
 
 	CPU::CPU(GameboyConfig& config) {
@@ -85,6 +87,7 @@ namespace toygb {
 		m_timer = nullptr;
 		m_wramMapping = nullptr;
 		m_wramBankMapping = nullptr;
+		m_systemControlMapping = nullptr;
 		m_hramMapping = nullptr;
 	}
 
@@ -96,11 +99,13 @@ namespace toygb {
 
 		if (m_hramMapping != nullptr) delete m_hramMapping;
 		if (m_wramMapping != nullptr) delete m_wramMapping;
+		if (m_systemControlMapping != nullptr) delete m_systemControlMapping;
 		if (m_wramBankMapping != nullptr) delete m_wramBankMapping;
 		if (m_timer != nullptr) delete m_timer;
 		m_hramMapping = nullptr;
 		m_wramMapping = nullptr;
 		m_wramBankMapping = nullptr;
+		m_systemControlMapping = nullptr;
 		m_timer = nullptr;
 	}
 
@@ -108,10 +113,6 @@ namespace toygb {
 	void CPU::init(HardwareConfig* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
-
-		// Default behaviour : no bootrom, initial registers value will be set by the emulator on startup. loadBootrom() resets m_bootromUnmapped if a bootrom is set
-		m_bootromUnmapped = true;
-		m_bootromDisableMapping = new BootromDisableMapping(&m_bootromUnmapped);
 
 		// Load the bootrom if set
 		bool hasBootrom = loadBootrom(m_config.bootrom);
@@ -121,18 +122,20 @@ namespace toygb {
 		switch (hardware->mode()) {
 			case OperationMode::DMG:  // DMG mode : only one WRAM bank
 				m_wram = new uint8_t[WRAM_SIZE]; break;
-			case OperationMode::CGB:  // CGB mode : 2 switchable WRAM banks
+			case OperationMode::CGB:  // CGB mode : 8 switchable WRAM banks
 				m_wram = new uint8_t[WRAM_BANK_SIZE * WRAM_BANK_NUM]; break;
 			case OperationMode::Auto:
 				throw EmulationError("OperationMode::Auto given to CPU");
 		}
 
+		m_bootromDisableMapping = new BootromDisableMapping(m_hardware);
 		m_hramMapping = new ArrayMemoryMapping(m_hram);
 		switch (hardware->mode()) {
 			case OperationMode::DMG:
 				m_wramMapping = new ArrayMemoryMapping(m_wram);
 				break;
 			case OperationMode::CGB:
+				m_systemControlMapping = new SystemControlMapping(m_hardware);
 				m_wramBankMapping = new WRAMBankSelectMapping(&m_wramBank);
 				m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_NUM, WRAM_BANK_SIZE, m_wram, true);
 				break;
@@ -150,6 +153,7 @@ namespace toygb {
 		memory->add(IO_BOOTROM_UNMAP, IO_BOOTROM_UNMAP, m_bootromDisableMapping);
 		if (m_hardware->mode() == OperationMode::CGB) {
 			memory->add(IO_WRAM_BANK, IO_WRAM_BANK, m_wramBankMapping);
+			memory->add(IO_KEY0, IO_KEY1, m_systemControlMapping);
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
 		memory->add(ECHO_OFFSET, ECHO_OFFSET + ECHO_SIZE - 1, m_wramMapping);  // Same mapping at a different address range to emulate WRAM echo
@@ -872,11 +876,11 @@ namespace toygb {
 
 		// Could not load the bootrom,
 		if (m_bootrom.size < 0) {
-			m_bootromUnmapped = true;
+			m_hardware->setBootromStatus(true);
 			initRegisters();
 			return false;
 		} else {
-			m_bootromUnmapped = false;
+			m_hardware->setBootromStatus(false);
 			m_pc = 0x0000;
 			return true;
 		}
@@ -965,7 +969,7 @@ namespace toygb {
 		// Overlaying the bootrom with our memory mapping system would be a pain
 		// As only the CPU uses the ROM area (except the DMA component but AFAIK there's no DMA in the bootroms), it makes no difference to just hack it right there
 		// CGB bootroms are larger than 0x0100, so they are mapped over 0x0000-0x00FF, leave the cartridge on 0x0100-0x01FF and mapped after 0x0200
-		if (!m_bootromUnmapped && (address < 0x0100 || (address >= 0x0200 && address < m_bootrom.size)))
+		if (!m_hardware->bootromUnmapped() && (address < 0x0100 || (address >= 0x0200 && address < m_bootrom.size)))
 			return m_bootrom.bootrom[address];
 
 		return m_memory->get(address);

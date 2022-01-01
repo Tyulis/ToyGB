@@ -8,6 +8,8 @@ namespace toygb {
 		m_console = ConsoleModel::Auto;
 		m_system = SystemRevision::Auto;
 		m_hasBootrom = false;
+		m_bootromUnmapped = false;
+		m_doubleSpeed = false;
 	}
 
 	// Initialize the hardware configuration with custom values
@@ -16,6 +18,8 @@ namespace toygb {
 		m_console = console;
 		m_system = system;
 		m_hasBootrom = false;
+		m_bootromUnmapped = false;
+		m_doubleSpeed = false;
 	}
 
 	// Get the console model
@@ -64,6 +68,28 @@ namespace toygb {
 		// CGB-capable models always start in CGB-mode, the bootrom sets DMG-compatibility mode itself by writing to KEY0
 		if (m_hasBootrom && isCGBCapable())
 			m_mode = OperationMode::CGB;
+	}
+
+	// Tell whether the bootrom has been unmapped
+	bool HardwareConfig::bootromUnmapped() const {
+		return m_bootromUnmapped;
+	}
+
+	// Set whether the bootrom is unmapped
+	void HardwareConfig::setBootromStatus(bool unmapped) {
+		m_bootromUnmapped = unmapped;
+	}
+
+	// Tell whether the CPU is in double-speed mode
+	bool HardwareConfig::doubleSpeed() const {
+		return m_doubleSpeed;
+	}
+
+	// Set whether the CPU is in double-speed mode
+	void HardwareConfig::setDoubleSpeedMode(bool isDoubleSpeed) {
+		if (!isCGBCapable() && isDoubleSpeed)
+			throw EmulationError("Tried to set double-speed mode on non-CGB hardware");
+		m_doubleSpeed = isDoubleSpeed;
 	}
 
 	// Set the remaining auto settings

@@ -90,6 +90,9 @@
 #define IO_WINDOW_Y          0xFF4A
 #define IO_WINDOW_X          0xFF4B
 
+#define IO_KEY0              0xFF4C
+#define IO_KEY1              0xFF4D
+
 #define IO_VRAM_BANK         0xFF4F
 
 #define IO_BOOTROM_UNMAP     0xFF50
@@ -104,6 +107,7 @@
 #define IO_BGPALETTE_DATA    0xFF69
 #define IO_OBJPALETTE_INDEX  0xFF6A
 #define IO_OBJPALETTE_DATA   0xFF6B
+#define IO_OBJPRIORITY       0xFF6C
 
 #define IO_WRAM_BANK         0xFF70
 

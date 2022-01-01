@@ -19,7 +19,7 @@ namespace toygb {
 	// Build an automatic hardware configuration to run this ROM, based on its header
 	HardwareConfig ROMMapping::getDefaultHardwareConfig() const {
 		// TODO : SGB config
-		return HardwareConfig((m_romData[0x0143] & 0x80 ? OperationMode::CGB : OperationMode::DMG), ConsoleModel::Auto, SystemRevision::Auto);
+		return HardwareConfig(OperationMode::Auto, (m_romData[0x0143] & 0x80 ? ConsoleModel::CGB : ConsoleModel::DMG), SystemRevision::Auto);
 	}
 
 	bool ROMMapping::hasRAM() const {

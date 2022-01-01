@@ -54,7 +54,7 @@ if "--toyboot" in sys.argv or "--full" in sys.argv:
 
 if "--bundle" in sys.argv or "--full" in sys.argv:
 	for argument in sys.argv:
-		if argument.startswith("BOOT_") and "=" in arguments:
+		if argument.startswith("BOOT_") and "=" in argument:
 			key, value = argument.split("=")
 			if key not in BOOTROMS.keys():
 				print("Invalid bootROM key : " + key)

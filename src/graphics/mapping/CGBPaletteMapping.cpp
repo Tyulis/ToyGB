@@ -1,10 +1,11 @@
 #include "graphics/mapping/CGBPaletteMapping.hpp"
 
 #define OFFSET_START IO_BGPALETTE_INDEX
-#define OFFSET_BGINDEX  IO_BGPALETTE_INDEX - OFFSET_START
-#define OFFSET_BGDATA   IO_BGPALETTE_DATA - OFFSET_START
-#define OFFSET_OBJINDEX IO_OBJPALETTE_INDEX - OFFSET_START
-#define OFFSET_OBJDATA  IO_OBJPALETTE_DATA - OFFSET_START
+#define OFFSET_BGINDEX     IO_BGPALETTE_INDEX - OFFSET_START
+#define OFFSET_BGDATA      IO_BGPALETTE_DATA - OFFSET_START
+#define OFFSET_OBJINDEX    IO_OBJPALETTE_INDEX - OFFSET_START
+#define OFFSET_OBJDATA     IO_OBJPALETTE_DATA - OFFSET_START
+#define OFFSET_OBJPRIORITY IO_OBJPRIORITY - OFFSET_START
 
 /** CGB color palettes IO registers mapping
 CGB palettes hold two blocks of 64 bytes, one for background palettes and one for object palettes
@@ -23,12 +24,16 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
       FF6A |       0002 | OCPS | B-BBBBBB | Object palettes addressing control : A-IIIIII
            |            |      |          | - A (bit 7) : Auto-increment the current index after writing to OCPD
            |            |      |          | - I (bit 0-5) : Index of the object palette memory accessible from OCPD
-      FF6B |       0003 | OCPD | BBBBBBBB | Addressed byte of the object palette memory, as set by OCPS.0-5 */
+      FF6B |       0003 | OCPD | BBBBBBBB | Addressed byte of the object palette memory, as set by OCPS.0-5
+      FF6C |       0004 | OPRI | -------W | Objects priority mode control
+           |            |      |          | If bit 0 is set to 0, the object with the lowest OAM index gets priority (CGB mode)
+           |            |      |          | If it is set to 1, the object with the lowest X coordinate gets priority (DMG mode) */
 
 
 namespace toygb {
 	// Initialize the memory with its initial values
-	CGBPaletteMapping::CGBPaletteMapping() {
+	CGBPaletteMapping::CGBPaletteMapping(HardwareConfig* hardware) {
+		m_hardware = hardware;
 		accessible = true;
 
 		objectIndex = 0x3F;
@@ -40,6 +45,8 @@ namespace toygb {
 		backgroundAutoIncrement = true;
 		for (int i = 0; i < 8; i++)
 			backgroundPalettes[i] = 0x7FFF;
+
+		objectPriority = false;
 	}
 
 	// Get the value at the given relative address
@@ -66,6 +73,8 @@ namespace toygb {
 				else
 					return color & 0xFF;
 			}
+			case OFFSET_OBJPRIORITY:  // OPRI
+				return 0xFF;
 		}
 		std::stringstream errstream;
 		errstream << "Wrong memory mapping : " << oh16(address);
@@ -106,6 +115,9 @@ namespace toygb {
 						objectIndex = (objectIndex + 1) & 0x3F;
 					break;
 				}
+				case OFFSET_OBJPRIORITY:  // OPRI
+					if (!m_hardware->bootromUnmapped())
+						objectPriority = value & 1;
 			}
 		}
 	}

@@ -7,6 +7,7 @@
 #include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
 #include "core/mapping/TimerMapping.hpp"
+#include "core/mapping/SystemControlMapping.hpp"
 #include "core/mapping/BootromDisableMapping.hpp"
 #include "core/mapping/WRAMBankSelectMapping.hpp"
 #include "memory/MemoryMapping.hpp"
@@ -71,12 +72,12 @@ namespace toygb {
 			MemoryMapping* m_hramMapping;                    // HRAM memory mapping
 			MemoryMapping* m_wramMapping;                    // WRAM memory mapping
 			TimerMapping* m_timer;                           // Timer IO registers memory mapping
+			SystemControlMapping* m_systemControlMapping;    // CGB system control registers (KEY0, KEY1)
 			BootromDisableMapping* m_bootromDisableMapping;  // Unmap bootrom register (register BOOT, 0xFF50)
 			WRAMBankSelectMapping* m_wramBankMapping;        // For CGB mode, WRAM bank select IO register (register SVBK, 0xFF70)
 
 			uint8_t m_wramBank;      // WRAM bank that is currently mapped
 			bootrom_t m_bootrom;     // Bootrom data (first mapped on 0x0000-0x0100 + 0x0200-)
-			bool m_bootromUnmapped;  // Whether the bootrom is unmapped
 
 			uint8_t m_registers[8];      // Main CPU registers, index is the register identifier in opcodes [b, c, d, e, h, l, f, a]
 			uint16_t m_sp;               // Stack pointer register
