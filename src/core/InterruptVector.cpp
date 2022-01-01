@@ -17,8 +17,8 @@ namespace toygb {
 
 	// Initialize the interrupt vector
 	void InterruptVector::init() {
-		m_enable = new InterruptRegisterMapping(true);
-		m_request = new InterruptRegisterMapping(false);
+		m_enable = new InterruptRegisterMapping(true);    // IE can keep a value in its upper unused bits
+		m_request = new InterruptRegisterMapping(false);  // IF can't
 		m_master = true;
 	}
 

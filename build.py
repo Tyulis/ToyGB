@@ -4,6 +4,11 @@ import os
 CC = "g++"
 LDFLAGS = "-lm -pthread -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio"
 CFLAGS = "-Wall -Wextra -Wno-unused-parameter -std=c++20 -g -fcoroutines -I./include"
+EXE = "toygb"
+
+BOOTROMS = (
+	"toyboot_dmg", "toyboot_dmg0", "toyboot_mgb"
+)
 
 objects = []
 for path, dirs, files in os.walk("src"):
@@ -23,6 +28,13 @@ for path, dirs, files in os.walk("src"):
 		os.system(command)
 		objects.append(buildpath)
 
-command = f"{CC} -o toygb {' '.join(objects)} {LDFLAGS}"
+command = f"{CC} -o {EXE} {' '.join(objects)} {LDFLAGS}"
 print(command)
 os.system(command)
+
+for bootrom in BOOTROMS:
+	sourcepath = os.path.join("boot", bootrom + ".s")
+	outpath = os.path.join("boot", bootrom + ".bin")
+	command = f"./{EXE} {outpath} --assemble={sourcepath}"
+	print(command)
+	os.system(command)

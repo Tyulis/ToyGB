@@ -1,6 +1,6 @@
 #include "graphics/LCDController.hpp"
 
-// Special color value for a blank pixel (nothing at all, theoretically is is whiter than drawn white pixels)
+// Special color value for a blank pixel (nothing at all, theoretically it is whiter than drawn white pixels)
 #define COLORVALUE_BLANK 0xFF
 
 // Special value for the DMG background index
@@ -512,8 +512,8 @@ namespace toygb {
 					clock(456);  // FIXME
 				}
 
-				// FIXME : Not sure about whether the interrupt request must be reset at the end of VBlank, common sense tells it should be but 80s hardware is not reknowned to have one
-				m_interrupt->resetRequest(Interrupt::VBlank);
+				// FIXME : Not sure about whether the interrupt request must be reset at the end of VBlank, common sense tells it should be but 80s hardware is not known to follow it
+				// m_interrupt->resetRequest(Interrupt::VBlank);
 			} else {
 				clock(1);
 			}

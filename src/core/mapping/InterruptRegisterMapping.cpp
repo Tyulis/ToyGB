@@ -24,13 +24,14 @@ namespace toygb {
 	// Get the value at the given relative address
 	uint8_t InterruptRegisterMapping::get(uint16_t address) {
 		uint8_t result = 0x00;
-		for (int i = 0; i < 5; i++){
+		for (int i = 0; i < 5; i++)
 			result |= interrupts[i] << i;
-		}
 
 		// IE can retain any value in its unused bits
 		if (m_holdUpperBits)
 			result |= m_upperBits;
+		else
+			result |= 0xE0;
 		return result;
 	}
 

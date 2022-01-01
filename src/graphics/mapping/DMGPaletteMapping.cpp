@@ -25,24 +25,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 namespace toygb {
 	// Initialize the memory mapping with its initial values
 	DMGPaletteMapping::DMGPaletteMapping() {
-		// Monochrome palettes
-		backgroundPalette[0] = 3;
-		backgroundPalette[1] = 3;
-		backgroundPalette[2] = 2;
-		backgroundPalette[3] = 0;
-
-		objectPalette0[0] = 3;
-		objectPalette0[1] = 3;
-		objectPalette0[2] = 3;
-		objectPalette0[3] = 3;
-
-		objectPalette1[0] = 3;
-		objectPalette1[1] = 3;
-		objectPalette1[2] = 3;
-		objectPalette1[3] = 3;
-
-		windowX = 0x00;
-		windowY = 0x00;
+		
 	}
 
 	// Get the value at the given relative address

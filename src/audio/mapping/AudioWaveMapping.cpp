@@ -26,16 +26,8 @@ namespace toygb {
 	const float WAVE_VOLUMES[] = {0.0f, 1.0f, 0.5f, 0.25f};
 
 	// Initialize the channel
-	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
 	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		m_wavePatternMapping = wavePatternMapping;
-
-		enable = false;
-		length = 0xFF;
-		outputLevel = 0;
-		frequency = 0x07FF;
-		enableLength = false;
-
 		m_baseTimerCounter = 0;
 		m_sampleIndex = 0;
 	}

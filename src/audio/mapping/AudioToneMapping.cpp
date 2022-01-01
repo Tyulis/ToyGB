@@ -31,18 +31,7 @@ namespace toygb {
 	const uint8_t TONE_WAVEPATTERNS[4] = {0b00000001, 0b10000001, 0b10000111, 0b01111110};
 
 	// Initialize the channel
-	// Most of the initial values are just to have the right values at boot, they will get reset as soon as the channel is used
 	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
-		wavePatternDuty = 0;
-		length = 0x3F;
-
-		initialEnvelopeVolume = 0;
-		envelopeDirection = false;
-		envelopePeriod = 0;
-
-		frequency = 0x07FF;
-		enableLength = false;
-
 		m_dutyPointer = 0;
 		m_baseTimerCounter = 0;
 		m_envelopeFrameCounter = 0;

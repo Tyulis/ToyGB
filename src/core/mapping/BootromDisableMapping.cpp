@@ -11,17 +11,17 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	BootromDisableMapping::BootromDisableMapping(bool* reg){
+	BootromDisableMapping::BootromDisableMapping(bool* reg) {
 		m_register = reg;
 	}
 
 	// Get the value at the given relative address
-	uint8_t BootromDisableMapping::get(uint16_t address){
-		return *m_register;
+	uint8_t BootromDisableMapping::get(uint16_t address) {
+		return *m_register | 0xFE;
 	}
 
 	// Set the value at the given relative address
-	void BootromDisableMapping::set(uint16_t address, uint8_t value){
+	void BootromDisableMapping::set(uint16_t address, uint8_t value) {
 		*m_register = (value & 1) | *m_register;
 	}
 }

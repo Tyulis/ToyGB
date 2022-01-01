@@ -104,7 +104,7 @@ int assembleFile(std::string filename, std::string outname) {
 	code.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
 	file.close();
 
-	std::vector<uint8_t> assembled = assemble(code);
+	std::vector<uint8_t> assembled = assemble(code, filename);
 	uint8_t* output = new uint8_t[assembled.size()];
 	std::copy(assembled.begin(), assembled.end(), output);
 

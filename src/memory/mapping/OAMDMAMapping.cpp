@@ -12,7 +12,6 @@ namespace toygb {
 	// Initialize the memory mapping with its initial values
 	OAMDMAMapping::OAMDMAMapping(HardwareConfig* hardware) {
 		m_hardware = hardware;
-		sourceAddress = hardware->isCGBCapable() ? 0x00 : 0xFF;
 		active = false;
 	}
 

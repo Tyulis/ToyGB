@@ -37,13 +37,15 @@ namespace toygb {
 		str.erase(end + 1);
 	}
 
-	static int decodeValue(std::string strvalue) {
+	static int decodeValue(std::string strvalue, std::map<std::string, int> const& defines) {
 		trim(strvalue);
 		char typeIdentifier = strvalue.at(0);
 		if (typeIdentifier == '$') {  // Hexadecimal number
 			return stoi(strvalue.substr(1), nullptr, 16);
 		} else if (typeIdentifier == '%') {  // Binary number
 			return stoi(strvalue.substr(1), nullptr, 2);
+		} else if (typeIdentifier == '#') {  // Decimal number
+			return stoi(strvalue.substr(1), nullptr, 10);
 		} else if (typeIdentifier == '0' && strvalue.size() > 1) {  // Standard base code
 			char baseIdentifier = strvalue.at(1);
 			if (baseIdentifier == 'x')
@@ -62,6 +64,8 @@ namespace toygb {
 				return -stoi(strvalue.substr(2), nullptr, 16);
 			} else if (typeIdentifier == '%') {  // Binary number
 				return -stoi(strvalue.substr(2), nullptr, 2);
+			} else if (typeIdentifier == '#') {  // Decimal number
+				return -stoi(strvalue.substr(2), nullptr, 10);
 			} else if (typeIdentifier == '0' && strvalue.size() > 2) {  // Standard base code
 				char baseIdentifier = strvalue.at(2);
 				if (baseIdentifier == 'x')
@@ -79,14 +83,16 @@ namespace toygb {
 			}
 		} else if (std::isdigit(typeIdentifier)) {
 			return stoi(strvalue, nullptr, 10);
+		} else if (defines.find(strvalue) != defines.end()) {
+			return defines.at(strvalue);
 		}
 		throw std::runtime_error("Invalid operand value " + strvalue);
 	}
 
-	static void decodeOperand(asm_instruction_t& instruction, std::string strvalue, int size, bool acceptLabel) {
+	static void decodeOperand(asm_instruction_t& instruction, std::string strvalue, int size, std::map<std::string, int> const& defines, bool acceptLabel) {
 		char typeIdentifier = strvalue.at(0);
-		if (std::isdigit(typeIdentifier) || typeIdentifier == '$' || typeIdentifier == '%' || typeIdentifier == '-') {
-			int value = decodeValue(strvalue);
+		if (std::isdigit(typeIdentifier) || typeIdentifier == '$' || typeIdentifier == '%' || typeIdentifier == '-' || typeIdentifier == '#' || defines.find(strvalue) != defines.end()) {
+			int value = decodeValue(strvalue, defines);
 			if (size == 1 && value < 0x100 && value >= -0x80) {
 				instruction.operand1 = uint8_t(value);
 			} else if (size == 2 && value < 0x10000 && value >= -0x8000) {
@@ -104,8 +110,8 @@ namespace toygb {
 		}
 	}
 
-	static void decodeOperand(asm_instruction_t& instruction, std::string strvalue, int size) {
-		decodeOperand(instruction, strvalue, size, false);
+	static void decodeOperand(asm_instruction_t& instruction, std::string strvalue, int size, std::map<std::string, int> const& defines) {
+		decodeOperand(instruction, strvalue, size, defines, false);
 	}
 
 	static bool isSingleRegister(std::string strvalue) {
@@ -196,7 +202,7 @@ namespace toygb {
 		throw std::runtime_error("Invalid shift/rotate operation " + mnemonic);
 	}
 
-	static asm_instruction_t buildInstruction(std::string mnemonic, int definedOperands, std::string operand1, std::string operand2, int lineno) {
+	static asm_instruction_t buildInstruction(std::string mnemonic, int definedOperands, std::string operand1, std::string operand2, int lineno, std::map<std::string, int> const& defines) {
 		asm_instruction_t instruction = {.opcode = 0xFF, .operands = -1, .operand1 = 0xFF, .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
 
 		// Well...
@@ -214,7 +220,7 @@ namespace toygb {
 			if (definedOperands == 0)
 				instruction.operand1 = 0x00;
 			else  // In case anyone wants to assemble a corrupted stop
-				decodeOperand(instruction, operand1, 1);
+				decodeOperand(instruction, operand1, 1, defines);
 		}
 
 		// 00 rrr 110 | 0x06, 0x0E, 0x16, 0x1E, 0x26, 0x2E, 0x3E | ld r, u8                  | Load an immediate value into a register                                           | 2 | ----
@@ -260,7 +266,7 @@ namespace toygb {
 						else {
 							instruction.opcode = 0xF0;
 							instruction.operands = 1;
-							decodeOperand(instruction, highvalue, 1);
+							decodeOperand(instruction, highvalue, 1, defines);
 						}
 					}
 
@@ -292,7 +298,7 @@ namespace toygb {
 					else if (operand1 == "a") {
 						instruction.opcode = 0xFA;
 						instruction.operands = 2;
-						decodeOperand(instruction, referenced, 2);
+						decodeOperand(instruction, referenced, 2, defines);
 					}
 				}
 
@@ -300,7 +306,7 @@ namespace toygb {
 				else {
 					instruction.opcode = 0x06 | (encodeSingleRegister(operand1) << 3);
 					instruction.operands = 1;
-					decodeOperand(instruction, operand2, 1);
+					decodeOperand(instruction, operand2, 1, defines);
 				}
 			} else if (isDoubleRegister(operand1)) {
 				// ld sp, hl
@@ -319,7 +325,7 @@ namespace toygb {
 					} else {
 						std::string disp = operand2.substr(pluspos + 1);
 						trim(disp);
-						decodeOperand(instruction, disp, 1);
+						decodeOperand(instruction, disp, 1, defines);
 					}
 				}
 
@@ -327,7 +333,7 @@ namespace toygb {
 				else {
 					instruction.opcode = 0x01 | (encodeDoubleRegister(operand1) << 4);
 					instruction.operands = 2;
-					decodeOperand(instruction, operand2, 2);
+					decodeOperand(instruction, operand2, 2, defines);
 				}
 			} else if (isReference(operand1)) {
 				std::string referenced = getReference(operand1);
@@ -341,7 +347,7 @@ namespace toygb {
 					else {
 						instruction.opcode = 0x36;
 						instruction.operands = 1;
-						decodeOperand(instruction, operand2, 1);
+						decodeOperand(instruction, operand2, 1, defines);
 					}
 				}
 
@@ -375,7 +381,7 @@ namespace toygb {
 					else {
 						instruction.opcode = 0xE0;
 						instruction.operands = 1;
-						decodeOperand(instruction, highvalue, 1);
+						decodeOperand(instruction, highvalue, 1, defines);
 					}
 				}
 
@@ -383,14 +389,14 @@ namespace toygb {
 				else if (operand2 == "a") {
 					instruction.opcode = 0xEA;
 					instruction.operands = 2;
-					decodeOperand(instruction, referenced, 2);
+					decodeOperand(instruction, referenced, 2, defines);
 				}
 
 				// ld (u16), sp
 				else if (operand2 == "sp") {
 					instruction.opcode = 0x08;
 					instruction.operands = 2;
-					decodeOperand(instruction, referenced, 2);
+					decodeOperand(instruction, referenced, 2, defines);
 				}
 			}
 		}
@@ -450,7 +456,7 @@ namespace toygb {
 				// ldh (u8), a
 				else {
 					instruction.opcode = 0xE0;
-					int value = decodeValue(referenced);
+					int value = decodeValue(referenced, defines);
 					if (value >= 0xFF00 && value <= 0xFFFF) {
 						instruction.operand1 = value & 0xFF;
 					} else if (value >= 0x00 && value <= 0xFF) {
@@ -470,7 +476,7 @@ namespace toygb {
 				// ldh a, (u8)
 				else {
 					instruction.opcode = 0xF0;
-					int value = decodeValue(referenced);
+					int value = decodeValue(referenced, defines);
 					if (value >= 0xFF00 && value <= 0xFFFF) {
 						instruction.operand1 = value & 0xFF;
 					} else if (value >= 0x00 && value <= 0xFF) {
@@ -608,7 +614,7 @@ namespace toygb {
 				else {
 					instruction.opcode = 0xC6;
 					instruction.operands = 1;
-					decodeOperand(instruction, operand, 1);
+					decodeOperand(instruction, operand, 1, defines);
 				}
 			} else {
 				// add hl, rr
@@ -620,7 +626,7 @@ namespace toygb {
 				else if (operand1 == "sp") {
 					instruction.opcode = 0xE8;
 					instruction.operands = 1;
-					decodeOperand(instruction, operand2, 1);
+					decodeOperand(instruction, operand2, 1, defines);
 				}
 			}
 		}
@@ -647,7 +653,7 @@ namespace toygb {
 				else {
 					instruction.opcode = 0xC6 | (encodeArithmeticalOperation(mnemonic) << 3);
 					instruction.operands = 1;
-					decodeOperand(instruction, operand, 1);
+					decodeOperand(instruction, operand, 1, defines);
 				}
 			}
 		}
@@ -677,13 +683,13 @@ namespace toygb {
 			if (definedOperands == 1) {
 				instruction.opcode = 0x18;
 				instruction.operands = 1;
-				decodeOperand(instruction, operand1, 1, true);
+				decodeOperand(instruction, operand1, 1, defines, true);
 			}
 			// jr cc, s8
 			else {
 				instruction.opcode = 0x20 | (encodeCondition(operand1) << 3);
 				instruction.operands = 1;
-				decodeOperand(instruction, operand2, 1, true);
+				decodeOperand(instruction, operand2, 1, defines, true);
 			}
 		}
 
@@ -701,14 +707,14 @@ namespace toygb {
 				else {
 					instruction.opcode = 0xC3;
 					instruction.operands = 2;
-					decodeOperand(instruction, operand1, 2);
+					decodeOperand(instruction, operand1, 2, defines);
 				}
 			}
 			// jp cc, u16
 			else {
 				instruction.opcode = 0xC2 | (encodeCondition(operand1) << 3);
 				instruction.operands = 2;
-				decodeOperand(instruction, operand2, 2);
+				decodeOperand(instruction, operand2, 2, defines);
 			}
 		}
 
@@ -719,19 +725,19 @@ namespace toygb {
 			if (definedOperands == 1) {
 				instruction.opcode = 0xCD;
 				instruction.operands = 2;
-				decodeOperand(instruction, operand1, 2);
+				decodeOperand(instruction, operand1, 2, defines);
 			}
 			// call cc, u16
 			else {
 				instruction.opcode = 0xC4 | (encodeCondition(operand1) << 3);
 				instruction.operands = 2;
-				decodeOperand(instruction, operand2, 2);
+				decodeOperand(instruction, operand2, 2, defines);
 			}
 		}
 
 		// 11 xxx 111 | 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF | rst xx | Call a reset vector (0x0000 / 0x0008 / 0x0010 / 0x0018 / 0x0020 / 0x0028 / 0x0030 / 0x0038) | 4 | ----
 		else if (mnemonic == "rst") {  DEFINED_OPERANDS(1, 1)
-			int value = decodeValue(operand1);
+			int value = decodeValue(operand1, defines);
 			if ((value & 0xC7) != 0x00)
 				throw std::runtime_error("Invalid reset vector : " + operand1);
 			instruction.opcode = 0xC7 | value;
@@ -797,7 +803,7 @@ namespace toygb {
 		//            11 bbb rrr |      All values in 0xC0-0xFF | set b, r | Set (to 1) bit b of the value of a register                                                       | ----
 		else if (mnemonic == "bit" || mnemonic == "set" || mnemonic == "res") {  DEFINED_OPERANDS(2, 2)
 			instruction.opcode = 0xCB;
-			int bit = decodeValue(operand1);
+			int bit = decodeValue(operand1, defines);
 			// <op> b, r
 			if (isSingleRegister(operand2)) {
 				instruction.operand1 = 0x00 | (encodeBitOperation(mnemonic) << 6) | (bit << 3) | encodeSingleRegister(operand2);
@@ -818,16 +824,88 @@ namespace toygb {
 		return instruction;
 	}
 
-	// Quick-and-dirty assembler to assemble simple code on-the-fly
-	std::vector<uint8_t> assemble(std::string code) {
+	static std::string resolveIncludes(std::string code, std::string filename) {
 		std::stringstream codestream(code);
+		std::string line;
+		int lineno;
+		std::string composedCode = "";
+		std::filesystem::path basepath(filename);
+
+		while (std::getline(codestream, line, '\n')) {
+			lineno += 1;
+			trim(line);
+			size_t separator = line.find_first_of(WHITESPACE);
+			std::string mnemonic = line.substr(0, separator);
+			std::string operand = line.substr(separator + 1);
+			trim(mnemonic); trim(operand);
+
+			try {
+				// ASM DIRECTIVE .include : include another source file
+				if (mnemonic == ".inc" || mnemonic == ".include") {
+					std::filesystem::path incpath(basepath);
+					incpath.replace_filename(operand);
+					std::ifstream incfile(incpath.string());
+					if (!incfile.is_open())
+						throw std::runtime_error("Included file " + incpath.string() + " could not be opened");
+
+					std::string includeCode;
+					includeCode.assign(std::istreambuf_iterator<char>(incfile), std::istreambuf_iterator<char>());
+					composedCode += "\n" + resolveIncludes(includeCode, incpath.string()) + "\n";
+				}
+
+				// ASM DIRECTIVE .incbin : include a binary file
+				else if (mnemonic == ".incbin") {
+					std::filesystem::path incpath(basepath);
+					incpath.replace_filename(operand);
+					std::ifstream incfile(incpath.string(), std::ifstream::in | std::ifstream::binary);
+					if (!incfile.is_open())
+						throw std::runtime_error("Included file " + incpath.string() + " could not be opened");
+
+					std::stringstream includeLine(".db ");
+					int index = 0;
+					char byte;
+					while (incfile.get(byte)) {
+						if (index++ > 0)
+							includeLine << ",";
+						includeLine << int(uint8_t(byte));
+					}
+					composedCode += includeLine.str() + "\n";
+				}
+
+				// Normal line
+				else {
+					composedCode += line + "\n";
+				}
+			} catch (std::exception const& exc) {
+				std::cerr << "ERROR, file " << filename << ", line " << lineno << " : " << exc.what() << std::endl;
+				std::cerr << "\t" << line << std::endl;
+				continue;
+			}
+		}
+
+		return composedCode;
+	}
+
+	std::vector<uint8_t> assemble(std::string code) {
+		return assemble(code, "");
+	}
+
+	// Quick-and-dirty assembler to assemble simple code on-the-fly
+	std::vector<uint8_t> assemble(std::string code, std::string filename) {
+		// Process inclusions only if we assemble from a valid file system
+		if (filename != "")
+			code = resolveIncludes(code, filename);
+
 		std::string line = "";
+		int lineno = 0;
+		std::stringstream codestream(code);
 		std::vector<asm_instruction_t> instructions;  // Intermediate instruction list
 		std::map<std::string, int> labels;        // Associate label names to their position
+		std::map<std::string, int> defines;       // Associate .define names to their value
 		std::string lastLabel = "";
 		int position = 0;
-		int lineno = 0;
 		int errors = 0;
+		lineno = 0;
 
 		// Translate instructions
 		while (std::getline(codestream, line, '\n')) {
@@ -872,73 +950,101 @@ namespace toygb {
 				trim(mnemonic); trim(operand1); trim(operand2);
 
 				try {
+					// ASM DIRECTIVE .define : Define an assemble-time constant
+					if (mnemonic == ".define" || mnemonic == ".equ" || mnemonic == ".def") {
+						if (definedOperands == 1) {
+							size_t separator = operand1.find_first_of(WHITESPACE);
+							operand2 = operand1.substr(separator + 1);
+							operand1 = operand1.substr(0, separator);
+							trim(operand1); trim(operand2);
+						}
+
+						if (labels.find(operand1) != labels.end())
+							throw std::runtime_error("Constant name " + operand1 + " is the same as a label");
+
+						defines[operand1] = decodeValue(operand2, defines);
+					}
 					// ASM DIRECTIVE .db : Declare raw bytes
-					if (mnemonic == ".db") {
-						if (operand1.empty()) {
+					else if (mnemonic == ".db") {
+						if (operand1.empty())
 							throw std::runtime_error("No argument given to .db");
-						} else {
-							std::string operands = line.substr(separator + 1);
-							size_t comma = operands.find_first_of(',');
-							while (comma != std::string::npos) {
-								int value = decodeValue(operands.substr(0, comma));
-								if (value < -0x80 || value > 0xFF)
-									throw std::runtime_error("Byte value out of range " + operands.substr(0, comma));
-								operands = operands.substr(comma + 1);
-								comma = operands.find_first_of(',');
-
-								asm_instruction_t instruction = {.opcode = uint8_t(value), .operands = 0, .operand1 = 0xFF, .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
-								instructions.push_back(instruction);
-								position += 1;
-							}
-
-							int value = decodeValue(operands);
+						std::string operands = line.substr(separator + 1);
+						size_t comma = operands.find_first_of(',');
+						while (comma != std::string::npos) {
+							int value = decodeValue(operands.substr(0, comma), defines);
 							if (value < -0x80 || value > 0xFF)
 								throw std::runtime_error("Byte value out of range " + operands.substr(0, comma));
+							operands = operands.substr(comma + 1);
+							comma = operands.find_first_of(',');
 
 							asm_instruction_t instruction = {.opcode = uint8_t(value), .operands = 0, .operand1 = 0xFF, .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
 							instructions.push_back(instruction);
 							position += 1;
 						}
+
+						int value = decodeValue(operands, defines);
+						if (value < -0x80 || value > 0xFF)
+							throw std::runtime_error("Byte value out of range " + operands.substr(0, comma));
+
+						asm_instruction_t instruction = {.opcode = uint8_t(value), .operands = 0, .operand1 = 0xFF, .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
+						instructions.push_back(instruction);
+						position += 1;
 					}
 
-					// ASM DIRECTIVE .dw/.ds : Declare raw 16-bits values
-					else if (mnemonic == ".ds" || mnemonic == ".dw") {
-						if (operand1.empty()) {
-							throw std::runtime_error("No argument given to " + mnemonic);
-						} else {
-							std::string operands = line.substr(separator + 1);
-							size_t comma = operands.find_first_of(',');
-							while (comma != std::string::npos) {
-								int value = decodeValue(operands.substr(0, comma));
-								if (value < -0x8000 || value > 0xFFFF)
-									throw std::runtime_error("Word value out of range " + operands.substr(0, comma));
-								operands = operands.substr(comma + 1);
-								comma = operands.find_first_of(',');
+					// ASM DIRECTIVE .dw : Declare raw 16-bits values
+					else if (mnemonic == ".dw") {
+						if (operand1.empty())
+							throw std::runtime_error("No argument given to .dw");
 
-								asm_instruction_t instruction = {.opcode = uint8_t(uint16_t(value) & 0xFF), .operands = 1, .operand1 = uint8_t(uint16_t(value) >> 8), .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
-								instructions.push_back(instruction);
-								position += 2;
-							}
-
-							int value = decodeValue(operands);
+						std::string operands = line.substr(separator + 1);
+						size_t comma = operands.find_first_of(',');
+						while (comma != std::string::npos) {
+							int value = decodeValue(operands.substr(0, comma), defines);
 							if (value < -0x8000 || value > 0xFFFF)
 								throw std::runtime_error("Word value out of range " + operands.substr(0, comma));
+							operands = operands.substr(comma + 1);
+							comma = operands.find_first_of(',');
 
 							asm_instruction_t instruction = {.opcode = uint8_t(uint16_t(value) & 0xFF), .operands = 1, .operand1 = uint8_t(uint16_t(value) >> 8), .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
 							instructions.push_back(instruction);
 							position += 2;
 						}
+
+						int value = decodeValue(operands, defines);
+						if (value < -0x8000 || value > 0xFFFF)
+							throw std::runtime_error("Word value out of range " + operands.substr(0, comma));
+
+						asm_instruction_t instruction = {.opcode = uint8_t(uint16_t(value) & 0xFF), .operands = 1, .operand1 = uint8_t(uint16_t(value) >> 8), .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
+						instructions.push_back(instruction);
+						position += 2;
+					}
+
+					// ASM DIRECTIVE .org : Add padding until the given address (only works with increasing addresses)
+					else if (mnemonic == ".org") {
+						if (operand1.empty())
+							throw std::runtime_error("No argument given to .org");
+
+						int orgposition = decodeValue(operand1, defines);
+						if (position > orgposition)
+							throw std::runtime_error("Given .org position is earlier than the current position");
+
+						while (position < orgposition) {
+							asm_instruction_t instruction = {.opcode = 0x00, .operands = 0, .operand1 = 0xFF, .operand2 = 0xFF, .lineno = lineno, .labelRelative = false, .labelOperand = ""};
+							instructions.push_back(instruction);
+							position += 1;
+						}
 					}
 
 					// Standard instruction
 					else {
-						asm_instruction_t instruction = buildInstruction(mnemonic, definedOperands, operand1, operand2, lineno);
+						asm_instruction_t instruction = buildInstruction(mnemonic, definedOperands, operand1, operand2, lineno, defines);
 						instructions.push_back(instruction);
 						position += instruction.operands + 1;
 					}
 				} catch (std::exception const& exc) {
 					errors += 1;
 					std::cerr << "ERROR, line " << lineno << " : " << exc.what() << std::endl;
+					std::cerr << "\t" << line << std::endl;
 					continue;
 				}
 
@@ -946,10 +1052,16 @@ namespace toygb {
 			} else {  // Contains : = label
 				std::string label = line.substr(0, colonPosition);
 				if (label.empty()) {
-					std::stringstream errstream;
-					errstream << "ERROR, line " << lineno << " : Empty label name";
-					throw std::runtime_error(errstream.str());
+					std::cerr << "ERROR, line " << lineno << " : Empty label name" << std::endl;
+					std::cerr << "\t" << line << std::endl;
+					continue;
 				}
+
+				if (defines.find(label) != defines.end()) {
+					std::cerr << "ERROR, line " << lineno << " : Label name " << label << " is the same as a constant";
+					std::cerr << "\t" << line << std::endl;
+				}
+
 
 				if (label.at(0) == '.')  // Local label
 					label = lastLabel + label;

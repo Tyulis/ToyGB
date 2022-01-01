@@ -91,6 +91,13 @@ namespace toygb {
 
 	// Dispatch a memory write to the corresponding memory mapping
 	void MemoryMap::set(uint16_t address, uint8_t value) {
+		// In the real hardware, FF60 is a test IO register (only accessible when CPU test pins are not grounded)
+		// So for quick debugging, let's log anything that gets written there
+		if (address == 0xFF60) {
+			std::cout << "DEBUG : Write to $FF60 : " << oh8(value) << std::endl;
+			return;
+		}
+
 		MemoryMap::Node* node = getNode(address);
 		if (node != nullptr){
 			return node->mapping->set(address - node->start, value);
