@@ -53,7 +53,7 @@ namespace toygb {
 	};
 
 
-	bootrom_t getBootrom(GameboyConfig const& config, HardwareConfig* hardware) {
+	bootrom_t getBootrom(GameboyConfig const& config, HardwareStatus* hardware) {
 		bootrom_t bootrom = {.builtin = false, .bootrom = nullptr, .size = -1};
 		const uint8_t* content = nullptr;
 		std::string filename = "";

@@ -14,7 +14,7 @@ namespace toygb {
 	/** Custom wave channel memory mapping and operation */
 	class AudioWaveMapping : public AudioChannelMapping {
 		public:
-			AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareConfig* hardware);
+			AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareStatus* hardware);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);

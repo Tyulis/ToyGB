@@ -81,8 +81,8 @@ namespace toygb {
 	}
 
 	// Get a default hardware configuration from the ROM
-	HardwareConfig CartController::getDefaultHardwareConfig() const {
-		return m_romMapping->getDefaultHardwareConfig();
+	HardwareStatus CartController::getDefaultHardwareStatus() const {
+		return m_romMapping->getDefaultHardwareStatus();
 	}
 
 	// Save the cartridge RAM to the save file if necessary

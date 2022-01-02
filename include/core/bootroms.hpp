@@ -19,7 +19,7 @@ namespace toygb {
 	} bootrom_t;
 
 	/** Load the default bootrom, either external or built-in, for the given hardware */
-	bootrom_t getBootrom(GameboyConfig const& config, HardwareConfig* hardware);
+	bootrom_t getBootrom(GameboyConfig const& config, HardwareStatus* hardware);
 
 	/** Load a custom external bootrom */
 	bootrom_t getBootrom(std::string filename);

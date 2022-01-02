@@ -11,7 +11,7 @@ namespace toygb {
 	/** LCD control IO registers memory mapping */
 	class LCDControlMapping : public MemoryMapping {
 		public:
-			LCDControlMapping(HardwareConfig* hardware);
+			LCDControlMapping(HardwareStatus* hardware);
 
 			virtual uint8_t get(uint16_t address);
 			virtual void set(uint16_t address, uint8_t value);
@@ -44,7 +44,7 @@ namespace toygb {
 		private:
 			void shutdownPPU();  // Called when the PPU is shut down (LCDC.7 goes 1 -> 0)
 
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 	};
 }
 

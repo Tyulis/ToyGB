@@ -11,7 +11,7 @@ namespace toygb {
 	/** CGB palettes IO registers memory mapping */
 	class CGBPaletteMapping : public MemoryMapping {
 		public:
-			CGBPaletteMapping(HardwareConfig* hardware);
+			CGBPaletteMapping(HardwareStatus* hardware);
 
 			virtual uint8_t get(uint16_t address);
 			virtual void set(uint16_t address, uint8_t value);
@@ -31,7 +31,7 @@ namespace toygb {
 			bool objectPriority;               // Object priority mode (0 = CGB mode, priority to the lowest OAM index, 1 = DMG mode, priority to the lowest X coordinate) (register OPRI, bit 0)
 
 		private:
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 	};
 }
 

@@ -17,11 +17,11 @@ namespace toygb {
 			SerialController();
 			~SerialController();
 
-			void init(HardwareConfig* hardware, InterruptVector* interrupt);
+			void init(HardwareStatus* hardware, InterruptVector* interrupt);
 			void configureMemory(MemoryMap* memory);
 
 		private:
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 			InterruptVector* m_interrupt;
 			SerialTransferMapping* m_mapping;
 

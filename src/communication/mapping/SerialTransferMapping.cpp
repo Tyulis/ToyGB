@@ -16,7 +16,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	SerialTransferMapping::SerialTransferMapping(HardwareConfig* hardware) {
+	SerialTransferMapping::SerialTransferMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 
 		// Default register values (SB = 0x00, SC = 0x7E on non-CGB, 0x7F on CGB-enabled)

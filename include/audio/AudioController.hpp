@@ -26,7 +26,7 @@ namespace toygb {
 			~AudioController();
 
 			void configureMemory(MemoryMap* memory);
-			void init(HardwareConfig* hardware);
+			void init(HardwareStatus* hardware);
 
 			/** Main loop of the component, as a coroutine */
 			GBComponent run();
@@ -42,7 +42,7 @@ namespace toygb {
 			bool getSamples(int16_t* buffer);
 
 		private:
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 
 			uint8_t* m_wavePattern;  // Wave RAM
 

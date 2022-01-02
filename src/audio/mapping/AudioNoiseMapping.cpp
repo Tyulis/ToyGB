@@ -30,7 +30,7 @@ namespace toygb {
 	const int NOISE_PERIOD_BASES[] = {4, 8, 16, 24, 32, 40, 48, 56};
 
 	// Initialize the channel.
-	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioNoiseMapping::AudioNoiseMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareStatus* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		length = 0x3F;
 
 		initialEnvelopeVolume = 0;

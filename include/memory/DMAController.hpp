@@ -16,7 +16,7 @@ namespace toygb {
 			~DMAController();
 
 			void configureMemory(MemoryMap* memory);
-			void init(HardwareConfig* hardware);
+			void init(HardwareStatus* hardware);
 
 			/** Main loop of the component, as a coroutine */
 			GBComponent run(MemoryMap* memory);
@@ -27,7 +27,7 @@ namespace toygb {
 			bool isOAMDMAActive();  // Tell whether an OAM DMA operation is active
 
 		private:
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 			OAMDMAMapping* m_oamDmaMapping;
 	};
 }

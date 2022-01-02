@@ -22,7 +22,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
            |            |      |          | - C (bits 0-3) : Audio channels status (for each channel, 1 = playing, 0 = idle). Channels are in order (bit 0 = channel 1, bit 3 = channel 4) */
 
 namespace toygb {
-	AudioControlMapping::AudioControlMapping(HardwareConfig* hardware) {
+	AudioControlMapping::AudioControlMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 
 		// Default values at boot

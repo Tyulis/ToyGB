@@ -32,7 +32,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory with its initial values
-	CGBPaletteMapping::CGBPaletteMapping(HardwareConfig* hardware) {
+	CGBPaletteMapping::CGBPaletteMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 		accessible = true;
 

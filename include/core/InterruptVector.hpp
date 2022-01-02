@@ -1,7 +1,6 @@
 #ifndef _CORE_INTERRUPTVECTOR_HPP
 #define _CORE_INTERRUPTVECTOR_HPP
 
-#include "core/hardware.hpp"
 #include "core/mapping/InterruptRegisterMapping.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/Constants.hpp"

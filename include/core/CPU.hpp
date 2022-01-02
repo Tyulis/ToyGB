@@ -28,7 +28,7 @@ namespace toygb {
 			~CPU();
 
 			void configureMemory(MemoryMap* memory);
-			void init(HardwareConfig* hardware, InterruptVector* interrupt);
+			void init(HardwareStatus* hardware, InterruptVector* interrupt);
 
 			/** Main CPU loop, as a coroutine */
 			GBComponent run(MemoryMap* memory, DMAController* dma);
@@ -52,7 +52,6 @@ namespace toygb {
 			uint16_t get16(uint8_t identifier);                             // Get the value of a 16-bits register, as specified by the identifier in the opcode
 			void set16(uint8_t identifier, uint16_t value);                 // Set the value of a 16-bits register, as specified by the identifier in the opcode
 			void set16(uint8_t identifier, uint8_t high, uint8_t low);      // Set the value of a 16-bits register, as specified by the identifier in the opcode, with the higher and lower bytes of the 16-bits value
-			void incrementTimer(int cycles);                                // Increment the timer registers
 			void applyDAA();                                                // Execute the DAA (Decimally Adjust the Accumulator)
 
 			// Debug thingies. TODO : Replace this with proper tools
@@ -64,14 +63,13 @@ namespace toygb {
 			DMAController* m_dma;          // The global DMA controller, for memory access shenanigans
 			InterruptVector* m_interrupt;  // Global interrupt vector
 			GameboyConfig m_config;
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 
 			uint8_t* m_wram;     // WRAM data array (mapped on 0xC000-0xDFFF)
 			uint8_t* m_hram;     // HRAM data array (mapped on 0xFF80-0xFFFE)
 
 			MemoryMapping* m_hramMapping;                    // HRAM memory mapping
 			MemoryMapping* m_wramMapping;                    // WRAM memory mapping
-			TimerMapping* m_timer;                           // Timer IO registers memory mapping
 			SystemControlMapping* m_systemControlMapping;    // CGB system control registers (KEY0, KEY1)
 			BootromDisableMapping* m_bootromDisableMapping;  // Unmap bootrom register (register BOOT, 0xFF50)
 			WRAMBankSelectMapping* m_wramBankMapping;        // For CGB mode, WRAM bank select IO register (register SVBK, 0xFF70)

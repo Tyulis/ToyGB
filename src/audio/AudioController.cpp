@@ -32,7 +32,7 @@ namespace toygb {
 	}
 
 	// Initialize the component
-	void AudioController::init(HardwareConfig* hardware) {
+	void AudioController::init(HardwareStatus* hardware) {
 		m_hardware = hardware;
 		m_wavePattern = new uint8_t[IO_WAVEPATTERN_SIZE];
 
@@ -56,8 +56,7 @@ namespace toygb {
 		memory->add(IO_UNDOCUMENTED_FF72, IO_PCM34, m_debug);
 	}
 
-#define clock(num) m_cyclesToSkip = num-1; \
-			  co_await std::suspend_always();
+#define cycle() co_await std::suspend_always();
 
 	// Main component loop (implemented as a coroutine)
 	GBComponent AudioController::run() {
@@ -73,17 +72,12 @@ namespace toygb {
 				}
 			}
 
-			clock(2);
+			cycle();
 		}
 	}
 
 	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
 	bool AudioController::skip() {
-		if (m_cyclesToSkip > 0) {  // We are in-between APU cycles (= 2 clocks)
-			m_cyclesToSkip -= 1;
-			return true;
-		}
-
 		// Skip if the APU is disabled and the shutdown is already done
 		return !m_control->audioEnable && !m_channels[0]->powered && !m_channels[1]->powered && !m_channels[2]->powered && !m_channels[3]->powered;
 	}

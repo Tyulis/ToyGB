@@ -31,7 +31,7 @@ namespace toygb {
 	const uint8_t TONE_WAVEPATTERNS[4] = {0b00000001, 0b10000001, 0b10000111, 0b01111110};
 
 	// Initialize the channel
-	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioToneMapping::AudioToneMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareStatus* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		wavePatternDuty = 0;
 		length = 0x3F;
 

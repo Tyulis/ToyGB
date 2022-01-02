@@ -71,7 +71,6 @@ namespace toygb {
 		m_hram = nullptr;
 		m_wram = nullptr;
 
-		m_timer = nullptr;
 		m_wramMapping = nullptr;
 		m_hramMapping = nullptr;
 		m_wramBankMapping = nullptr;
@@ -84,7 +83,6 @@ namespace toygb {
 		m_hram = nullptr;
 		m_wram = nullptr;
 
-		m_timer = nullptr;
 		m_wramMapping = nullptr;
 		m_wramBankMapping = nullptr;
 		m_systemControlMapping = nullptr;
@@ -101,16 +99,14 @@ namespace toygb {
 		if (m_wramMapping != nullptr) delete m_wramMapping;
 		if (m_systemControlMapping != nullptr) delete m_systemControlMapping;
 		if (m_wramBankMapping != nullptr) delete m_wramBankMapping;
-		if (m_timer != nullptr) delete m_timer;
 		m_hramMapping = nullptr;
 		m_wramMapping = nullptr;
 		m_wramBankMapping = nullptr;
 		m_systemControlMapping = nullptr;
-		m_timer = nullptr;
 	}
 
 	// Initialize the component
-	void CPU::init(HardwareConfig* hardware, InterruptVector* interrupt) {
+	void CPU::init(HardwareStatus* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 
@@ -142,8 +138,6 @@ namespace toygb {
 			case OperationMode::Auto:
 				throw EmulationError("OperationMode::Auto given to CPU");
 		}
-
-		m_timer = new TimerMapping(hardware, interrupt);
 	}
 
 	// Configure the memory mappings associated with the component
@@ -157,17 +151,11 @@ namespace toygb {
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
 		memory->add(ECHO_OFFSET, ECHO_OFFSET + ECHO_SIZE - 1, m_wramMapping);  // Same mapping at a different address range to emulate WRAM echo
-
-		memory->add(IO_TIMER_DIVIDER, IO_TIMER_CONTROL, m_timer);
 	}
 
 // Skip `num` clocks
-#define clock(num) m_cyclesToSkip = num-1; \
-				co_await std::suspend_always(); \
-				incrementTimer(num);
-
-// Skip `num` CPU cycles (= 4 clock ticks each)
-#define cycle(num) clock(4*num)
+#define cycle(num) m_cyclesToSkip = num-1; \
+				co_await std::suspend_always();
 
 
 	// Main CPU loop, as a coroutine
@@ -249,7 +237,7 @@ namespace toygb {
 						// TODO : Not implemented
 						else if (opcode == 0b00010000) {
 							/*uint8_t value =*/ memoryRead(m_pc++); cycle(1); // TODO : Invalid stop values ?
-							m_timer->resetDivider();  // Stopping resets the timers
+							m_hardware->resetDivider();  // Stopping resets the timers
 						}
 
 						// 001 cc 000 | 0x20, 0x28, 0x30, 0x38 | jr [nz, z, nc, c], s8 | Conditional relative jump, by a number of bytes given by the given signed value | 3 (jump) / 2 (condition is false, not jump) | ----
@@ -1167,11 +1155,6 @@ namespace toygb {
 		}
 
 		setFlags(reg_a == 0, UNAFFECTED, 0, newcarry);
-	}
-
-	// Update the timer IO registers
-	void CPU::incrementTimer(int cycles){
-		m_timer->incrementCounter(cycles, m_stopped);
 	}
 
 	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless

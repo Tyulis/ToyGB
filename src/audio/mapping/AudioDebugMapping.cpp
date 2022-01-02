@@ -23,7 +23,7 @@ Abs. addr. | Rel. addr. | Name  | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	AudioDebugMapping::AudioDebugMapping(HardwareConfig* hardware) {
+	AudioDebugMapping::AudioDebugMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 
 		// Those start at 0

@@ -14,7 +14,7 @@ This is extremely revision- and hardware-dependant, so many details are probably
 
 namespace toygb {
 	// Initialize the memory mapping
-	OAMMapping::OAMMapping(HardwareConfig* hardware, uint8_t* array) : LCDMemoryMapping(array){
+	OAMMapping::OAMMapping(HardwareStatus* hardware, uint8_t* array) : LCDMemoryMapping(array){
 		m_hardware = hardware;
 		m_fea0 = nullptr;
 		m_fec0 = nullptr;

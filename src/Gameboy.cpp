@@ -15,7 +15,7 @@ namespace toygb {
 		m_cart.init(m_config.romfile, m_config.ramfile);
 
 		// Configure the hardware, issuing warnings (just in case) if the user set a hardware configuration different than the preferred one for the cartridge
-		HardwareConfig cartConfig = m_cart.getDefaultHardwareConfig();
+		HardwareStatus cartConfig = m_cart.getDefaultHardwareStatus();
 		if (m_hardware.mode() == OperationMode::Auto)
 			m_hardware.setOperationMode(cartConfig.mode());
 		else if (m_hardware.mode() != cartConfig.mode() && cartConfig.mode() != OperationMode::Auto)
@@ -42,6 +42,7 @@ namespace toygb {
 			m_hardware.setOperationMode(OperationMode::CGB);
 
 		m_interrupt.init();
+		m_hardware.init(&m_interrupt);
 		m_lcd.init(&m_hardware, &m_interrupt);
 		m_audio.init(&m_hardware);
 		m_joypad.init(&m_hardware, &m_interrupt);
@@ -51,6 +52,7 @@ namespace toygb {
 		// Build the memory map
 		m_memory = MemoryMap();
 		m_interrupt.configureMemory(&m_memory);
+		m_hardware.configureMemory(&m_memory);
 		m_cpu.configureMemory(&m_memory);
 		m_lcd.configureMemory(&m_memory);
 		m_audio.configureMemory(&m_memory);
@@ -77,10 +79,16 @@ namespace toygb {
 		while (!m_interface.isStopping()) {
 			// Run a cycle. FIXME : the order of the components here is arbitrary, is it significant ?
 			// The skip() methods here allow a little optimisation by not triggering a coroutine resume (context commutation) if it is useless (e.g the component is turned off)
-			if (!m_cpu.skip()) cpuComponent.onCycle();
-			if (!m_lcd.skip()) lcdComponent.onCycle();
-			if (!m_dma.skip()) dmaComponent.onCycle();
-			if (!m_audio.skip()) audioComponent.onCycle();
+			m_hardware.incrementDivider();
+			uint16_t divider = m_hardware.getDivider();
+			if (!m_cpu.skip() && (divider & 0b11) == 0)
+				cpuComponent.onCycle();
+			if (!m_lcd.skip())
+				lcdComponent.onCycle();
+			if (!m_dma.skip())
+				dmaComponent.onCycle();
+			if (!m_audio.skip() && (divider & 1) == 0)
+				audioComponent.onCycle();
 
 			// Wait till the next cycle
 			// Here we use a floating point number for the period in nanoseconds, obviously the timer is not precise to the picosecond so it's not perfect at every cycle,

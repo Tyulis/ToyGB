@@ -26,7 +26,7 @@ namespace toygb {
 	const float WAVE_VOLUMES[] = {0.0f, 1.0f, 0.5f, 0.25f};
 
 	// Initialize the channel
-	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareConfig* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
+	AudioWaveMapping::AudioWaveMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, WaveMemoryMapping* wavePatternMapping, HardwareStatus* hardware) : AudioChannelMapping(channel, control, debug, hardware) {
 		m_wavePatternMapping = wavePatternMapping;
 
 		enable = false;

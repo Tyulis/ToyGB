@@ -71,7 +71,7 @@ namespace toygb {
 	}
 
 	// Initialize the component
-	void LCDController::init(HardwareConfig* hardware, InterruptVector* interrupt) {
+	void LCDController::init(HardwareStatus* hardware, InterruptVector* interrupt) {
 		m_hardware = hardware;
 		m_interrupt = interrupt;
 
@@ -539,7 +539,7 @@ namespace toygb {
 	////////// LCDController::ObjectSelectionComparator
 	// FIXME : Vestigial parameters
 
-	LCDController::ObjectSelectionComparator::ObjectSelectionComparator(HardwareConfig* hardware, LCDMemoryMapping* oam) {
+	LCDController::ObjectSelectionComparator::ObjectSelectionComparator(HardwareStatus* hardware, LCDMemoryMapping* oam) {
 		m_hardware = hardware;
 		m_oamMapping = oam;
 	}

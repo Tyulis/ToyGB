@@ -6,9 +6,6 @@
 #define OFFSET_MODULO  IO_TIMER_MODULO - OFFSET_START
 #define OFFSET_CONTROL IO_TIMER_CONTROL - OFFSET_START
 
-// Check whether a specific bit got from 1 to 0 between two values
-#define HIGH_TO_LOW(prev, next, bit) (((prev >> bit) & 1) && !((next >> bit) & 1))
-
 /** Timer IO registers memory mapping
 The timer has an internal, hidden 16-bits counter, that keeps track of the amount of clock ticks that pass (incremented every clock)
 The divider (register DIV) just returns the upper 8 bits of that internal counter directly (thus making it a 16384Hz = 4194304/256Hz timer, 32768Hz in double-speed mode)
@@ -40,8 +37,8 @@ namespace toygb {
 	const int TIMA_TRIGGER_BITS[] = {9, 3, 5, 7};
 
 	// Initialize the memory mapping with initial values
-	TimerMapping::TimerMapping(HardwareConfig* hardware, InterruptVector* interrupt) {
-		m_hardware = hardware;
+	TimerMapping::TimerMapping(uint16_t* divider, InterruptVector* interrupt) {
+		m_divider = divider;
 		m_interrupt = interrupt;
 
 		counter = 0x00;
@@ -49,7 +46,6 @@ namespace toygb {
 		enable = false;
 		clockSelect = 0x00;
 
-		m_internalCounter = 0;  // FIXME
 		m_timaReloadDelay = 0xFF;
 	}
 
@@ -57,7 +53,7 @@ namespace toygb {
 	uint8_t TimerMapping::get(uint16_t address) {
 		switch (address) {
 			case OFFSET_DIVIDER:  // DIV
-				return m_internalCounter >> 8;
+				return (*m_divider) >> 8;
 			case OFFSET_COUNTER:  // TIMA
 				return counter;
 			case OFFSET_MODULO:  // TMA
@@ -73,8 +69,9 @@ namespace toygb {
 	// Set the value at the given relative address
 	void TimerMapping::set(uint16_t address, uint8_t value) {
 		switch (address) {
-			case OFFSET_DIVIDER:  // DIV
-				resetDivider();
+			case OFFSET_DIVIDER:  // DIV : Reset the divider on any write
+				dividerChange(0);
+				*m_divider = 0;
 				break;
 			case OFFSET_COUNTER:  // TIMA
 				if (m_timaReloadDelay != 0)  // FIXME
@@ -90,35 +87,20 @@ namespace toygb {
 		}
 	}
 
-	// Reset the internal counter
-	void TimerMapping::resetDivider() {
-		checkTimerIncrements(m_internalCounter, 0);  // Even resetting the divider may increment TIMA
-		m_internalCounter = 0;
-	}
-
-	// Increment the internal counter and execute associated actions and increments, with the amount of clocks that passed, and whether the CPU is in stop mode
-	void TimerMapping::incrementCounter(int clocks, bool stopped) {
-		if (!stopped) {
-			for (int i = 0; i < clocks; i++) {  // FIXME
-				if (m_timaReloadDelay != 0xFF) {  // We are in the delay between TIMA overflow and its reloading with TMA : advance the reload period
-					m_timaReloadDelay -= 1;
-					if (m_timaReloadDelay == 0) {
-						counter = modulo;
-						m_timaReloadDelay = 0xFF;
-					}
-				}
-
-				checkTimerIncrements(m_internalCounter, m_internalCounter + 1);
-				m_internalCounter += 1;
+	// Execute actions associated to the divider changing its value
+	void TimerMapping::dividerChange(uint16_t newValue) {
+		if (m_timaReloadDelay != 0xFF) {  // We are in the delay between TIMA overflow and its reloading with TMA : advance the reload period
+			m_timaReloadDelay -= 1;
+			if (m_timaReloadDelay == 0) {
+				counter = modulo;
+				m_timaReloadDelay = 0xFF;
 			}
 		}
-	}
 
-	// Check whether to increment TIMA, and handle the TIMA overflow logic, when going from an internal counter value to another
-	void TimerMapping::checkTimerIncrements(uint16_t previousValue, uint16_t newValue) {
+		// Check divider bits for TIMA increments
 		if (enable) {
 			// Increment if the trigger bit goes from 1 to 0, regardless of whether it was an internal counter increment, reset or overflow
-			if (HIGH_TO_LOW(previousValue, newValue, TIMA_TRIGGER_BITS[clockSelect])) {
+			if ((HIGH_TO_LOW(*m_divider, newValue) >> TIMA_TRIGGER_BITS[clockSelect]) & 1) {
 				if (counter == 0xFF) {  // TIMA overflow : timer interrupt, set TIMA to 0 and go in the 4-clock delay before reloading with TMA
 					m_interrupt->setRequest(Interrupt::Timer);
 					counter = 0;

@@ -8,13 +8,13 @@ namespace toygb {
 	/** BootROM disable IO register memory mapping */
 	class BootromDisableMapping : public MemoryMapping {
 		public:
-			BootromDisableMapping(HardwareConfig* hardware);
+			BootromDisableMapping(HardwareStatus* hardware);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
 
 		protected:
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 	};
 }
 

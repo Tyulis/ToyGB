@@ -3,7 +3,7 @@
 
 namespace toygb {
 	// Initialize the base channel
-	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware){
+	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareStatus* hardware){
 		m_channel = channel;
 		m_control = control;
 		m_debug = debug;
@@ -19,8 +19,8 @@ namespace toygb {
 
 		// Default values for the frame sequencer, not confirmed
 		m_frameSequencer = 7;
-		m_frameSequencerTimer = 0;
 		m_outputTimerCounter = 0;
+		m_previousDivider = m_hardware->getDivider();
 	}
 
 	// Get a full sample buffer, or nullptr if not full yed
@@ -59,25 +59,26 @@ namespace toygb {
 
 		// Initial value for the frame sequencer on power-on, confirmed
 		m_frameSequencer = 7;
-		m_frameSequencerTimer = 0;
 	}
 
 	// Called at every APU cycle
 	void AudioChannelMapping::update(){
-		// Frame sequencer operation
-		m_frameSequencerTimer += 1;
-		if (m_frameSequencerTimer >= FRAME_SEQUENCER_PERIOD){  // Passed one 512Hz clock
-			m_frameSequencerTimer = 0;
+		// The frame sequencer is clocked by bit 13 of the timer divider (bit 14 in double-speed mode)
+		// But in our case, as some timers need to be updated on 512Hz ticks instead of 256Hz and without any hardware tricks, we will use bits 12/13
+		uint16_t divider = m_hardware->getDivider();
+		int triggerBit = (m_hardware->doubleSpeed() ? 13 : 12);
+		if ((HIGH_TO_LOW(m_previousDivider, divider) >> triggerBit) & 1) {
 			// Frame cycles in range 0-8
 			m_frameSequencer = (m_frameSequencer + 1) % 8;
 			if (m_frameSequencer >= 8)
 				m_frameSequencer = 0;
 			onFrame(m_frameSequencer);
 		}
+		m_previousDivider = divider;
 
 		// Audio output operation
 		m_outputTimerCounter += 1;
-		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD){
+		if (m_outputTimerCounter >= OUTPUT_SAMPLE_PERIOD) {
 			m_outputTimerCounter = 0;
 			outputSample();
 		}

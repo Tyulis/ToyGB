@@ -31,7 +31,7 @@ namespace toygb {
 			LCDController();
 			~LCDController();
 
-			void init(HardwareConfig* hardware, InterruptVector* interrupt);
+			void init(HardwareStatus* hardware, InterruptVector* interrupt);
 			void configureMemory(MemoryMap* memory);
 
 			/** Main loop of the component, as a coroutine */
@@ -46,11 +46,11 @@ namespace toygb {
 			/** Comparator for sprite rendering order */
 			class ObjectSelectionComparator {
 				public:
-					ObjectSelectionComparator(HardwareConfig* hardware, LCDMemoryMapping* oam);
+					ObjectSelectionComparator(HardwareStatus* hardware, LCDMemoryMapping* oam);
 					bool operator()(const uint16_t& address1, const uint16_t& address2);
 
 				private:
-					HardwareConfig* m_hardware;
+					HardwareStatus* m_hardware;
 					LCDMemoryMapping* m_oamMapping;
 			};
 
@@ -65,7 +65,7 @@ namespace toygb {
 					uint8_t priority;     // Pixel priority value
 			};
 
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 			InterruptVector* m_interrupt;
 
 			// Related memory mappings

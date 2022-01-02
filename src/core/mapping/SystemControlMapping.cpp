@@ -22,7 +22,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	SystemControlMapping::SystemControlMapping(HardwareConfig* hardware) {
+	SystemControlMapping::SystemControlMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 		m_prepareSpeedSwitch = false;
 	}

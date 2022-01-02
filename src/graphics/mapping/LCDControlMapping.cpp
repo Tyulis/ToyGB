@@ -39,7 +39,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping with initial values
-	LCDControlMapping::LCDControlMapping(HardwareConfig* hardware) {
+	LCDControlMapping::LCDControlMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 
 		// LCDC

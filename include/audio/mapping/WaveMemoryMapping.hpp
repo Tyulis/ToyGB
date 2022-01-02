@@ -8,7 +8,7 @@ namespace toygb {
 	/** Wave RAM memory mapping */
 	class WaveMemoryMapping : public ArrayMemoryMapping {
 		public:
-			WaveMemoryMapping(uint8_t* array, HardwareConfig* m_hardware);
+			WaveMemoryMapping(uint8_t* array, HardwareStatus* m_hardware);
 
 			// Access by the CPU
 			uint8_t get(uint16_t address);
@@ -24,7 +24,7 @@ namespace toygb {
 			void setCurrentIndex(uint16_t index);  // Tell that the given index is being read by the APU
 
 		protected:
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 			uint16_t m_readIndex;  // Index that is being read
 			int m_readCounter;     // Counts the APU cycles to disable access in DMG mode
 			bool m_playing;

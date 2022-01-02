@@ -39,7 +39,7 @@ namespace toygb {
 			SerialController m_serial;
 			DMAController m_dma;
 
-			HardwareConfig m_hardware;
+			HardwareStatus m_hardware;
 			MemoryMap m_memory;
 			Interface m_interface;
 	};

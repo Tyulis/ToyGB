@@ -11,7 +11,7 @@ Abs. addr. | Rel. addr. | Name | Access   | Content
 
 namespace toygb {
 	// Initialize the memory mapping
-	BootromDisableMapping::BootromDisableMapping(HardwareConfig* hardware) {
+	BootromDisableMapping::BootromDisableMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 	}
 

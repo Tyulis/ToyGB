@@ -31,7 +31,7 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 
 			/** Return an automatic hardware configuration to run the cartridge, based on the ROM header */
-			HardwareConfig getDefaultHardwareConfig() const;
+			HardwareStatus getDefaultHardwareStatus() const;
 
 			/** Save the cartridge RAM to the predefined save file */
 			void save();

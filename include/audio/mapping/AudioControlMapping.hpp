@@ -11,7 +11,7 @@ namespace toygb {
 	/** APU control IO registers mapping */
 	class AudioControlMapping : public MemoryMapping {
 		public:
-			AudioControlMapping(HardwareConfig* hardware);
+			AudioControlMapping(HardwareStatus* hardware);
 
 			uint8_t get(uint16_t address);
 			void set(uint16_t address, uint8_t value);
@@ -34,7 +34,7 @@ namespace toygb {
 			void onPowerOn();  // Called when audioEnable goes 0 -> 1
 			void onPowerOff(); // Called when audioEnable goes 1 -> 0
 
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 	};
 }
 

@@ -9,6 +9,7 @@
 #include "core/hardware.hpp"
 #include "memory/Constants.hpp"
 #include "memory/MemoryMapping.hpp"
+#include "util/bits.hpp"
 #include "util/error.hpp"
 
 
@@ -20,7 +21,7 @@ namespace toygb {
 		public:
 			/** Initialize the channel
 			 * int channel : channel index (0 = tone+sweep, 1 = tone, 2 = wave, 3 = debug) */
-			AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareConfig* hardware);
+			AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareStatus* hardware);
 
 			/** Unfolds an APU cycle (=2 clocks) worth of channel operation */
 			void update();
@@ -55,7 +56,7 @@ namespace toygb {
 			int m_channel;  // Channel index
 			AudioControlMapping* m_control;
 			AudioDebugMapping* m_debug;
-			HardwareConfig* m_hardware;
+			HardwareStatus* m_hardware;
 
 			bool m_started;  // True if the channel is operating
 
@@ -65,9 +66,9 @@ namespace toygb {
 			int m_outputBufferIndex;  // Next index to set in the back buffer
 			bool m_bufferAvailable;   // Whether a buffer is full and available to use
 
-			int m_frameSequencerTimer;  // Counts the APU cycles for the 512Hz frame sequencer
-			int m_frameSequencer;       // Current sequencer frame (0-7)
-			int m_outputTimerCounter;   // Counts the APU cycles for the output sample frequency
+			uint16_t m_previousDivider;  // Counts the APU cycles for the 512Hz frame sequencer
+			int m_frameSequencer;        // Current sequencer frame (0-7)
+			int m_outputTimerCounter;    // Counts the APU cycles for the output sample frequency
 
 		private:
 			void onFrame(int frame);  // Called every time the frame sequencer clocks, dispatches to the individual frame methods

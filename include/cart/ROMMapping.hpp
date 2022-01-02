@@ -27,7 +27,7 @@ namespace toygb {
 			virtual MemoryMapping* getRAM() = 0;
 
 			/** Return an automatic hardware configuration to run the ROM, based on its header */
-			HardwareConfig getDefaultHardwareConfig() const;
+			HardwareStatus getDefaultHardwareStatus() const;
 
 			bool hasRAM() const;  // Check whether the cartridge contains RAM
 			bool hasBattery() const;  // Check whether the cartridge has a battery (= saves its RAM)

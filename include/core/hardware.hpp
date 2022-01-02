@@ -3,6 +3,9 @@
 
 #include <string>
 
+#include "core/InterruptVector.hpp"
+#include "core/mapping/TimerMapping.hpp"
+#include "memory/MemoryMap.hpp"
 #include "util/error.hpp"
 
 
@@ -30,10 +33,10 @@ namespace toygb {
 	};
 
 	/** Describes the specific hardware to emulate */
-	class HardwareConfig {
+	class HardwareStatus {
 		public:
-			HardwareConfig();
-			HardwareConfig(OperationMode mode, ConsoleModel model, SystemRevision revision);
+			HardwareStatus();
+			HardwareStatus(OperationMode mode, ConsoleModel model, SystemRevision revision);
 
 			// Console model to emulate
 			ConsoleModel console() const;
@@ -62,6 +65,15 @@ namespace toygb {
 			// Set the remaining Auto settings
 			void setAutoConfig();
 
+			// Component initialization and configuration
+			void init(InterruptVector* interrupts);
+			void configureMemory(MemoryMap* memory);
+
+			// Divider internal counter
+			uint16_t getDivider() const;
+			void incrementDivider();
+			void resetDivider();
+
 			// Generic console model checks
 			bool isDMGConsole() const;  // DMG, MGB
 			bool isCGBConsole() const;  // CGB
@@ -85,6 +97,10 @@ namespace toygb {
 			bool m_hasBootrom;
 			bool m_bootromUnmapped;
 			bool m_doubleSpeed;
+
+			// Clock status
+			uint16_t m_divider;
+			TimerMapping* m_timerMapping;
 	};
 }
 
