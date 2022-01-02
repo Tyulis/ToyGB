@@ -84,7 +84,6 @@ namespace toygb {
 			if (m_hasBattery) {
 				std::ifstream ram(m_ramFile, std::ifstream::in | std::ifstream::binary);
 				if (ram.is_open()) {
-					m_ramData = new uint8_t[m_ramSize];
 					ram.read(reinterpret_cast<char*>(m_ramData), m_ramSize);
 					ram.close();
 				}

@@ -21,6 +21,7 @@ namespace toygb {
 		m_hasBootrom = false;
 		m_bootromUnmapped = false;
 		m_doubleSpeed = false;
+		m_divider = 0x0000;
 	}
 
 	// Get the console model

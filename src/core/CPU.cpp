@@ -75,6 +75,8 @@ namespace toygb {
 		m_hramMapping = nullptr;
 		m_wramBankMapping = nullptr;
 		m_systemControlMapping = nullptr;
+
+		m_cyclesToSkip = 0;
 	}
 
 	CPU::CPU(GameboyConfig& config) {
@@ -87,6 +89,8 @@ namespace toygb {
 		m_wramBankMapping = nullptr;
 		m_systemControlMapping = nullptr;
 		m_hramMapping = nullptr;
+
+		m_cyclesToSkip = 0;
 	}
 
 	CPU::~CPU() {
@@ -111,6 +115,7 @@ namespace toygb {
 		m_interrupt = interrupt;
 
 		// Load the bootrom if set
+		initRegisters();
 		bool hasBootrom = loadBootrom(m_config.bootrom);
 		m_hardware->setBootrom(hasBootrom);  // CPU must be initialized before everything else such that the bootrom mode is transferred to others too
 
@@ -865,7 +870,6 @@ namespace toygb {
 		// Could not load the bootrom,
 		if (m_bootrom.size < 0) {
 			m_hardware->setBootromStatus(true);
-			initRegisters();
 			return false;
 		} else {
 			m_hardware->setBootromStatus(false);

@@ -40,6 +40,8 @@ namespace toygb {
 		m_oamMapping = nullptr;
 
 		m_backBuffer = nullptr;
+
+		m_cyclesToSkip = 0;
 	}
 
 	LCDController::~LCDController() {

@@ -51,6 +51,7 @@ namespace toygb {
 		enableLength = false;
 
 		m_dutyPointer = 0;
+		m_envelopeVolume = initialEnvelopeVolume;
 		m_baseTimerCounter = 0;
 		m_outputTimerCounter = 0;
 		m_sweepFrequency = 0;
