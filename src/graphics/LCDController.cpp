@@ -231,7 +231,11 @@ namespace toygb {
 							}
 
 							// The tilemap is a 32*32 array, most significant coordinate is the row
-							uint8_t tileIndex = m_vram[tileMapAddress + 32 * tileY + tileX];
+							uint16_t tileMetadataAddress = tileMapAddress + 32 * tileY + tileX;
+							uint8_t tileIndex = m_vram[tileMetadataAddress];
+							uint8_t control = 0;
+							if (m_hardware->mode() == OperationMode::CGB)
+								control = m_vram[VRAM_BANK_SIZE + tileMetadataAddress];
 							clock(2);
 
 							// Get the tile data VRAM address from its index (all addresses are relative to their memory section, here relative to VRAM)
@@ -246,17 +250,48 @@ namespace toygb {
 							else  // LCDC.4 = 0 : Address from 0x1000
 								tileAddress = 0x1000 + tileIndex * 16;
 
+							// In CGB mode, if the tile control byte, bit 6 is set, the tile is flipped vertically
+							// We thus count the tile data rows from the end instead of from the beginning (row 2 -> row 7-2)
+							if ((control >> 6) & 1)
+								indexY = 7 - indexY;
+
 							// Retrieve the 2-byte row to render from VRAM
-							uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + indexY * 2);
-							uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + indexY * 2 + 1);  // (Little endian, upper byte is second)
+							// In CGB mode, bit 3 of the control byte controls the VRAM bank to take the tile data from
+							if (m_hardware->mode() == OperationMode::CGB && ((control >> 3) & 1))
+								tileAddress += VRAM_BANK_SIZE;
+							uint8_t tileLow = m_vram[tileAddress + indexY * 2];
+							uint8_t tileHigh = m_vram[tileAddress + indexY * 2 + 1];  // (Little endian, upper byte is second)
 							clock(6);
 
 							// Each row is in two bytes, bits of each byte are interleaved to build the 2-bits color index. Indices are the x coordinate within the tile :
 							// Upper byte : u0 u1 u2 u3 u4 u5 u6 u7 |
 							// Lower byte : l0 l1 l2 l3 l4 l5 l6 l7 | -> u0l0 u1l1 u2l2 u3l3 u4l4 u5l5 u6l6 u7l7
 							for (int i = 7; i >= 0; i--) {
-								uint8_t color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
-								LCDController::Pixel pixelData(color, BACKGROUND_PALETTE, BACKGROUND_INDEX, false);
+								// In CGB mode, background tiles can be flipped horizontally with bit 5 of the tile control byte
+								// We do that by taking bits from the end instead of from the beginning, much like Y flip
+								uint8_t color;
+								if (m_hardware->mode() == OperationMode::CGB && ((control >> 5) & 1))  // Flipped horizontally
+									color = (((tileHigh >> (7 - i)) & 1) << 1) | ((tileLow >> (7 - i)) & 1);
+								else
+									color = (((tileHigh >> i) & 1) << 1) | ((tileLow >> i) & 1);
+
+								// Get which palette to use from the OAM control byte
+								uint8_t palette;
+								bool priorityBit;
+								switch (m_hardware->mode()) {
+									case OperationMode::DMG:  // DMG mode : monochrome background palette
+										palette = BACKGROUND_PALETTE;
+										priorityBit = false;
+										break;
+									case OperationMode::CGB:  // CGB mode : BCPI/BCPD palette index is defined by bits 0-2 of the control byte
+										palette = control & 7;
+										priorityBit = (control >> 7) & 1;
+										break;
+									case OperationMode::Auto:
+										throw EmulationError("OperationMode::Auto given to LCD controller");
+								}
+
+								LCDController::Pixel pixelData(color, palette, BACKGROUND_INDEX, priorityBit);
 								backgroundQueue.push_back(pixelData);
 							}
 							clock(1);
@@ -264,39 +299,36 @@ namespace toygb {
 
 						////////// Fetch sprites
 						// NOTE : selectedSprites contains the OAM addresses of the selected sprites, but is sorted by sprite X coordinate
-						if (m_lcdControl->objectEnable) {
+						if (m_lcdControl->objectEnable && !selectedSprites.empty()) {
 							// Check whether a new sprite may be pushed
 							// In DMG mode, lower X coordinate gets priority, so a sprite already being drawn can not be overridden by a later one
 							// In CGB mode, lower OAM position gets priority, so a sprite already being drawn can be overridden if a next one has a lower oam address
 							// FIXME : Here we only check the immediately next one. If several sprites are in range, can a sprite 2 positions later preempt the current one ?
-							bool pushSprite = objectQueue.empty() || (m_hardware->mode() == OperationMode::CGB && selectedSprites.front() < objectQueue.front().oamAddress);
+
+							// Eliminate sprites that were earlier on the line (the current X coordinate is after their last pixel X coordinate)
+							// OAM defines the X coordinate + 8, so to detect this it's OAM X coordinate - 8 < current X - 8 <=> OAM X coordinate < current X
+							while (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) <= x)
+								selectedSprites.pop_front();
+
+							bool pushSprite = objectQueue.empty() || (m_hardware->isCGBCapable() && !m_cgbPalette->objectPriority && selectedSprites.front() < objectQueue.front().oamAddress);
+							uint16_t spriteToPush = selectedSprites.front();
+
+							if (m_hardware->isCGBCapable() && !m_cgbPalette->objectPriority) {
+								for (std::deque<uint16_t>::iterator it = selectedSprites.begin(); it != selectedSprites.end() && m_oamMapping->lcdGet(*it + 1) - 8 < x; it++) {
+									if (*it < objectQueue.front().oamAddress)
+										pushSprite = true;
+									if (*it < spriteToPush)
+										spriteToPush = *it;
+								}
+							}
 							if (pushSprite) {
 								objectQueue.clear();
-								uint16_t spriteToPush;
-
-								// Eliminate sprites that were earlier on the line (the current X coordinate is after their last pixel X coordinate)
-								// OAM defines the X coordinate + 8, so to detect this it's OAM X coordinate - 8 < current X - 8 <=> OAM X coordinate < current X
-								while (!selectedSprites.empty() && m_oamMapping->lcdGet(selectedSprites.front() + 1) < x)
-									selectedSprites.pop_front();
 
 								// Check whether the next sprite must be rendered at the current X coordinate (only need to check the next one as selectedSprites is sorted by X coordinate).
 								// As always, OAM gives X + 8, so -8 everywhere to get the actual position on the screen (and the end position is OAM X coordinate - 8 + 8 = OAM X coordinate)
 								if (!selectedSprites.empty() && x >= m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 && x < m_oamMapping->lcdGet(selectedSprites.front() + 1)) {
-									switch (m_hardware->mode()) {
-										case OperationMode::DMG:  // DMG mode : No problem, priority goes to the lowest X coordinate, so the first in selectedSprites
-											spriteToPush = selectedSprites.front();
-											selectedSprites.pop_front();
-											break;
-										case OperationMode::CGB:  // CGB mode : Priority goes to the lowest OAM address, so we need to scan sprites in the [x, x+8] range to find the one to render
-											spriteToPush = selectedSprites.front();
-											for (std::deque<uint16_t>::iterator it = selectedSprites.begin() + 1; it != selectedSprites.end() && m_oamMapping->lcdGet(*it + 1) - 8 < x + 8; it++) {
-												if (*it < spriteToPush)
-													spriteToPush = *it;
-											}
-											break;
-										case OperationMode::Auto:
-											throw EmulationError("OperationMode::Auto given to LCD controller");
-									}
+									if (m_hardware->mode() == OperationMode::DMG)  // DMG mode : No problem, priority goes to the lowest X coordinate, so the first in selectedSprites
+										selectedSprites.pop_front();
 									clock(1); hblankDuration -= 1;
 
 									// FIXME : Delay if the background scrolling is not a multiple of 8. This is probably not accurate at all.
@@ -319,6 +351,8 @@ namespace toygb {
 
 									// Contrary to the background / window, sprites always use the 0x0000-0x1000 tile data addressing, so no problem at all
 									uint16_t tileAddress = tileIndex * 16;
+									if (m_hardware->mode() == OperationMode::CGB && ((control >> 3) & 1))
+										tileAddress += VRAM_BANK_SIZE;
 
 									// If OAM control byte, bit 6 is set, the tile is flipped vertically
 									// We thus count the tile data rows from the end instead of from the beginning (row 2 -> row 7-2 / 15-2)
@@ -326,8 +360,8 @@ namespace toygb {
 										yoffset = OBJECT_HEIGHTS[m_lcdControl->objectSize] - yoffset - 1;
 
 									// Retrieve the tile data row from VRAM, much like background
-									uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + 2*yoffset);
-									uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + 2*yoffset + 1);
+									uint8_t tileLow = m_vram[tileAddress + 2*yoffset];
+									uint8_t tileHigh = m_vram[tileAddress + 2*yoffset + 1];
 									clock(1); hblankDuration -= 1;
 
 									// See above, bits organisation and color bits interleave are described in the same part of the background row fetching
@@ -424,8 +458,9 @@ namespace toygb {
 							//       CGB |                  0 |                      - |                     - |     non-zero |             zero | OBJ
 							//       CGB |                  0 |                      - |                     - |         zero |         non-zero | BG
 							//       CGB |                  0 |                      - |                     - |     non-zero |         non-zero | OBJ
-							bool objectHasPriority;
-							if (objectPixel.priority) {
+							bool objectHasPriority = (objectPixel.color > 0) && (!m_lcdControl->backgroundDisplay || backgroundPixel.color == 0 || (!objectPixel.priority && (m_hardware->mode() == OperationMode::DMG || !backgroundPixel.priority)));
+
+							/*if (objectPixel.priority) {
 								if (!m_lcdControl->backgroundDisplay) {
 									objectHasPriority = (objectPixel.color > 0);
 								} else {
@@ -433,7 +468,7 @@ namespace toygb {
 								}
 							} else {
 								objectHasPriority = (objectPixel.color > 0);
-							}
+							}*/
 
 							// If we determined the object pixel must replace the background one
 							if (objectHasPriority) {
@@ -483,9 +518,8 @@ namespace toygb {
 					if (m_cgbPalette != nullptr)
 						m_cgbPalette->accessible = true;
 
-					if (m_lcdControl->hblankInterrupt){
+					if (m_lcdControl->hblankInterrupt)
 						m_interrupt->setRequest(Interrupt::LCDStat);
-					}
 
 					clock(hblankDuration);  // FIXME
 
