@@ -485,24 +485,31 @@ namespace toygb {
 							colorResult = COLOR_BLANK;
 						}
 
+						// CGB mode : Resolve with CGB palettes (BCPD / OCPD)
+						else if (m_hardware->isCGBCapable()) {
+							if (m_hardware->mode() == OperationMode::CGB) {
+								// Calculate the index in the palette data array
+								int paletteIndex = colorPalette * 4 + colorValue;
+								if (elementIndex == BACKGROUND_INDEX)
+									colorResult = m_cgbPalette->backgroundPalettes[paletteIndex];
+								else
+									colorResult = m_cgbPalette->objectPalettes[paletteIndex];
+							} else {
+								if (colorPalette == BACKGROUND_PALETTE)
+									colorResult = m_cgbPalette->backgroundPalettes[colorValue];
+								else
+									colorResult = m_cgbPalette->objectPalettes[colorPalette * 4 + colorValue];
+							}
+						}
+
 						// DMG mode : Resolve with monochrome palettes (BGP / OBP0 / OBP1) and use the associated default RGB555 color
-						else if (m_hardware->mode() == OperationMode::DMG) {
+						else {
 							if (colorPalette == BACKGROUND_PALETTE)
 								colorResult = DMG_PALETTE[m_dmgPalette->backgroundPalette[colorValue]];
 							else if (colorPalette == 0)
 								colorResult = DMG_PALETTE[m_dmgPalette->objectPalette0[colorValue]];
 							else if (colorPalette == 1)
 								colorResult = DMG_PALETTE[m_dmgPalette->objectPalette1[colorValue]];
-						}
-
-						// CGB mode : Resolve with CGB palettes (BCPD / OCPD)
-						else if (m_hardware->mode() == OperationMode::CGB) {
-							// Calculate the index in the palette data array
-							int paletteIndex = colorPalette * 4 + colorValue;
-							if (elementIndex == BACKGROUND_INDEX)
-								colorResult = m_cgbPalette->backgroundPalettes[paletteIndex];
-							else
-								colorResult = m_cgbPalette->objectPalettes[paletteIndex];
 						}
 
 						// Finally render the pixel into the back pixels buffer
