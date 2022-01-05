@@ -8,7 +8,7 @@ namespace toygb {
 	WaveMemoryMapping::WaveMemoryMapping(uint8_t* array, HardwareStatus* hardware) : ArrayMemoryMapping(array) {
 		m_hardware = hardware;
 		m_playing = false;
-		m_readIndex = WAVE_NOT_READABLE;
+		m_readIndex = 0;
 		m_readCounter = 0;
 	}
 
@@ -17,10 +17,10 @@ namespace toygb {
 		if (m_playing) {
 			// While the wave channel is playing, only the sample that is being read can be accessed
 			// On DMG hardware, it is only readble at the exact same time the APU is reading
-			if (m_readIndex == WAVE_NOT_READABLE)
-				return 0xFF;
-			else
+			if (m_readIndex != WAVE_NOT_READABLE)
 				return ArrayMemoryMapping::get(m_readIndex);
+			else
+				return 0xFF;
 		} else {  // Normal access when the wave channel is inactive
 			return ArrayMemoryMapping::get(address);
 		}
@@ -38,7 +38,7 @@ namespace toygb {
 	}
 
 	// Tell that the given index is being read
-	void WaveMemoryMapping::setCurrentIndex(uint16_t address){
+	void WaveMemoryMapping::setCurrentIndex(uint16_t address) {
 		m_readIndex = address;
 		m_readCounter = 2;
 	}
@@ -56,11 +56,11 @@ namespace toygb {
 	// Called every APU cycle (= 2 cycles) while the wave channel is active
 	void WaveMemoryMapping::update() {
 		// Tick the timer for the currently read index access timer
-		if (m_readIndex != WAVE_NOT_READABLE) {
+		// Wave RAM access is not disabled on CGB hardware
+		if (m_readIndex != WAVE_NOT_READABLE && !m_hardware->isCGBCapable()) {
 			m_readCounter -= 1;
-			if (m_readCounter <= 0){
+			if (m_readCounter <= 0)
 				m_readIndex = WAVE_NOT_READABLE;
-			}
 		}
 	}
 

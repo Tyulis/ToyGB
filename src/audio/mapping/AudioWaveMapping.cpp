@@ -130,7 +130,7 @@ namespace toygb {
 	}
 
 	// Restart the channel operation
-	void AudioWaveMapping::reset(){
+	void AudioWaveMapping::reset() {
 		// Only start if DAC is enabled
 		if (enable)
 			start();
@@ -142,7 +142,7 @@ namespace toygb {
 		m_baseTimerCounter = 2048 - frequency + 3;
 
 		// If the length counter is set to zero, it is reloaded with maximum
-		if (length == 0){
+		if (length == 0) {
 			// If length is enabled and the next frame does not clock length, maximum - 1
 			if (m_frameSequencer % 2 == 0 && enableLength)
 				length = 255;
@@ -166,12 +166,12 @@ namespace toygb {
 		m_baseTimerCounter = 0;
 	}
 
-	// Extend AudioChannelMapping::start to manage wave RAM
+	// Extend AudioChannelMapping::start to manage wave RAM corruption
 	void AudioWaveMapping::start() {
-		// Trigger while the channel reads a sample : corrupt first bytes of wave RAM
+		// Trigger while the channel reads a sample on DMG (fixed on CGB) : corrupt first bytes of wave RAM
 		// Here the APU is emulated after the CPU in the same cycle, and this method is called by the CPU, so we are projecting the next APU cycle operations
 		// But for all intents and purposes, trigger is done more or less at the exact same time the APU reads a sample
-		if (m_baseTimerCounter - 1 == 0 && m_started){
+		if (m_baseTimerCounter - 1 == 0 && m_started && !m_hardware->isCGBCapable()){
 			uint16_t position = ((m_sampleIndex + 1) >> 1) & 0x0F;  // Index of the sample that would have been read
 			if (position < 4) {  // Read in the first 4 bytes : overwrite the first byte with the current one
 				m_wavePatternMapping->waveSet(0, m_wavePatternMapping->waveGet(position));
