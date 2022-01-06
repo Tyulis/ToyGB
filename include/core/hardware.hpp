@@ -62,12 +62,23 @@ namespace toygb {
 			bool doubleSpeed() const;
 			void setDoubleSpeedMode(bool isDoubleSpeed);
 
+			// STOP mode status
+			bool isStopped() const;
+			void setStopMode(bool stop);
+
+			// Trigger a speed switch
+			void triggerSpeedSwitch();
+
 			// Set the remaining Auto settings
 			void setAutoConfig();
 
 			// Component initialization and configuration
 			void init(InterruptVector* interrupts);
 			void configureMemory(MemoryMap* memory);
+			void update();
+
+			// Return the emulator components sequence counter value
+			uint16_t getSequencer() const;
 
 			// Divider internal counter
 			uint16_t getDivider() const;
@@ -97,9 +108,12 @@ namespace toygb {
 			bool m_hasBootrom;
 			bool m_bootromUnmapped;
 			bool m_doubleSpeed;
+			bool m_stopped;
+			int m_speedSwitchCountdown;
 
 			// Clock status
-			uint16_t m_divider;
+			uint16_t m_sequencer;     // Emulator components sequencer, to clock the components at the right time (CPU, audio)
+			uint16_t m_divider;  // Gameboy internal divider, used for timer IO and audio frame sequencer
 			TimerMapping* m_timerMapping;
 	};
 }

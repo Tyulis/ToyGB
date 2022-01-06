@@ -11,6 +11,9 @@ namespace toygb {
 		m_bootromUnmapped = false;
 		m_doubleSpeed = false;
 		m_divider = 0x0000;
+		m_sequencer = 0x0000;
+		m_stopped = false;
+		m_speedSwitchCountdown = 0;
 	}
 
 	// Initialize the hardware configuration with custom values
@@ -22,6 +25,9 @@ namespace toygb {
 		m_bootromUnmapped = false;
 		m_doubleSpeed = false;
 		m_divider = 0x0000;
+		m_sequencer = 0x0000;
+		m_stopped = false;
+		m_speedSwitchCountdown = 0;
 	}
 
 	// Get the console model
@@ -94,6 +100,23 @@ namespace toygb {
 		m_doubleSpeed = isDoubleSpeed;
 	}
 
+	// Trigger a speed switch
+	void HardwareStatus::triggerSpeedSwitch() {
+		m_doubleSpeed = !m_doubleSpeed;
+		m_speedSwitchCountdown = 8200;  // The hardware is in transitory state for 8200 clocks
+	}
+
+	// Tell whether the CPU is in STOP mode
+	bool HardwareStatus::isStopped() const {
+		return m_stopped || m_speedSwitchCountdown > 0;
+	}
+
+	// Set whether the CPU is in STOP mode
+	void HardwareStatus::setStopMode(bool stop) {
+		m_stopped = stop;
+	}
+
+
 	// Initialize the component
 	void HardwareStatus::init(InterruptVector* interrupts) {
 		m_timerMapping = new TimerMapping(&m_divider, interrupts);
@@ -102,6 +125,20 @@ namespace toygb {
 	// Configure the associated memory mappings
 	void HardwareStatus::configureMemory(MemoryMap* memory) {
 		memory->add(IO_TIMER_DIVIDER, IO_TIMER_CONTROL, m_timerMapping);
+	}
+
+	// Tick the clock and do appropriate actions
+	void HardwareStatus::update() {
+		m_sequencer += 1;
+		if (m_speedSwitchCountdown > 0)
+			m_speedSwitchCountdown -= 1;
+		if (!isStopped())
+			incrementDivider();
+	}
+
+	// Get the emulator components sequence counter value
+	uint16_t HardwareStatus::getSequencer() const {
+		return m_sequencer;
 	}
 
 	// Get the current divider internal counter value

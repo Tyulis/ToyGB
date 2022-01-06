@@ -162,10 +162,14 @@ namespace toygb {
 					// Find all sprites that will be rendered on the current scanline
 
 					m_lcdControl->modeFlag = 2;
-					m_oamMapping->accessible = false;
-					m_vramMapping->accessible = true;
-					if (m_cgbPalette != nullptr)
-						m_cgbPalette->accessible = true;
+
+					// PPU memory access is frozen when in STOP mode
+					if (!m_hardware->isStopped()) {
+						m_oamMapping->accessible = false;
+						m_vramMapping->accessible = true;
+						if (m_cgbPalette != nullptr)
+							m_cgbPalette->accessible = true;
+					}
 
 					// Update LY and check LY = LYC STAT interrupt
 					m_lcdControl->coordY = line;
@@ -195,10 +199,14 @@ namespace toygb {
 
 					// Mode 3 = Drawing pixels
 					m_lcdControl->modeFlag = 3;
-					m_oamMapping->accessible = false;
-					m_vramMapping->accessible = false;
-					if (m_cgbPalette != nullptr)
-						m_cgbPalette->accessible = false;
+
+					// PPU memory access is frozen when in STOP mode
+					if (!m_hardware->isStopped()) {
+						m_oamMapping->accessible = false;
+						m_vramMapping->accessible = false;
+						if (m_cgbPalette != nullptr)
+							m_cgbPalette->accessible = false;
+					}
 
 					// Pixel FIFOs
 					std::deque<LCDController::Pixel> backgroundQueue;
@@ -232,10 +240,10 @@ namespace toygb {
 
 							// The tilemap is a 32*32 array, most significant coordinate is the row
 							uint16_t tileMetadataAddress = tileMapAddress + 32 * tileY + tileX;
-							uint8_t tileIndex = m_vram[tileMetadataAddress];
+							uint8_t tileIndex = m_vramMapping->lcdGet(tileMetadataAddress);
 							uint8_t control = 0;
 							if (m_hardware->mode() == OperationMode::CGB)
-								control = m_vram[VRAM_BANK_SIZE + tileMetadataAddress];
+								control = m_vramMapping->lcdGet(VRAM_BANK_SIZE + tileMetadataAddress);
 							clock(2);
 
 							// Get the tile data VRAM address from its index (all addresses are relative to their memory section, here relative to VRAM)
@@ -259,8 +267,8 @@ namespace toygb {
 							// In CGB mode, bit 3 of the control byte controls the VRAM bank to take the tile data from
 							if (m_hardware->mode() == OperationMode::CGB && ((control >> 3) & 1))
 								tileAddress += VRAM_BANK_SIZE;
-							uint8_t tileLow = m_vram[tileAddress + indexY * 2];
-							uint8_t tileHigh = m_vram[tileAddress + indexY * 2 + 1];  // (Little endian, upper byte is second)
+							uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + indexY * 2);
+							uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + indexY * 2 + 1);  // (Little endian, upper byte is second)
 							clock(6);
 
 							// Each row is in two bytes, bits of each byte are interleaved to build the 2-bits color index. Indices are the x coordinate within the tile :
@@ -360,8 +368,8 @@ namespace toygb {
 										yoffset = OBJECT_HEIGHTS[m_lcdControl->objectSize] - yoffset - 1;
 
 									// Retrieve the tile data row from VRAM, much like background
-									uint8_t tileLow = m_vram[tileAddress + 2*yoffset];
-									uint8_t tileHigh = m_vram[tileAddress + 2*yoffset + 1];
+									uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + 2*yoffset);
+									uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + 2*yoffset + 1);
 									clock(1); hblankDuration -= 1;
 
 									// See above, bits organisation and color bits interleave are described in the same part of the background row fetching
@@ -520,10 +528,14 @@ namespace toygb {
 
 					// Mode 0 = HBlank
 					m_lcdControl->modeFlag = 0;
-					m_oamMapping->accessible = true;
-					m_vramMapping->accessible = true;
-					if (m_cgbPalette != nullptr)
-						m_cgbPalette->accessible = true;
+
+					// PPU memory access is frozen when in STOP mode
+					if (!m_hardware->isStopped()) {
+						m_oamMapping->accessible = true;
+						m_vramMapping->accessible = true;
+						if (m_cgbPalette != nullptr)
+							m_cgbPalette->accessible = true;
+					}
 
 					if (m_lcdControl->hblankInterrupt)
 						m_interrupt->setRequest(Interrupt::LCDStat);
@@ -537,10 +549,14 @@ namespace toygb {
 
 				// Mode 1 = VBlank
 				m_lcdControl->modeFlag = 1;
-				m_oamMapping->accessible = true;
-				m_vramMapping->accessible = true;
-				if (m_cgbPalette != nullptr)
-					m_cgbPalette->accessible = true;
+
+				// PPU memory access is frozen when in STOP mode
+				if (!m_hardware->isStopped()) {
+					m_oamMapping->accessible = true;
+					m_vramMapping->accessible = true;
+					if (m_cgbPalette != nullptr)
+						m_cgbPalette->accessible = true;
+				}
 
 				m_interrupt->setRequest(Interrupt::VBlank);
 

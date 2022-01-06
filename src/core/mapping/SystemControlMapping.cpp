@@ -69,4 +69,9 @@ namespace toygb {
 			}
 		}
 	}
+
+	// Tell whether a speed switch has been requested
+	bool SystemControlMapping::prepareSpeedSwitch() const {
+		return m_prepareSpeedSwitch;
+	}
 }

@@ -171,7 +171,7 @@ namespace toygb {
 		m_ei_scheduled = false;
 		m_haltBug = false;
 		m_halted = false;
-		m_stopped = false;
+		m_haltCycles = 0;
 
 		// Start CPU operation
 		uint8_t opcode = memoryRead(m_pc++);  // Start with first opcode already fetched
@@ -202,7 +202,7 @@ namespace toygb {
 						memoryWrite(m_sp, (m_pc - 1) & 0xFF); cycle(1);
 
 						// Standard interrupt vectors
-						switch (interrupt){
+						switch (interrupt) {
 							case Interrupt::VBlank:  m_pc = 0x0040; break;
 							case Interrupt::LCDStat: m_pc = 0x0048; break;
 							case Interrupt::Timer:   m_pc = 0x0050; break;
@@ -210,6 +210,7 @@ namespace toygb {
 							case Interrupt::Joypad:  m_pc = 0x0060; break;
 							case Interrupt::None: break;
 						}
+						cycle(1);
 						opcode = memoryRead(m_pc++); cycle(1);  // Fetch the next opcode
 						continue;
 					}
@@ -217,7 +218,7 @@ namespace toygb {
 
 				uint16_t basePC = m_pc - 1;
 
-				if (!m_halted && !m_stopped){
+				if (!m_halted){
 					if (m_config.disassemble) logDisassembly(basePC);
 
 					// Opcode description :
@@ -239,10 +240,54 @@ namespace toygb {
 						}
 
 						// 00 01 0000 | 0x10 | stop | Stop the clock to get into a very low-power mode (or to switch to CGB double-speed mode) | 2 | ----
-						// TODO : Not implemented
 						else if (opcode == 0b00010000) {
-							/*uint8_t value =*/ memoryRead(m_pc++); cycle(1); // TODO : Invalid stop values ?
-							m_hardware->resetDivider();  // Stopping resets the timers
+							// If a button is pressed and selected (so if at least one bit is 0)
+							if ((m_memory->get(IO_JOYPAD) & 0x0F) < 0x0F) {
+								// No interrupt pending : 2-bytes opcode, enter halt mode, no divider reset
+								if (interrupt == Interrupt::None) {
+									m_pc += 1; cycle(1);
+									m_halted = true;
+								}
+								// Else : nothing (1-byte opcode, no mode change, no divider reset)
+							}
+							// No button pressed and selected
+							else {
+								// Speed switch requested
+								if (m_systemControlMapping->prepareSpeedSwitch()) {
+									// No interrupt pending : trigger speed switch, then enter halt mode
+									if (interrupt == Interrupt::None) {
+										m_pc += 1; cycle(1);
+										m_hardware->resetDivider();
+										m_hardware->triggerSpeedSwitch();
+										m_halted = true;
+										// Halt mode for 32768 CPU cycles, but the first 2050 are in complete stop
+										m_haltCycles = 32768 - 2050;
+									}
+
+									// Interrupt pending during the speed switch
+									else {
+										// IME enabled : the CPU glitches non-deterministically ?
+										if (m_interrupt->getMaster()) {
+											continue;  // Just hang
+										}
+										// IME disabled : 1-byte opcode, no mode change, speed switch, divider reset
+										else {
+											m_hardware->resetDivider();
+											m_hardware->triggerSpeedSwitch();
+										}
+									}
+								}
+								// No pending speed switch : enter stop mode, reset the divider
+								else {
+									m_hardware->setStopMode(true);
+									m_hardware->resetDivider();
+									// No interrupt pending : 2-bytes opcode
+									if (interrupt == Interrupt::None) {
+										m_pc += 1; cycle(1);
+									}
+									// Interrupt pending : 1-byte opcode
+								}
+							}
 						}
 
 						// 001 cc 000 | 0x20, 0x28, 0x30, 0x38 | jr [nz, z, nc, c], s8 | Conditional relative jump, by a number of bytes given by the given signed value | 3 (jump) / 2 (condition is false, not jump) | ----
@@ -852,6 +897,11 @@ namespace toygb {
 						m_haltBug = false;
 				} else {  // Skip the cycle if in halt or stop mode
 					cycle(1);
+					if (m_haltCycles > 0) {
+						m_haltCycles -= 1;
+						if (m_haltCycles == 0)
+							m_halted = false;
+					}
 				}
 			}
 		} catch (const _EmulationError& exc){

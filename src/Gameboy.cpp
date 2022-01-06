@@ -77,23 +77,32 @@ namespace toygb {
 		/*uint64_t cycleCount = 0, cycleDelays = 0;
 		clocktime_t cycleStart = std::chrono::steady_clock::now();*/
 		while (!m_interface.isStopping()) {
-			// Run a cycle. FIXME : the order of the components here is arbitrary, is it significant ?
+			// Run a clock cycle. FIXME : the order of the components here is arbitrary (except CPU before APU), is it significant ?
 			// The skip() methods here allow a little optimisation by not triggering a coroutine resume (context commutation) if it is useless (e.g the component is turned off)
-			m_hardware.incrementDivider();
-			uint16_t divider = m_hardware.getDivider();
-			if (!m_cpu.skip() && (divider & 0b11) == 0)
-				cpuComponent.onCycle();
-			if (!m_lcd.skip())
+			m_hardware.update();
+			int sequencer = m_hardware.getSequencer();
+
+			if (!m_hardware.isStopped()) {
+				if (!m_cpu.skip() && (sequencer & 0b11) == 0)
+					cpuComponent.onCycle();
+				if (!m_dma.skip())
+					dmaComponent.onCycle();
+			}
+			// Exit STOP mode when a selected joypad button is pressed (when a bit goes low)
+			else if ((m_memory.get(IO_JOYPAD) & 0x0F) < 0x0F) {
+				m_hardware.setStopMode(false);
+			}
+
+			// Keep the same timing for the APU and PPU, even in double-speed mode
+			if (!m_lcd.skip() && (!m_hardware.doubleSpeed() || (sequencer & 0b01) == 0))
 				lcdComponent.onCycle();
-			if (!m_dma.skip())
-				dmaComponent.onCycle();
-			if (!m_audio.skip() && (divider & 1) == 0)
+			if (!m_audio.skip() && (sequencer & (m_hardware.doubleSpeed() ? 0b11 : 0b01)) == 0)
 				audioComponent.onCycle();
 
 			// Wait till the next cycle
 			// Here we use a floating point number for the period in nanoseconds, obviously the timer is not precise to the picosecond so it's not perfect at every cycle,
 			// but it compensates in the long run, truncating this value into an integer would constantly make the emulator run a little bit too fast (~100.54% speed)
-			double target = lastCycle + CLOCK_CYCLE_NS_REAL;
+			double target = lastCycle + (m_hardware.doubleSpeed() ? DOUBLESPEED_CLOCK_CYCLE_NS_REAL : CLOCK_CYCLE_NS_REAL);
 			while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime).count() < target)/*
 				cycleDelays += 1*/;
 			lastCycle = target;

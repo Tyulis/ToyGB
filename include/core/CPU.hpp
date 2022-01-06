@@ -83,8 +83,8 @@ namespace toygb {
 			bool m_ei_scheduled;         // Whether a EI (enable interrupts) instruction has been run on the last cycle, to respect the 1 cycle delay before activation
 
 			bool m_halted;   // HALT status (set by the halt instruction)
-			bool m_stopped;  // STOP status (set by the stop instruction)
 			bool m_haltBug;  // Whether the halt instruction was just used in a situation that causes the program counter to not be incremented
+			int m_haltCycles;
 
 			int m_timaCounter;     // Counts cycles for the TIMA register timer
 			int m_dividerCounter;  // Counts cycles for the DIV register timer
