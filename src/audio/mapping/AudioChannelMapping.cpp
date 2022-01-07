@@ -3,7 +3,7 @@
 
 namespace toygb {
 	// Initialize the base channel
-	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareStatus* hardware){
+	AudioChannelMapping::AudioChannelMapping(int channel, AudioControlMapping* control, AudioDebugMapping* debug, HardwareStatus* hardware) {
 		m_channel = channel;
 		m_control = control;
 		m_debug = debug;
@@ -24,7 +24,7 @@ namespace toygb {
 	}
 
 	// Get a full sample buffer, or nullptr if not full yed
-	float* AudioChannelMapping::getBuffer(){
+	float* AudioChannelMapping::getBuffer() {
 		if (m_bufferAvailable){
 			m_bufferAvailable = false;
 			return m_outputBuffer;
@@ -34,7 +34,7 @@ namespace toygb {
 	}
 
 	// Enable channel operation, usually via NRx4.7
-	void AudioChannelMapping::start(){
+	void AudioChannelMapping::start() {
 		m_started = true;
 		m_control->channelEnable[m_channel] = true;  // Set the associated NR52 bit
 	}
@@ -46,14 +46,14 @@ namespace toygb {
 	}
 
 	// Called on APU power off
-	void AudioChannelMapping::powerOff(){
+	void AudioChannelMapping::powerOff() {
 		disable();
 		onPowerOff();
 		powered = false;
 	}
 
 	// Called on APU power on
-	void AudioChannelMapping::powerOn(){
+	void AudioChannelMapping::powerOn() {
 		onPowerOn();
 		powered = true;
 
@@ -62,7 +62,7 @@ namespace toygb {
 	}
 
 	// Called at every APU cycle
-	void AudioChannelMapping::update(){
+	void AudioChannelMapping::update() {
 		// The frame sequencer is clocked by bit 13 of the timer divider (bit 14 in double-speed mode)
 		// But in our case, as some timers need to be updated on 512Hz ticks instead of 256Hz and without any hardware tricks, we will use bits 12/13
 		uint16_t divider = m_hardware->getDivider();
@@ -97,7 +97,7 @@ namespace toygb {
 	 *     5 |        |          |
 	 *     6 |  Clock |          | Clock
 	 *     7 |        |    Clock | */
-	void AudioChannelMapping::onFrame(int frame){
+	void AudioChannelMapping::onFrame(int frame) {
 		if (frame % 2 == 0)  // Length frames are just every 2 frames
 			onLengthFrame();
 
@@ -109,28 +109,28 @@ namespace toygb {
 	}
 
 	// Default, no-op implementation for those
-	void AudioChannelMapping::onLengthFrame(){
+	void AudioChannelMapping::onLengthFrame() {
 
 	}
 
-	void AudioChannelMapping::onSweepFrame(){
+	void AudioChannelMapping::onSweepFrame() {
 
 	}
 
-	void AudioChannelMapping::onEnvelopeFrame(){
+	void AudioChannelMapping::onEnvelopeFrame() {
 
 	}
 
-	void AudioChannelMapping::onPowerOff(){
+	void AudioChannelMapping::onPowerOff() {
 
 	}
 
-	void AudioChannelMapping::onPowerOn(){
+	void AudioChannelMapping::onPowerOn() {
 
 	}
 
 	// Output a sample to the audio output buffer
-	void AudioChannelMapping::outputSample(){
+	void AudioChannelMapping::outputSample() {
 		float sample = (m_started ? buildSample() : 0);
 		m_backBuffer[m_outputBufferIndex] = sample;
 		m_debug->setChannelAmplitude(m_channel, uint8_t(((sample + 1.0f) / 2) * 0x0F));

@@ -71,6 +71,7 @@ namespace toygb {
 		m_hram = nullptr;
 		m_wram = nullptr;
 
+		m_hdmaMapping = nullptr;
 		m_wramMapping = nullptr;
 		m_hramMapping = nullptr;
 		m_wramBankMapping = nullptr;
@@ -85,6 +86,7 @@ namespace toygb {
 		m_hram = nullptr;
 		m_wram = nullptr;
 
+		m_hdmaMapping = nullptr;
 		m_wramMapping = nullptr;
 		m_wramBankMapping = nullptr;
 		m_systemControlMapping = nullptr;
@@ -103,10 +105,12 @@ namespace toygb {
 		if (m_wramMapping != nullptr) delete m_wramMapping;
 		if (m_systemControlMapping != nullptr) delete m_systemControlMapping;
 		if (m_wramBankMapping != nullptr) delete m_wramBankMapping;
+		if (m_hdmaMapping != nullptr) delete m_hdmaMapping;
 		m_hramMapping = nullptr;
 		m_wramMapping = nullptr;
 		m_wramBankMapping = nullptr;
 		m_systemControlMapping = nullptr;
+		m_hdmaMapping = nullptr;
 	}
 
 	// Initialize the component
@@ -139,6 +143,7 @@ namespace toygb {
 				m_systemControlMapping = new SystemControlMapping(m_hardware);
 				m_wramBankMapping = new WRAMBankSelectMapping(&m_wramBank);
 				m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_NUM, WRAM_BANK_SIZE, m_wram, true);
+				m_hdmaMapping = new HDMAMapping();
 				break;
 			case OperationMode::Auto:
 				throw EmulationError("OperationMode::Auto given to CPU");
@@ -152,6 +157,7 @@ namespace toygb {
 		memory->add(IO_BOOTROM_UNMAP, IO_BOOTROM_UNMAP, m_bootromDisableMapping);
 		if (m_hardware->mode() == OperationMode::CGB) {
 			memory->add(IO_WRAM_BANK, IO_WRAM_BANK, m_wramBankMapping);
+			memory->add(IO_HDMA_SOURCELOW, IO_HDMA_SETTINGS, m_hdmaMapping);
 			memory->add(IO_KEY0, IO_KEY1, m_systemControlMapping);
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
@@ -218,7 +224,13 @@ namespace toygb {
 
 				uint16_t basePC = m_pc - 1;
 
-				if (!m_halted){
+				// Halt the program and transfer data when type = 0 (general-purpose) or type = 1 (HBlank) and STAT mode is 0 (HBlank)
+				/*if (m_hardware->isCGBCapable() && m_hdmaMapping->active && (!m_hdmaMapping->type || (m_memory->read(IO_LCD_STATUS) & 3) == 0)) {
+
+				}
+
+				// Continue the program
+				else*/ if (!m_halted) {
 					if (m_config.disassemble) logDisassembly(basePC);
 
 					// Opcode description :

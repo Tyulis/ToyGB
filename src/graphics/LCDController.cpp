@@ -31,7 +31,6 @@ namespace toygb {
 		m_vram = nullptr;
 		m_oam = nullptr;
 
-		m_hdma = nullptr;
 		m_dmgPalette = nullptr;
 		m_cgbPalette = nullptr;
 		m_lcdControl = nullptr;
@@ -48,7 +47,6 @@ namespace toygb {
 		if (m_vram != nullptr) delete[] m_vram;
 		if (m_oam != nullptr) delete[] m_oam;
 
-		if (m_hdma != nullptr) delete m_hdma;
 		if (m_dmgPalette != nullptr) delete m_dmgPalette;
 		if (m_cgbPalette != nullptr) delete m_cgbPalette;
 		if (m_lcdControl != nullptr) delete m_lcdControl;
@@ -61,7 +59,6 @@ namespace toygb {
 
 		m_vram = m_oam = nullptr;
 
-		m_hdma = nullptr;
 		m_dmgPalette = nullptr;
 		m_cgbPalette = nullptr;
 		m_lcdControl = nullptr;
@@ -114,12 +111,10 @@ namespace toygb {
 				break;
 
 			case OperationMode::CGB:
-				m_hdma = new HDMAMapping();
 				m_cgbPalette = new CGBPaletteMapping(m_hardware);
 				m_vramBankMapping = new VRAMBankSelectMapping(&m_vramBank);
 				m_vramMapping = new LCDBankedMemoryMapping(&m_vramBank, VRAM_BANK_SIZE, m_vram);
 
-				memory->add(IO_HDMA_SOURCELOW, IO_HDMA_SETTINGS, m_hdma);
 				memory->add(IO_BGPALETTE_INDEX, IO_OBJPRIORITY, m_cgbPalette);
 				memory->add(IO_VRAM_BANK, IO_VRAM_BANK, m_vramBankMapping);
 				break;

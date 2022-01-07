@@ -210,7 +210,8 @@ namespace toygb {
 	// Resqart the channel operation
 	void AudioToneSweepMapping::reset() {
 		// Only start if DAC is enabled
-		if (initialEnvelopeVolume != 0 || envelopeDirection != 0)
+		// The AGB does not have controllable DACs
+		if ((initialEnvelopeVolume != 0 || envelopeDirection != 0) && !m_hardware->isAGBConsole())
 			start();
 
 		// If the length counter is set to zero, it is reloaded with maximum

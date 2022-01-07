@@ -1,4 +1,4 @@
-#include "memory/mapping/HDMAMapping.hpp"
+#include "core/mapping/HDMAMapping.hpp"
 
 #define OFFSET_START IO_HDMA_SOURCELOW
 #define OFFSET_SOURCELOW  IO_HDMA_SOURCELOW - OFFSET_START

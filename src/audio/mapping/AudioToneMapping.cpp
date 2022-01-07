@@ -149,7 +149,8 @@ namespace toygb {
 	// Restart the channel
 	void AudioToneMapping::reset() {
 		// Only start if DAC is enabled (higher 5 bits of NR22)
-		if (initialEnvelopeVolume != 0 || envelopeDirection != 0)
+		// The AGB does not have controllable DACs
+		if ((initialEnvelopeVolume != 0 || envelopeDirection != 0) && !m_hardware->isAGBConsole())
 			start();
 
 		// If the length counter is set to zero, it is reloaded with maximum

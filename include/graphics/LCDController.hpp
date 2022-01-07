@@ -16,7 +16,6 @@
 #include "graphics/mapping/LCDBankedMemoryMapping.hpp"
 #include "graphics/mapping/VRAMBankSelectMapping.hpp"
 #include "memory/MemoryMap.hpp"
-#include "memory/mapping/HDMAMapping.hpp"
 #include "util/component.hpp"
 
 // Screen dimensions
@@ -69,7 +68,6 @@ namespace toygb {
 			InterruptVector* m_interrupt;
 
 			// Related memory mappings
-			HDMAMapping* m_hdma;
 			CGBPaletteMapping* m_cgbPalette;
 			LCDControlMapping* m_lcdControl;
 			DMGPaletteMapping* m_dmgPalette;

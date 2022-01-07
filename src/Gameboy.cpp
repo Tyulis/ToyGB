@@ -2,6 +2,19 @@
 #include <iostream>
 
 namespace toygb {
+	// Wait for the given time (in nanoseconds) from the given start time point
+	// This implements some kind of "semi-busy" wait, where we bruteforce the delay to skip,
+	// but yield to other threads in-between measurements
+	// The actual skipped delay is thus always a bit more than requested, but it is reasonably accurate and is accounted for anyway
+	static inline int waitFor(clocktime_t start, int nanoseconds) {
+		int delay;
+		do {
+			std::this_thread::yield();
+			delay = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
+		} while (delay < nanoseconds);
+		return delay;
+	}
+
 	// Initialize the emulator
 	Gameboy::Gameboy(GameboyConfig& config):
 		m_config(config), m_cpu(config), m_lcd(),
@@ -71,11 +84,15 @@ namespace toygb {
 		GBComponent dmaComponent = m_dma.run(&m_memory);
 		GBComponent audioComponent = m_audio.run();
 
-		clocktime_t startTime = std::chrono::steady_clock::now();
-		double lastCycle = 0;
+		//clocktime_t startTime = std::chrono::steady_clock::now();
+		//double lastCycle = 0;
 
-		/*uint64_t cycleCount = 0, cycleDelays = 0;
+		uint64_t cycleCount = 0;
+		/*int cycleDelay = 0;
 		clocktime_t cycleStart = std::chrono::steady_clock::now();*/
+
+		clocktime_t blockStart = std::chrono::steady_clock::now();
+		int inaccuracyReserve = 0;
 		while (!m_interface.isStopping()) {
 			// Run a clock cycle. FIXME : the order of the components here is arbitrary (except CPU before APU), is it significant ?
 			// The skip() methods here allow a little optimisation by not triggering a coroutine resume (context commutation) if it is useless (e.g the component is turned off)
@@ -99,21 +116,31 @@ namespace toygb {
 			if (!m_audio.skip() && (sequencer & (m_hardware.doubleSpeed() ? 0b11 : 0b01)) == 0)
 				audioComponent.onCycle();
 
-			// Wait till the next cycle
-			// Here we use a floating point number for the period in nanoseconds, obviously the timer is not precise to the picosecond so it's not perfect at every cycle,
-			// but it compensates in the long run, truncating this value into an integer would constantly make the emulator run a little bit too fast (~100.54% speed)
-			double target = lastCycle + (m_hardware.doubleSpeed() ? DOUBLESPEED_CLOCK_CYCLE_NS_REAL : CLOCK_CYCLE_NS_REAL);
-			while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - startTime).count() < target)/*
-				cycleDelays += 1*/;
-			lastCycle = target;
+			// Wait to skip excess time in-between cycles
+			// The timers are not accurate up to the nanosecond and it would be terribly inefficient to busy wait at each cycle for a few nanoseconds
+			// Thus we run cycles by "blocks", and "semi-busy wait" (see waitFor) during the excess time between each block
+			cycleCount += 1;
+			if (cycleCount % BLOCK_CYCLES == 0) {
+				clocktime_t blockEnd = std::chrono::steady_clock::now();
+				int blockNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(blockEnd - blockStart).count();
+				blockStart = blockEnd;  // Must set this as soon as possible for better accuracy
+				int expectedNanoseconds = int(BLOCK_CYCLES * (m_hardware.doubleSpeed() ? DOUBLESPEED_CLOCK_CYCLE_NS_REAL : CLOCK_CYCLE_NS_REAL));
+				inaccuracyReserve += expectedNanoseconds - blockNanoseconds;
+				// inaccuracyReserve is the current excess time, we only wait when it reaches a certain threshold for better efficiency
+				if (inaccuracyReserve >= MIN_WAIT_TIME_NS) {
+					int actualDelay = waitFor(blockEnd, inaccuracyReserve);  // Give it blockEnd as a start to account for everything that happened since its measurement
+					blockStart = std::chrono::steady_clock::now();  // Set this as soon as possible
+					/*cycleDelay += actualDelay;*/
+					inaccuracyReserve -= actualDelay;  // The actual delay we waited is always a bit more, so the inaccuracyReserve can be negative to account for it
+				}
+			}
 
-			/*cycleCount += 1;
-			if (cycleCount % 0x400000 == 0){
+			/*if (cycleCount % 0x400000 == 0) {
 				clocktime_t cycleEnd = std::chrono::steady_clock::now();
 				double duration = std::chrono::duration_cast<std::chrono::microseconds>(cycleEnd - cycleStart).count() / 1000000.0;
-				std::cout << 0x400000 << " cycles in " << duration << " seconds : " << 100.0 / duration << "% (" << int(0x400000 / duration) << " Hz), " << cycleDelays << " delays (avg. " << (double(cycleDelays) / 0x400000) << " delays/cycle)" << std::endl;
+				std::cout << 0x400000 << " cycles in " << duration << " seconds : " << 100.0 / duration << "% (" << int(0x400000 / duration) << " Hz), " << cycleDelay / 1000000000.0 << "s of delays (" << cycleDelay / (duration*10000000.0) << "%)" << std::endl;
 				cycleStart = cycleEnd;
-				cycleDelays = 0;
+				cycleDelay = 0.0;
 			}*/
 		}
 
