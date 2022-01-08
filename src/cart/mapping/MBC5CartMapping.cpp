@@ -9,14 +9,14 @@
 
 namespace toygb {
 	// TODO : Not implemented
-	MBC5CartMapping::MBC5CartMapping(uint8_t carttype, std::string romfile, std::string ramfile) : ROMMapping(carttype, romfile, ramfile) {
+	MBC5CartMapping::MBC5CartMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware) : ROMMapping(carttype, romfile, ramfile, hardware) {
 		switch (carttype) {
-			case CARTTYPE_MBC5: setCartFeatures(false, false); break;
-			case CARTTYPE_MBC5_RAM: setCartFeatures(true, false); break;
-			case CARTTYPE_MBC5_RAM_BATTERY: setCartFeatures(true, true); break;
-			case CARTTYPE_MBC5_RUMBLE: setCartFeatures(false, false); break;
-			case CARTTYPE_MBC5_RUMBLE_RAM: setCartFeatures(true, false); break;
-			case CARTTYPE_MBC5_RUMBLE_RAM_BATTERY: setCartFeatures(true, true); break;
+			case CARTTYPE_MBC5: setCartFeatures(false, false, false); break;
+			case CARTTYPE_MBC5_RAM: setCartFeatures(true, false, false); break;
+			case CARTTYPE_MBC5_RAM_BATTERY: setCartFeatures(true, true, false); break;
+			case CARTTYPE_MBC5_RUMBLE: setCartFeatures(false, false, false); break;
+			case CARTTYPE_MBC5_RUMBLE_RAM: setCartFeatures(true, false, false); break;
+			case CARTTYPE_MBC5_RUMBLE_RAM_BATTERY: setCartFeatures(true, true, false); break;
 		}
 
 		loadCartData();

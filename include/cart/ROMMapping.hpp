@@ -17,7 +17,7 @@ namespace toygb {
 			 * uint8_t carttype : Cart type identifier, as read at address 0x0147 of the cartridge header
 			 * string romfile   : ROM file name
 			 * string ramfile   : Save file name */
-			ROMMapping(uint8_t carttype, std::string romfile, std::string ramfile);
+			ROMMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware);
 			virtual ~ROMMapping();
 
 			virtual uint8_t get(uint16_t address) = 0;
@@ -29,15 +29,21 @@ namespace toygb {
 			/** Return an automatic hardware configuration to run the ROM, based on its header */
 			HardwareStatus getDefaultHardwareStatus() const;
 
-			bool hasRAM() const;  // Check whether the cartridge contains RAM
+			bool hasRAM() const;      // Check whether the cartridge contains RAM
 			bool hasBattery() const;  // Check whether the cartridge has a battery (= saves its RAM)
+			bool hasRTC() const;      // Check whether the cartridge has a Real-Time Clock
+
+			/** Update the cartridge status, like the RTC. Called at every clock tick */
+			virtual void update();
 
 		protected:
 			/** Set the cartridge features as defined by the cartridge type identifier in the ROM header, for use by subclasses. */
-			void setCartFeatures(bool hasRAM, bool hasBattery);
+			void setCartFeatures(bool hasRAM, bool hasBattery, bool hasRTC);
 
 			/** Load the cartridge data in memory, from the ROM file and the RAM file if it exists and if the cart has a battery */
 			void loadCartData();
+
+			HardwareStatus* m_hardware;
 
 			std::string m_romFile;  // ROM file name
 			std::string m_ramFile;  // Save file name
@@ -50,6 +56,7 @@ namespace toygb {
 
 			bool m_hasRAM;
 			bool m_hasBattery;
+			bool m_hasRTC;
 	};
 }
 

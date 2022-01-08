@@ -5,10 +5,10 @@
 
 namespace toygb {
 	// TODO : Not implemented
-	MBC2CartMapping::MBC2CartMapping(uint8_t carttype, std::string romfile, std::string ramfile) : ROMMapping(carttype, romfile, ramfile) {
+	MBC2CartMapping::MBC2CartMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware) : ROMMapping(carttype, romfile, ramfile, hardware) {
 		switch (carttype){
-			case CARTTYPE_MBC2: setCartFeatures(false, false); break;
-			case CARTTYPE_MBC2_BATTERY: setCartFeatures(false, true); break;
+			case CARTTYPE_MBC2: setCartFeatures(false, false, false); break;
+			case CARTTYPE_MBC2_BATTERY: setCartFeatures(false, true, false); break;
 		}
 
 		loadCartData();

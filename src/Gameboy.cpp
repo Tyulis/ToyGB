@@ -25,7 +25,7 @@ namespace toygb {
 	// Start the emulator
 	void Gameboy::main() {
 		// Load the ROM and save files
-		m_cart.init(m_config.romfile, m_config.ramfile);
+		m_cart.init(m_config.romfile, m_config.ramfile, &m_hardware);
 
 		// Configure the hardware, issuing warnings (just in case) if the user set a hardware configuration different than the preferred one for the cartridge
 		HardwareStatus cartConfig = m_cart.getDefaultHardwareStatus();
@@ -115,6 +115,8 @@ namespace toygb {
 				lcdComponent.onCycle();
 			if (!m_audio.skip() && (sequencer & (m_hardware.doubleSpeed() ? 0b11 : 0b01)) == 0)
 				audioComponent.onCycle();
+
+			m_cart.update();
 
 			// Wait to skip excess time in-between cycles
 			// The timers are not accurate up to the nanosecond and it would be terribly inefficient to busy wait at each cycle for a few nanoseconds

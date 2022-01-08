@@ -3,7 +3,8 @@
 
 namespace toygb {
 	// Initialize the memory mapping
-	ROMMapping::ROMMapping(uint8_t carttype, std::string romfile, std::string ramfile) {
+	ROMMapping::ROMMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware) {
+		m_hardware = hardware;
 		m_cartType = carttype;
 		m_romFile = romfile;
 		m_ramFile = ramfile;
@@ -30,10 +31,15 @@ namespace toygb {
 		return m_hasBattery;
 	}
 
+	bool ROMMapping::hasRTC() const {
+		return m_hasRTC;
+	}
+
 	// Set cartridge feature flags based on the cartridge type identifier
-	void ROMMapping::setCartFeatures(bool hasRAM, bool hasBattery) {
+	void ROMMapping::setCartFeatures(bool hasRAM, bool hasBattery, bool hasRTC) {
 		m_hasRAM = hasRAM;
 		m_hasBattery = hasBattery;
+		m_hasRTC = hasRTC;
 	}
 
 	// Load the cartridge data from ROM and save files, and dimension ROM and RAM data in memory
@@ -91,5 +97,10 @@ namespace toygb {
 		} else {
 			m_ramData = nullptr;
 		}
+	}
+
+	// Update the cartridge status, like the RTC
+	void ROMMapping::update() {
+
 	}
 }

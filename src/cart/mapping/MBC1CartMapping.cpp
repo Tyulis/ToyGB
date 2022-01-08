@@ -6,11 +6,11 @@
 
 namespace toygb {
 	// Initialize the MBC1 ROM mapping
-	MBC1CartMapping::MBC1CartMapping(uint8_t carttype, std::string romfile, std::string ramfile) : ROMMapping(carttype, romfile, ramfile) {
+	MBC1CartMapping::MBC1CartMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware) : ROMMapping(carttype, romfile, ramfile, hardware) {
 		switch (carttype) {
-			case CARTTYPE_MBC1: setCartFeatures(false, false); break;
-			case CARTTYPE_MBC1_RAM: setCartFeatures(true, false); break;
-			case CARTTYPE_MBC1_RAM_BATTERY: setCartFeatures(true, true); break;
+			case CARTTYPE_MBC1: setCartFeatures(false, false, false); break;
+			case CARTTYPE_MBC1_RAM: setCartFeatures(true, false, false); break;
+			case CARTTYPE_MBC1_RAM_BATTERY: setCartFeatures(true, true, false); break;
 		}
 
 		loadCartData();

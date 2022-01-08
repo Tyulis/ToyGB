@@ -14,7 +14,7 @@ namespace toygb {
 			 * uint8_t carttype : Cart type identifier, as read at address 0x0147 of the cartridge header
 			 * string romfile   : ROM file name
 			 * string ramfile   : Save file name */
-			MBC4CartMapping(uint8_t carttype, std::string romfile, std::string ramfile);
+			MBC4CartMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware);
 			virtual ~MBC4CartMapping();
 
 			virtual uint8_t get(uint16_t address);

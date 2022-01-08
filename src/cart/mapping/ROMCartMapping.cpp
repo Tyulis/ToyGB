@@ -6,11 +6,11 @@
 
 namespace toygb {
 	// Initialize the memory mapping
-	ROMCartMapping::ROMCartMapping(uint8_t carttype, std::string romfile, std::string ramfile) : ROMMapping(carttype, romfile, ramfile) {
+	ROMCartMapping::ROMCartMapping(uint8_t carttype, std::string romfile, std::string ramfile, HardwareStatus* hardware) : ROMMapping(carttype, romfile, ramfile, hardware) {
 		switch (carttype){
-			case CARTTYPE_ROM: setCartFeatures(false, false); break;
-			case CARTTYPE_ROM_RAM: setCartFeatures(true, false); break;
-			case CARTTYPE_ROM_RAM_BATTERY: setCartFeatures(true, true); break;
+			case CARTTYPE_ROM: setCartFeatures(false, false, false); break;
+			case CARTTYPE_ROM_RAM: setCartFeatures(true, false, false); break;
+			case CARTTYPE_ROM_RAM_BATTERY: setCartFeatures(true, true, false); break;
 		}
 
 		loadCartData();

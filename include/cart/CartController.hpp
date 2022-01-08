@@ -27,7 +27,7 @@ namespace toygb {
 			~CartController();
 
 			/** Initialize the cartridge with a ROM file and a save file (may be an empty string) */
-			void init(std::string romfile, std::string ramfile);
+			void init(std::string romfile, std::string ramfile, HardwareStatus* hardware);
 			void configureMemory(MemoryMap* memory);
 
 			/** Return an automatic hardware configuration to run the cartridge, based on the ROM header */
@@ -36,11 +36,20 @@ namespace toygb {
 			/** Save the cartridge RAM to the predefined save file */
 			void save();
 
+			/** Feature checks */
+			bool hasRAM() const;      // Check whether the cartridge contains RAM
+			bool hasBattery() const;  // Check whether the cartridge has a battery (= saves its RAM)
+			bool hasRTC() const;      // Check whether the cartridge has a Real-Time Clock
+
+			/** Update the cartridge status, like the RTC */
+			void update();
+
 		private:
 			std::string m_romfile;
 			std::string m_ramfile;
 			ROMMapping* m_romMapping;
 			MemoryMapping* m_ramMapping;
+			HardwareStatus* m_hardware;
 	};
 }
 

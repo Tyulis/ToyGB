@@ -54,8 +54,8 @@ namespace toygb {
 		if (m_vramMapping != nullptr) delete m_vramMapping;
 		if (m_oamMapping != nullptr) delete m_oamMapping;
 
-		if (m_backBuffer != nullptr) delete m_backBuffer;
-		if (m_frontBuffer != nullptr) delete m_frontBuffer;
+		if (m_backBuffer != nullptr) delete[] m_backBuffer;
+		if (m_frontBuffer != nullptr) delete[] m_frontBuffer;
 
 		m_vram = m_oam = nullptr;
 
