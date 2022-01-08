@@ -1,6 +1,7 @@
-#ifndef _COMMUNICATION_SERIALCONTROLLER_HPP
-#define _COMMUNICATION_SERIALCONTROLLER_HPP
+#ifndef _COMMUNICATION_COMMUNICATIONCONTROLLER_HPP
+#define _COMMUNICATION_COMMUNICATIONCONTROLLER_HPP
 
+#include "communication/mapping/InfraredTransferMapping.hpp"
 #include "communication/mapping/SerialTransferMapping.hpp"
 #include "core/hardware.hpp"
 #include "core/InterruptVector.hpp"
@@ -12,10 +13,10 @@
 namespace toygb {
 	/** Serial communications components
 	 * TODO : Implement actual communications ? Currently this is just a stub to have a working interface to the CPU */
-	class SerialController {
+	class CommunicationController {
 		public:
-			SerialController();
-			~SerialController();
+			CommunicationController();
+			~CommunicationController();
 
 			void init(HardwareStatus* hardware, InterruptVector* interrupt);
 			void configureMemory(MemoryMap* memory);
@@ -23,7 +24,8 @@ namespace toygb {
 		private:
 			HardwareStatus* m_hardware;
 			InterruptVector* m_interrupt;
-			SerialTransferMapping* m_mapping;
+			SerialTransferMapping* m_serialMapping;
+			InfraredTransferMapping* m_infraredMapping;
 
 	};
 }

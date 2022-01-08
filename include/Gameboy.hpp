@@ -8,7 +8,7 @@
 #include "GameboyConfig.hpp"
 #include "audio/AudioController.hpp"
 #include "cart/CartController.hpp"
-#include "communication/SerialController.hpp"
+#include "communication/CommunicationController.hpp"
 #include "control/JoypadController.hpp"
 #include "core/CPU.hpp"
 #include "core/timing.hpp"
@@ -36,7 +36,7 @@ namespace toygb {
 			AudioController m_audio;
 			JoypadController m_joypad;
 			CartController m_cart;
-			SerialController m_serial;
+			CommunicationController m_serial;
 			DMAController m_dma;
 
 			HardwareStatus m_hardware;

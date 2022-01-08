@@ -84,9 +84,11 @@ namespace toygb {
 			uint16_t m_pc;               // Program counter
 			bool m_ei_scheduled;         // Whether a EI (enable interrupts) instruction has been run on the last cycle, to respect the 1 cycle delay before activation
 
-			bool m_halted;   // HALT status (set by the halt instruction)
-			bool m_haltBug;  // Whether the halt instruction was just used in a situation that causes the program counter to not be incremented
-			int m_haltCycles;
+			bool m_halted;     // HALT status (set by the halt instruction)
+			bool m_haltBug;    // Whether the halt instruction was just used in a situation that causes the program counter to not be incremented
+			int m_haltCycles;  // Number of CPU cycles to stay in HALT mode before exiting it automatically (like during speed switch)
+
+			uint8_t m_lastStatMode;  // Last known STAT mode (used to detect when to resume HBlank HDMA)
 
 			int m_timaCounter;     // Counts cycles for the TIMA register timer
 			int m_dividerCounter;  // Counts cycles for the DIV register timer

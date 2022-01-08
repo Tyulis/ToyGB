@@ -157,7 +157,7 @@ namespace toygb {
 		memory->add(IO_BOOTROM_UNMAP, IO_BOOTROM_UNMAP, m_bootromDisableMapping);
 		if (m_hardware->mode() == OperationMode::CGB) {
 			memory->add(IO_WRAM_BANK, IO_WRAM_BANK, m_wramBankMapping);
-			memory->add(IO_HDMA_SOURCELOW, IO_HDMA_SETTINGS, m_hdmaMapping);
+			memory->add(IO_HDMA_SOURCEHIGH, IO_HDMA_SETTINGS, m_hdmaMapping);
 			memory->add(IO_KEY0, IO_KEY1, m_systemControlMapping);
 		}
 		memory->add(WRAM_OFFSET, WRAM_OFFSET + WRAM_SIZE - 1, m_wramMapping);
@@ -178,17 +178,61 @@ namespace toygb {
 		m_haltBug = false;
 		m_halted = false;
 		m_haltCycles = 0;
+		m_lastStatMode = 0;
 
 		// Start CPU operation
 		uint8_t opcode = memoryRead(m_pc++);  // Start with first opcode already fetched
 
 		try {
 			while (true) {
-				// EI has a 1-cycle delay before actually activating the interrupts
+				// EI has a 1-CPU cycle delay before actually activating the interrupts
 				if (m_ei_scheduled) {
 					m_ei_scheduled = false;
 					m_interrupt->setMaster(true);
 				}
+
+				// Halt the program and transfer data when type = 0 (general-purpose) or type = 1 (HBlank) and STAT mode is 0 (HBlank) (and was not 0 before, so if we just entered HBlank)
+				if (m_hardware->isCGBCapable() && m_hdmaMapping->running() && (!m_hdmaMapping->type || ((m_memory->get(IO_LCD_STATUS) & 0b11) == 0 && m_lastStatMode != 0))) {
+					cycle(1);  // 4 clocks of overhead
+					// Transfer one 16-bytes block per HBlank in HBlank DMA mode, all at once for GDMA
+					uint8_t blocksToTransfer = (m_hdmaMapping->type == 1 ? 1 : m_hdmaMapping->blocks);
+					for (int block = 0; block < blocksToTransfer; block++) {
+						uint16_t source = m_hdmaMapping->source;
+						uint16_t dest = m_hdmaMapping->dest;
+
+						// Write one byte every 2 clocks. As our CPU clock goes 4 by 4 clocks, we write 2 bytes every 4 clocks but it might be little bit inaccurate
+						for (uint16_t i = 0x0000; i < 0x0010; i += 2) {
+							// HDMA reads invalid values when its source address is within VRAM
+							// From The Cycle-Accurate Gameboy Doc, it writes 2 garbage bytes on CGB and AGB, 1 garbage byte on AGS, then all 0xFF
+							// FIXME : Write corrupted bytes at every block or only once at the beginning of the transfer ?
+							if ((source & 0xE000) == 0x8000) {
+								if (i == 0x0000) {
+									// FIXME : What kind of garbage ? Currently, some arbitrary values
+									m_memory->set(dest + i, 0x01);
+									if (m_hardware->console() == ConsoleModel::AGS)
+										m_memory->set(dest + i + 1, 0xFF);
+									else
+										m_memory->set(dest + i + 1, 0x02);
+								} else {
+									m_memory->set(dest + i, 0xFF);
+									m_memory->set(dest + i + 1, 0xFF);
+								}
+							} else {
+								m_memory->set(dest + i, m_memory->get(source + i));
+								m_memory->set(dest + i + 1, m_memory->get(source + i + 1));
+							}
+							cycle(1);
+						}
+
+						m_hdmaMapping->nextBlock();
+					}
+
+					m_lastStatMode = m_memory->get(IO_LCD_STATUS) & 3;
+					continue;
+				}
+
+				if (m_hardware->isCGBCapable())
+					m_lastStatMode = m_memory->get(IO_LCD_STATUS) & 3;
 
 				// Interrupt management
 				Interrupt interrupt = m_interrupt->getInterrupt();
@@ -224,13 +268,8 @@ namespace toygb {
 
 				uint16_t basePC = m_pc - 1;
 
-				// Halt the program and transfer data when type = 0 (general-purpose) or type = 1 (HBlank) and STAT mode is 0 (HBlank)
-				/*if (m_hardware->isCGBCapable() && m_hdmaMapping->active && (!m_hdmaMapping->type || (m_memory->read(IO_LCD_STATUS) & 3) == 0)) {
-
-				}
-
 				// Continue the program
-				else*/ if (!m_halted) {
+				if (!m_halted) {
 					if (m_config.disassemble) logDisassembly(basePC);
 
 					// Opcode description :

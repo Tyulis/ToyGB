@@ -21,8 +21,10 @@
 #define MACHINE_CYCLE_NS (1000000000 / MACHINE_FREQUENCY)
 #define DOUBLESPEED_MACHINE_CYCLE_NS (1000000000 / DOUBLESPEED_MACHINE_FREQUENCY)
 
+// Number of clock cycles to run at once
 #define BLOCK_CYCLES 400
-#define MIN_WAIT_TIME_NS (2*BLOCK_CYCLES*CLOCK_CYCLE_NS)
+// Minimum time to realign the clock timing by
+#define MIN_WAIT_TIME_NS (BLOCK_CYCLES*CLOCK_CYCLE_NS)
 
 #include <chrono>
 
