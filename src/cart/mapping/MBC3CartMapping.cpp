@@ -34,10 +34,12 @@ namespace toygb {
 		m_ramBankSelect = 0;
 		m_romBankSelect = 1;
 
-		if (m_ramData != nullptr)
+		if (m_ramData != nullptr) {
 			m_ramMapping = new MBC3RAMMapping(&m_ramBankSelect, m_ramSize/SRAM_SIZE, SRAM_SIZE, m_ramData, false, m_rtc, m_rtcLatch);
-		else
+			loadSaveData(m_ramMapping);
+		} else {
 			m_ramMapping = nullptr;
+		}
 	}
 
 	MBC3CartMapping::~MBC3CartMapping() {
@@ -66,7 +68,7 @@ namespace toygb {
 			if (m_romBankSelect == 0) m_romBankSelect = 1;  // Can’t select bank 0, select 1 instead
 		} else if (0x4000 <= address && address < 0x6000) {  // 0x4000 - 0x5FFF : RAM bank select
 			m_ramBankSelect = value & 0x0F;
-		} else if (0x6000 <= address && address < 0x8000) {  // 0x6000 - 0x7FFF : Latch clock data
+		} else if (0x6000 <= address && address < 0x8000 && m_hasRTC) {  // 0x6000 - 0x7FFF : Latch clock data
 			// Need to write 0 then 1 to latch the registers
 			if (!m_rtcLatched && (value & 1)) {
 				m_rtcLatch->divider = m_rtc->divider;

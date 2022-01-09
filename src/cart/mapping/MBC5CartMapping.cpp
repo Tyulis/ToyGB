@@ -23,6 +23,7 @@ namespace toygb {
 
 		if (m_ramData != nullptr) {
 			m_ramMapping = new ArrayMemoryMapping(m_ramData);
+			loadSaveData(m_ramMapping);
 		} else {
 			m_ramMapping = nullptr;
 		}

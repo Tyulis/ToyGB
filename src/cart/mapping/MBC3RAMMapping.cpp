@@ -110,9 +110,10 @@ namespace toygb {
 			if ((control >> 6) & 1) {  // RTC halted, did not tick since last save
 				currentSeconds = saveSeconds;
 			} else {
-				std::chrono::steady_clock::duration unixTime = std::chrono::seconds(saveTimestamp);
-				clocktime_t saveTime(unixTime);
-				clocktime_t currentTime = std::chrono::steady_clock::now();
+				// Since C++20 system_clock has the UNIX epoch as standard
+				std::chrono::system_clock::duration unixTime = std::chrono::seconds(saveTimestamp);
+				std::chrono::time_point<std::chrono::system_clock> saveTime(unixTime);
+				std::chrono::time_point<std::chrono::system_clock> currentTime = std::chrono::system_clock::now();
 				currentSeconds = saveSeconds + std::chrono::duration_cast<std::chrono::seconds>(currentTime - saveTime).count();
 			}
 
@@ -133,7 +134,7 @@ namespace toygb {
 		// Write BESS-like RTC data at the end of the save file
 		if (m_rtc != nullptr) {
 			uint8_t threePaddingBytes[3] = {0, 0, 0};
-			int64_t timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+			int64_t timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			uint8_t dayLow = m_rtc->days & 0xFF;
 			uint8_t control = ((m_rtc->days >> 8) & 1) | (m_rtc->halt << 6) | (m_rtc->dayCarry << 7);
 			output.write(reinterpret_cast<char*>(&(m_rtc->seconds)), 1);

@@ -6,8 +6,8 @@ namespace toygb {
 	// This implements some kind of "semi-busy" wait, where we bruteforce the delay to skip,
 	// but yield to other threads in-between measurements
 	// The actual skipped delay is thus always a bit more than requested, but it is reasonably accurate and is accounted for anyway
-	static inline int waitFor(clocktime_t start, int nanoseconds) {
-		int delay;
+	static inline int64_t waitFor(clocktime_t start, int64_t nanoseconds) {
+		int64_t delay;
 		do {
 			std::this_thread::yield();
 			delay = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
@@ -92,7 +92,7 @@ namespace toygb {
 		clocktime_t cycleStart = std::chrono::steady_clock::now();*/
 
 		clocktime_t blockStart = std::chrono::steady_clock::now();
-		int inaccuracyReserve = 0;
+		int64_t inaccuracyReserve = 0;
 		while (!m_interface.isStopping()) {
 			// Run a clock cycle. FIXME : the order of the components here is arbitrary (except CPU before APU), is it significant ?
 			// The skip() methods here allow a little optimisation by not triggering a coroutine resume (context commutation) if it is useless (e.g the component is turned off)
@@ -124,13 +124,13 @@ namespace toygb {
 			cycleCount += 1;
 			if (cycleCount % BLOCK_CYCLES == 0) {
 				clocktime_t blockEnd = std::chrono::steady_clock::now();
-				int blockNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(blockEnd - blockStart).count();
+				int64_t blockNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(blockEnd - blockStart).count();
 				blockStart = blockEnd;  // Must set this as soon as possible for better accuracy
-				int expectedNanoseconds = int(BLOCK_CYCLES * (m_hardware.doubleSpeed() ? DOUBLESPEED_CLOCK_CYCLE_NS_REAL : CLOCK_CYCLE_NS_REAL));
+				int64_t expectedNanoseconds = int(BLOCK_CYCLES * (m_hardware.doubleSpeed() ? DOUBLESPEED_CLOCK_CYCLE_NS_REAL : CLOCK_CYCLE_NS_REAL));
 				inaccuracyReserve += expectedNanoseconds - blockNanoseconds;
 				// inaccuracyReserve is the current excess time, we only wait when it reaches a certain threshold for better efficiency
 				if (inaccuracyReserve >= MIN_WAIT_TIME_NS) {
-					int actualDelay = waitFor(blockEnd, inaccuracyReserve);  // Give it blockEnd as a start to account for everything that happened since its measurement
+					int64_t actualDelay = waitFor(blockEnd, inaccuracyReserve);  // Give it blockEnd as a start to account for everything that happened since its measurement
 					blockStart = std::chrono::steady_clock::now();  // Set this as soon as possible
 					/*cycleDelay += actualDelay;*/
 					inaccuracyReserve -= actualDelay;  // The actual delay we waited is always a bit more, so the inaccuracyReserve can be negative to account for it

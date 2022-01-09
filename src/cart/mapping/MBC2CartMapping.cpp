@@ -13,10 +13,12 @@ namespace toygb {
 
 		loadCartData();
 
-		if (m_ramData != nullptr)
+		if (m_ramData != nullptr) {
 			m_ramMapping = new ArrayMemoryMapping(m_ramData);
-		else
+			loadSaveData(m_ramMapping);
+		} else {
 			m_ramMapping = nullptr;
+		}
 	}
 
 	MBC2CartMapping::~MBC2CartMapping() {

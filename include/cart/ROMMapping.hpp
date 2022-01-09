@@ -42,6 +42,7 @@ namespace toygb {
 
 			/** Load the cartridge data in memory, from the ROM file and the RAM file if it exists and if the cart has a battery */
 			void loadCartData();
+			void loadSaveData(MemoryMapping* ramMapping);
 
 			HardwareStatus* m_hardware;
 

@@ -23,6 +23,7 @@ namespace toygb {
 		// Has RAM (does not check the hasRAM flag because some homebrew roms do not set it in the cartridge header, a real gameboy doesn’t care)
 		if (m_ramData != nullptr) {
 			m_ramMapping = new MBC1RAMMapping(&m_ramBankSelect, &m_modeSelect, m_ramSize/SRAM_SIZE, SRAM_SIZE, m_ramData, false);
+			loadSaveData(m_ramMapping);
 		} else {
 			m_ramMapping = nullptr;
 		}

@@ -42,7 +42,7 @@ namespace toygb {
 		m_hasRTC = hasRTC;
 	}
 
-	// Load the cartridge data from ROM and save files, and dimension ROM and RAM data in memory
+	// Load the cartridge data from ROM, and dimension ROM and RAM data in memory
 	void ROMMapping::loadCartData() {
 		// Open the ROM file
 		std::ifstream rom(m_romFile, std::ifstream::in | std::ifstream::binary);
@@ -80,22 +80,25 @@ namespace toygb {
 			// Some homebrew ROMs expect RAM but don’t set any size, so we set it to a single bank of cartridge RAM (0x2000) by default
 			// A real gameboy would not care (those values in the header were probably only for emulators used for testing anyway)
 			if (m_ramSize == 0) {
-				std::cerr << "Warning : cart type (" << oh8(m_cartType) << ") indicates cart RAM but with size zero." << std::endl;
+				std::cerr << "Warning : cart type (" << oh8(m_cartType) << ") indicates cart RAM but with size zero, defaulting to a single bank" << std::endl;
 				m_ramSize = 0x2000;
 			}
 
 			m_ramData = new uint8_t[m_ramSize];
-
-			// Load RAM content from the save file if it already exists
-			if (m_hasBattery) {
-				std::ifstream ram(m_ramFile, std::ifstream::in | std::ifstream::binary);
-				if (ram.is_open()) {
-					ram.read(reinterpret_cast<char*>(m_ramData), m_ramSize);
-					ram.close();
-				}
-			}
 		} else {
 			m_ramData = nullptr;
+		}
+	}
+
+	// Load the cartridge RAM content from the save file if it exists
+	void ROMMapping::loadSaveData(MemoryMapping* ramMapping) {
+		// Load RAM content from the save file if it already exists
+		if (m_hasBattery) {
+			std::ifstream ram(m_ramFile, std::ifstream::in | std::ifstream::binary);
+			if (ram.is_open()) {
+				ramMapping->load(ram);
+				ram.close();
+			}
 		}
 	}
 
