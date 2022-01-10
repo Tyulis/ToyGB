@@ -94,7 +94,9 @@ namespace toygb {
 		clocktime_t blockStart = std::chrono::steady_clock::now();
 		int64_t inaccuracyReserve = 0;
 		while (!m_interface.isStopping()) {
-			// Run a clock cycle. FIXME : the order of the components here is arbitrary (except CPU before APU), is it significant ?
+			// Run a clock cycle. FIXME : the order of the components here is dictated by emulator behaviour technicalities, is it significant ?
+			// Currently, CPU must be before DMA because of OAM DMA startup cycles handling
+			//            CPU must be before APU because that’s how we manage wave RAM access, but it could be done the other way by changing AudioWaveMapping::start
 			// The skip() methods here allow a little optimisation by not triggering a coroutine resume (context commutation) if it is useless (e.g the component is turned off)
 			m_hardware.update();
 			int sequencer = m_hardware.getSequencer();

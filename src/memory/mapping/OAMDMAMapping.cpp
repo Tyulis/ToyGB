@@ -13,17 +13,22 @@ namespace toygb {
 	OAMDMAMapping::OAMDMAMapping(HardwareStatus* hardware) {
 		m_hardware = hardware;
 		active = false;
-		sourceAddress = hardware->isCGBCapable() ? 0x00 : 0xFF;
+		sourceAddress = hardware->isCGBCapable() ? 0x0000 : 0xFF00;
+		requestedAddress = 0x0000;
+		requested = false;
+		idleCycles = 0;
 	}
 
 	// Get the value at the given relative address
 	uint8_t OAMDMAMapping::get(uint16_t address) {
+		// FIXME : Does it return the requested address or the active source address ?
 		return sourceAddress >> 8;  // Always goes from 0xXX00 to 0xXXA0, the upper byte is always constant
 	}
 
 	// Set the value at the given relative address
 	void OAMDMAMapping::set(uint16_t address, uint8_t value) {
-		sourceAddress = (uint16_t)value << 8;
-		active = true;
+		requestedAddress = (uint16_t)value << 8;
+		requested = true;
+		idleCycles = 4;
 	}
 }

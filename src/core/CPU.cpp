@@ -1056,6 +1056,7 @@ namespace toygb {
 	// Read the value at the given absolute memory address
 	uint8_t CPU::memoryRead(uint16_t address) {
 		// Memory other than HRAM is inaccessible during OAM DMA
+		// FIXME : on CGB, only the source address bus is inaccessible
 		if (m_dma->isOAMDMAActive() && (address < HRAM_OFFSET || address >= IO_INTERRUPT_ENABLE))
 			return 0xFF;
 
@@ -1069,7 +1070,7 @@ namespace toygb {
 	}
 
 	// Write a value at the given absolute memory address
-	// FIXME : While the bootrom is mapped, are writes in its area fully ignored or are they still sent to the MBC ?
+	// FIXME : While the bootrom is mapped, are writes in its area fully ignored or are they still sent to the MBC ? (probably not)
 	void CPU::memoryWrite(uint16_t address, uint8_t value) {
 		m_memory->set(address, value);
 	}

@@ -31,8 +31,11 @@ namespace toygb {
 		while (true) {
 			// OAM DMA
 			// FIXME : There are apparently many obscure shenanigans with OAM DMA, check them out
+
+			// A DMA routine is running and actively copying data
+			// A previous DMA can still be running while a new one is in its startup phase
 			if (m_oamDmaMapping->active) {
-				// Source address got over 0x9F -> transfer to OAM finished
+				// Source address got over 0x--9F -> transfer to OAM finished
 				if ((m_oamDmaMapping->sourceAddress & 0xFF) >= 0xA0) {
 					m_oamDmaMapping->active = false;
 				} else {  // Transferring a byte per clock tick
@@ -41,6 +44,17 @@ namespace toygb {
 					memory->set(destination, memory->get(source));
 				}
 			}
+
+			// A DMA routine has been requested by writing to FF46 but still in the 4 startup clocks
+			if (m_oamDmaMapping->requested) {
+				m_oamDmaMapping->idleCycles -= 1;
+				if (m_oamDmaMapping->idleCycles < 0) {
+					m_oamDmaMapping->requested = false;
+					m_oamDmaMapping->active = true;
+					m_oamDmaMapping->sourceAddress = m_oamDmaMapping->requestedAddress;
+				}
+			}
+
 			clock();
 		}
 	}
@@ -48,7 +62,7 @@ namespace toygb {
 	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
 	bool DMAController::skip() const {
 		// Skip if no DMA operation is active. TODO : HDMA
-		return !m_oamDmaMapping->active;
+		return !(m_oamDmaMapping->active || m_oamDmaMapping->requested);
 	}
 
 	// Tell whether a OAM DMA operation is active
