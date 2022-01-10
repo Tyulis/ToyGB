@@ -20,16 +20,16 @@ namespace toygb {
 		m_romBankSelect = 1;
 		m_modeSelect = false;
 
+		m_romBanks = m_romSize / ROM_BANK_SIZE;
+		m_ramBanks = m_ramSize / SRAM_SIZE;
+
 		// Has RAM (does not check the hasRAM flag because some homebrew roms do not set it in the cartridge header, a real gameboy doesn’t care)
 		if (m_ramData != nullptr) {
-			m_ramMapping = new MBC1RAMMapping(&m_ramBankSelect, &m_modeSelect, m_ramSize/SRAM_SIZE, SRAM_SIZE, m_ramData, false);
+			m_ramMapping = new MBC1RAMMapping(&m_ramBankSelect, &m_modeSelect, m_ramBanks, SRAM_SIZE, m_ramData, false);
 			loadSaveData(m_ramMapping);
 		} else {
 			m_ramMapping = nullptr;
 		}
-
-		m_romBanks = m_romSize / ROM_BANK_SIZE;
-		m_ramBanks = m_ramSize / SRAM_SIZE;
 
 		// Compute the mask to apply onto the selected rom bank
 		// If a rom bank greater than the amount of banks present in the cart is selected, the additional bits are masked out
@@ -68,15 +68,22 @@ namespace toygb {
 	}
 
 	// Set the value at the given relative address
-	void MBC1CartMapping::set(uint16_t address, uint8_t value){
-		if (address < 0x2000 && m_ramMapping != nullptr){  // 0x0000 - 0x1FFF : RAM enable
+	void MBC1CartMapping::set(uint16_t address, uint8_t value) {
+		// 0x0000 - 0x1FFF : RAM enable
+		if (address < 0x2000 && m_ramMapping != nullptr) {
 			m_ramMapping->accessible = ((value & 0x0F) == 0x0A);  // Lower 4 bits must be 0x0A
-		} else if (0x2000 <= address && address < 0x4000){  // 0x2000 - 0x3FFF : switchable ROM bank select
+		}
+		// 0x2000 - 0x3FFF : switchable ROM bank select
+		else if (0x2000 <= address && address < 0x4000) {
 			m_romBankSelect = value;
 			if (m_romBankSelect == 0) m_romBankSelect = 1;  // Can’t map bank 0 to the switchable area, map 1 instead
-		} else if (0x4000 <= address && address < 0x6000){  // 0x4000 - 0x5FFF : RAM bank select / upper ROM bank bits
+		}
+		// 0x4000 - 0x5FFF : RAM bank select / upper ROM bank bits
+		else if (0x4000 <= address && address < 0x6000) {
 			m_ramBankSelect = value & 0x03;
-		} else if (0x6000 <= address && address < 0x8000){  // 0x6000 - 0x7FFF : Mode select
+		}
+		// 0x6000 - 0x7FFF : Banking mode select
+		else if (0x6000 <= address && address < 0x8000) {
 			m_modeSelect = value & 1;
 		}
 	}

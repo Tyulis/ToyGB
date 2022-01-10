@@ -2,7 +2,7 @@
 #define _CART_MAPPING_MBC5CARTMAPPING_HPP
 
 #include "cart/ROMMapping.hpp"
-#include "memory/mapping/ArrayMemoryMapping.hpp"
+#include "memory/mapping/FullBankedMemoryMapping.hpp"
 
 
 namespace toygb {
@@ -24,7 +24,14 @@ namespace toygb {
 			virtual MemoryMapping* getRAM();
 
 		protected:
-			ArrayMemoryMapping* m_ramMapping;  // Associated cart RAM mapping
+			FullBankedMemoryMapping* m_ramMapping;  // Associated cart RAM mapping
+
+			int m_romBanks;
+			int m_ramBanks;
+
+			// Internal registers
+			uint16_t m_romBankSelect;
+			uint8_t m_ramBankSelect;
 	};
 }
 

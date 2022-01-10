@@ -21,8 +21,15 @@ namespace toygb {
 
 		loadCartData();
 
+		// Default values at boot
+		m_ramBankSelect = 0;
+		m_romBankSelect = 1;
+
+		m_romBanks = m_romSize / ROM_BANK_SIZE;
+		m_ramBanks = m_ramSize / SRAM_SIZE;
+
 		if (m_ramData != nullptr) {
-			m_ramMapping = new ArrayMemoryMapping(m_ramData);
+			m_ramMapping = new FullBankedMemoryMapping(&m_ramBankSelect, m_ramBanks, SRAM_SIZE, m_ramData, false);
 			loadSaveData(m_ramMapping);
 		} else {
 			m_ramMapping = nullptr;
@@ -38,10 +45,30 @@ namespace toygb {
 	}
 
 	uint8_t MBC5CartMapping::get(uint16_t address) {
-		return m_romData[address];
+		// 0x0000-0x3FFF : Fixed bank area
+		if (address < 0x4000)
+			return m_romData[address];
+		// 0x4000-0x7FFF : Switchable bank area
+		else
+			return m_romData[(address - 0x4000) + m_romBankSelect * ROM_BANK_SIZE];
 	}
 
 	void MBC5CartMapping::set(uint16_t address, uint8_t value) {
-		// nop
+		// 0x0000-0x1FFF : RAM enable flag
+		if (address < 0x2000) {
+			m_ramMapping->accessible = ((value & 0x0F) == 0x0A);  // Lower 4 bits must be 0x0A to enable RAM
+		}
+		// 0x2000-0x2FFF : Lower byte of switchable ROM bank index
+		else if (0x2000 <= address && address < 0x3000) {
+			m_romBankSelect = (m_romBankSelect & 0x100) | value;
+		}
+		// 0x3000-0x3FFF : Upper bit of switchable ROM bank index
+		else if (0x3000 <= address && address < 0x4000) {
+			m_romBankSelect = (m_romBankSelect & 0x0FF) | ((value & 1) << 8);
+		}
+		// 0x4000-0x5FFF : RAM bank select
+		else if (0x4000 <= address && address < 0x6000) {
+			m_ramBankSelect = value & 0x0F;  // FIXME : check the index or just mask the excess bits out ?
+		}
 	}
 }
