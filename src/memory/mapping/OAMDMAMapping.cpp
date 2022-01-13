@@ -29,6 +29,6 @@ namespace toygb {
 	void OAMDMAMapping::set(uint16_t address, uint8_t value) {
 		requestedAddress = (uint16_t)value << 8;
 		requested = true;
-		idleCycles = 4;
+		idleCycles = 1;
 	}
 }

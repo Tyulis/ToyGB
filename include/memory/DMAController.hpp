@@ -22,13 +22,15 @@ namespace toygb {
 			GBComponent run(MemoryMap* memory);
 
 			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
-			bool skip() const;
+			bool skip();
 
 			bool isOAMDMAActive();  // Tell whether an OAM DMA operation is active
 
 		private:
 			HardwareStatus* m_hardware;
 			OAMDMAMapping* m_oamDmaMapping;
+
+			int m_cyclesToSkip;
 	};
 }
 
