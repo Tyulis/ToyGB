@@ -37,7 +37,7 @@ namespace toygb {
 			// A DMA routine is running and actively copying data
 			// A previous DMA can still be running while a new one is in its startup phase
 			if (m_oamDmaMapping->active) {
-				// Transferring a byte per clock tick
+				// Transferring a byte per machine cycle
 				uint16_t source = m_oamDmaMapping->sourceAddress++;
 				uint16_t destination = (source & 0xFF) | 0xFE00;
 				memory->set(destination, memory->get(source));
@@ -47,13 +47,13 @@ namespace toygb {
 					m_oamDmaMapping->active = false;
 			}
 
-			// A DMA routine has been requested by writing to FF46 but still in the 4 startup clocks
+			// A DMA routine has been requested by writing to FF46 but still in the startup cycle
 			if (m_oamDmaMapping->requested) {
 				m_oamDmaMapping->idleCycles -= 1;
 				if (m_oamDmaMapping->idleCycles < 0) {
 					m_oamDmaMapping->requested = false;
 					m_oamDmaMapping->active = true;
-					m_oamDmaMapping->sourceAddress = m_oamDmaMapping->requestedAddress;
+					m_oamDmaMapping->sourceAddress = (m_oamDmaMapping->requestedAddress >= 0xE000 ? m_oamDmaMapping->requestedAddress - 0x2000 : m_oamDmaMapping->requestedAddress);
 				}
 			}
 

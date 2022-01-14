@@ -21,8 +21,8 @@ namespace toygb {
 
 	// Get the value at the given relative address
 	uint8_t OAMDMAMapping::get(uint16_t address) {
-		// FIXME : Does it return the requested address or the active source address ?
-		return sourceAddress >> 8;  // Always goes from 0xXX00 to 0xXXA0, the upper byte is always constant
+		// Return the last written value, not the current source address
+		return requestedAddress >> 8;  // Always goes from 0xXX00 to 0xXXA0, the upper byte is always constant
 	}
 
 	// Set the value at the given relative address

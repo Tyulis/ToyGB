@@ -1057,7 +1057,8 @@ namespace toygb {
 	uint8_t CPU::memoryRead(uint16_t address) {
 		// Memory other than HRAM is inaccessible during OAM DMA
 		// FIXME : on CGB, only the source address bus is inaccessible
-		if (m_dma->isOAMDMAActive() && (address < HRAM_OFFSET || address >= IO_INTERRUPT_ENABLE))
+		// FIXME : only HRAM or HRAM + IO ? Seems like HRAM + IO
+		if (m_dma->isOAMDMAActive() && address < IO_OFFSET)
 			return 0xFF;
 
 		// Overlaying the bootrom with our memory mapping system would be a pain
