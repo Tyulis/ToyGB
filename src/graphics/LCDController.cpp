@@ -127,7 +127,8 @@ namespace toygb {
 
 // Wait till the next clock in the coroutine
 #define clock(num) m_cyclesToSkip = num-1; \
-					co_await std::suspend_always()
+					co_await std::suspend_always(); \
+					lineDots -= num
 
 	// Main coroutine component. This could be better if it was split into smaller functions, but the coroutine management forces it to be in one block
 	GBComponent LCDController::run() {
@@ -137,6 +138,7 @@ namespace toygb {
 		std::deque<uint16_t> selectedSprites;  // Will contain the objects selected for the current scanline
 		LCDController::ObjectSelectionComparator objComparator(m_hardware, m_oamMapping);
 
+		int lineDots = 0;
 		while (true) {
 			if (m_lcdControl->displayEnable) {  // FIXME : shutting down the display should stop it right away, not at the next frame
 				// Swap the pixel buffers
@@ -150,6 +152,8 @@ namespace toygb {
 
 				// On-screen scanlines : 0-143
 				for (int line = 0; line < 144; line++) {
+					lineDots = 456;
+
 					selectedSprites.clear();
 					bool hasWindow = false;  // Tell whether the window was rendered on this scanline, to increment the window line counter
 
@@ -208,7 +212,6 @@ namespace toygb {
 					std::deque<LCDController::Pixel> objectQueue;
 
 					bool wasInsideWindow = false;  // Keep track of what we were rendering (background / window) to clear the background FIFO accordingly
-					int hblankDuration = 204;      // Most sprite operations are in addition to the basic mode 3 duration, so shorten HBlank
 					for (int x = 0; x < LCD_WIDTH; x++) {
 						// The WX register is window X coordinate + 7
 						bool insideWindow = m_lcdControl->windowEnable && (x >= m_dmgPalette->windowX - 7 && line >= m_dmgPalette->windowY);
@@ -263,8 +266,9 @@ namespace toygb {
 							if (m_hardware->mode() == OperationMode::CGB && ((control >> 3) & 1))
 								tileAddress += VRAM_BANK_SIZE;
 							uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + indexY * 2);
+							clock(2);
 							uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + indexY * 2 + 1);  // (Little endian, upper byte is second)
-							clock(6);
+							clock(4);
 
 							// Each row is in two bytes, bits of each byte are interleaved to build the 2-bits color index. Indices are the x coordinate within the tile :
 							// Upper byte : u0 u1 u2 u3 u4 u5 u6 u7 |
@@ -332,13 +336,12 @@ namespace toygb {
 								if (!selectedSprites.empty() && x >= m_oamMapping->lcdGet(selectedSprites.front() + 1) - 8 && x < m_oamMapping->lcdGet(selectedSprites.front() + 1)) {
 									if (m_hardware->mode() == OperationMode::DMG)  // DMG mode : No problem, priority goes to the lowest X coordinate, so the first in selectedSprites
 										selectedSprites.pop_front();
-									clock(1); hblankDuration -= 1;
+									clock(1);
 
 									// FIXME : Delay if the background scrolling is not a multiple of 8. This is probably not accurate at all.
 									uint8_t scrollOffset = m_lcdControl->scrollX % 8;
 									if (scrollOffset > 0 && x == 0) {
 										clock(scrollOffset + 4);
-										hblankDuration -= (scrollOffset + 4);
 									}
 
 									// Read the OAM entry of the sprite to render
@@ -365,7 +368,7 @@ namespace toygb {
 									// Retrieve the tile data row from VRAM, much like background
 									uint8_t tileLow = m_vramMapping->lcdGet(tileAddress + 2*yoffset);
 									uint8_t tileHigh = m_vramMapping->lcdGet(tileAddress + 2*yoffset + 1);
-									clock(1); hblankDuration -= 1;
+									clock(1);
 
 									// See above, bits organisation and color bits interleave are described in the same part of the background row fetching
 									for (int i = 7 - xoffset; i >= 0; i--) {
@@ -535,7 +538,7 @@ namespace toygb {
 					if (m_lcdControl->hblankInterrupt)
 						m_interrupt->setRequest(Interrupt::LCDStat);
 
-					clock(hblankDuration);  // FIXME
+					clock(lineDots);  // FIXME
 
 					// If the window was rendered at some point in the current scanline, increment the window line counter
 					if (hasWindow)
@@ -556,7 +559,7 @@ namespace toygb {
 				m_interrupt->setRequest(Interrupt::VBlank);
 
 				// Off-screen scanlines (144-153)
-				for (int line = 144; line < 153; line++) {
+				for (int line = 144; line < 154; line++) {
 					// LY and LY = LYC STAT interrupts still update during VBlank
 					m_lcdControl->coordY = line;
 					if (m_lcdControl->coordY == m_lcdControl->coordYCompare && m_lcdControl->lycInterrupt)

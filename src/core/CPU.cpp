@@ -185,12 +185,6 @@ namespace toygb {
 
 		try {
 			while (true) {
-				// EI has a 1-CPU cycle delay before actually activating the interrupts
-				if (m_ei_scheduled) {
-					m_ei_scheduled = false;
-					m_interrupt->setMaster(true);
-				}
-
 				// Halt the program and transfer data when type = 0 (general-purpose) or type = 1 (HBlank) and STAT mode is 0 (HBlank) (and was not 0 before, so if we just entered HBlank)
 				if (m_hardware->isCGBCapable() && m_hdmaMapping->running() && (!m_hdmaMapping->type || ((m_memory->get(IO_LCD_STATUS) & 0b11) == 0 && m_lastStatMode != 0))) {
 					cycle(1);  // 4 clocks of overhead
@@ -264,6 +258,12 @@ namespace toygb {
 						opcode = memoryRead(m_pc++); cycle(1);  // Fetch the next opcode
 						continue;
 					}
+				}
+
+				// EI has a 1-CPU cycle delay before actually activating the interrupts
+				if (m_ei_scheduled) {
+					m_ei_scheduled = false;
+					m_interrupt->setMaster(true);
 				}
 
 				uint16_t basePC = m_pc - 1;

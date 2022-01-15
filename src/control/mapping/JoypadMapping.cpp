@@ -18,8 +18,8 @@ namespace toygb {
 	// Initialize the memory mapping
 	JoypadMapping::JoypadMapping() {
 		// Neither are selected (but 0 = selected, 1 = not)
-		selectButtons = true;
-		selectDirections = true;
+		selectButtons = false;
+		selectDirections = false;
 
 		// Start all set. TODO : those may be different on CGB/SGB
 		for (int i = 0; i < 8; i++)
