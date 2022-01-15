@@ -270,7 +270,8 @@ namespace toygb {
 
 				// Continue the program
 				if (!m_halted) {
-					if (m_config.disassemble) logDisassembly(basePC);
+					if (m_config.disassemble && m_hardware->bootromUnmapped())
+						logDisassembly(basePC);
 
 					// Opcode description :
 					// Binary opcode | hex opcodes | mnemonic | description | CPU cycles (*4 for clocks) | flag changes (znhc, 0 is reset, 1 is set, - is unaffected, z/n/h/c = it depends, x = depends on the actual instruction)
@@ -939,7 +940,8 @@ namespace toygb {
 						}
 					}
 
-					if (m_config.disassemble) logStatus();
+					if (m_config.disassemble && m_hardware->bootromUnmapped())
+						logStatus();
 
 					opcode = memoryRead(m_pc); cycle(1);  // Fetch the next opcode during the last cycle of the current instruction
 					if (!m_haltBug)  // When a halt instruction is executed when an interrupt is pending (IF + IE) and IME is clear, halt mode is not entered and PC is not incremented after the next fetch
@@ -1055,17 +1057,20 @@ namespace toygb {
 
 	// Read the value at the given absolute memory address
 	uint8_t CPU::memoryRead(uint16_t address) {
-		// Memory other than HRAM is inaccessible during OAM DMA
-		// FIXME : on CGB, only the source address bus is inaccessible
-		// FIXME : only HRAM or HRAM + IO ? Seems like HRAM + IO
-		if (m_dma->isOAMDMAActive() && address < IO_OFFSET)
-			return 0xFF;
-
 		// Overlaying the bootrom with our memory mapping system would be a pain
 		// As only the CPU uses the ROM area (except the DMA component but AFAIK there's no DMA in the bootroms), it makes no difference to just hack it right there
 		// CGB bootroms are larger than 0x0100, so they are mapped over 0x0000-0x00FF, leave the cartridge on 0x0100-0x01FF and mapped after 0x0200
 		if (!m_hardware->bootromUnmapped() && (address < 0x0100 || (address >= 0x0200 && address < m_bootrom.size)))
 			return m_bootrom.bootrom[address];
+
+		// Handle bus conflicts during OAM DMA
+		// For reference : https://www.reddit.com/r/EmuDev/comments/5hahss/gb_readwrite_memory_during_an_oam_dma/
+		if (m_dma->isOAMDMAActive()) {
+			if (address >= OAM_OFFSET && address < IO_OFFSET)
+				return 0xFF;
+			else
+				return m_dma->conflictingRead(address);
+		}
 
 		return m_memory->get(address);
 	}
@@ -1073,6 +1078,11 @@ namespace toygb {
 	// Write a value at the given absolute memory address
 	// FIXME : While the bootrom is mapped, are writes in its area fully ignored or are they still sent to the MBC ? (probably not)
 	void CPU::memoryWrite(uint16_t address, uint8_t value) {
+		// FIXME : What happens if a bus conflict happens between the CPU and DMA ?
+		if (m_dma->isOAMDMAActive()) {
+			if ((address >= OAM_OFFSET && address < IO_OFFSET) || m_dma->isConflicting(address))
+				return;  // Probably ignored, but don’t actually know
+		}
 		m_memory->set(address, value);
 	}
 

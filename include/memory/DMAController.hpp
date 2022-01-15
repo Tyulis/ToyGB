@@ -2,6 +2,7 @@
 #define _MEMORY_DMACONTROLLER_HPP
 
 #include "core/hardware.hpp"
+#include "memory/Constants.hpp"
 #include "memory/MemoryMap.hpp"
 #include "memory/mapping/OAMDMAMapping.hpp"
 #include "util/error.hpp"
@@ -24,11 +25,14 @@ namespace toygb {
 			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
 			bool skip();
 
-			bool isOAMDMAActive();  // Tell whether an OAM DMA operation is active
+			bool isOAMDMAActive() const;                  // Tell whether an OAM DMA operation is active
+			bool isConflicting(uint16_t address) const;   // Tell whether a bus conflict with OAM DMA can occur at the given address
+			uint8_t conflictingRead(uint16_t address);    // Get the value that the CPU will read at the given address, accounting for bus conflicts
 
 		private:
 			HardwareStatus* m_hardware;
 			OAMDMAMapping* m_oamDmaMapping;
+			MemoryMap* m_memory;
 
 			int m_cyclesToSkip;
 	};

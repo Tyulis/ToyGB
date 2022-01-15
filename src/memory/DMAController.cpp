@@ -30,6 +30,8 @@ namespace toygb {
 
 	// Main coroutine component
 	GBComponent DMAController::run(MemoryMap* memory) {
+		m_memory = memory;
+
 		while (true) {
 			// OAM DMA
 			// FIXME : There are apparently many obscure shenanigans with OAM DMA, check them out
@@ -72,7 +74,33 @@ namespace toygb {
 	}
 
 	// Tell whether a OAM DMA operation is active
-	bool DMAController::isOAMDMAActive() {
+	bool DMAController::isOAMDMAActive() const {
 		return m_oamDmaMapping->active;
+	}
+
+	// Tell whether a memory operation at the given address can conflict with OAM DMA (same bus)
+	bool DMAController::isConflicting(uint16_t address) const {
+		// No OAM DMA = no conflict
+		if (!m_oamDmaMapping->active)
+			return false;
+		// External bus conflict
+		else if (((/*EXTERNAL_BUS_LOW_START <= address && */address <= EXTERNAL_BUS_LOW_END) || (EXTERNAL_BUS_HIGH_START <= address && address <= EXTERNAL_BUS_HIGH_END)) &&
+				((/*EXTERNAL_BUS_LOW_START <= m_oamDmaMapping->sourceAddress && */m_oamDmaMapping->sourceAddress <= EXTERNAL_BUS_LOW_END) || (EXTERNAL_BUS_HIGH_START <= m_oamDmaMapping->sourceAddress && m_oamDmaMapping->sourceAddress <= EXTERNAL_BUS_HIGH_END)))
+			return true;
+		// Video RAM bus conflict
+		else if ((VIDEO_BUS_START <= address && address <= VIDEO_BUS_END) && (VIDEO_BUS_START <= m_oamDmaMapping->sourceAddress && m_oamDmaMapping->sourceAddress <= VIDEO_BUS_END))
+			return true;
+		// No conflict
+		else
+			return false;
+	}
+
+	// Get the value that the CPU will read at the given address, accounting for bus conflicts
+	uint8_t DMAController::conflictingRead(uint16_t address) {
+		// In case of read/read bus conflict, OAM DMA wins
+		if (isConflicting(address))
+			return m_memory->get(m_oamDmaMapping->sourceAddress);
+		else
+			return m_memory->get(address);
 	}
 }
