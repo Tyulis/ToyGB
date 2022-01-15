@@ -30,6 +30,7 @@ namespace toygb {
 	// Configure the associated memory mappings
 	void CommunicationController::configureMemory(MemoryMap* memory) {
 		memory->add(IO_SERIAL_DATA, IO_SERIAL_CONTROL, m_serialMapping);
-		memory->add(IO_INFRARED, IO_INFRARED, m_infraredMapping);
+		if (m_hardware->isCGBConsole())
+			memory->add(IO_INFRARED, IO_INFRARED, m_infraredMapping);
 	}
 }
