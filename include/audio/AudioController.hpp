@@ -28,11 +28,8 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 			void init(HardwareStatus* hardware);
 
-			/** Main loop of the component, as a coroutine */
-			GBComponent run();
-
-			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
-			bool skip();
+			/** Main component, called every APU cycle (2MHz, regardless of double-speed mode) */
+			void runCycle();
 
 			/** Read the samples for an audio buffer if available
 			 * If the amount of available samples is greater than audio/timing.hpp:OUTPUT_BUFFER_SAMPLES,

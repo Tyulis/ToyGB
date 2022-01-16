@@ -21,56 +21,37 @@ namespace toygb {
 
 	// Configure the associated memory mappings
 	void DMAController::configureMemory(MemoryMap* memory) {
+		m_memory = memory;
 		memory->add(IO_OAM_DMA, IO_OAM_DMA, m_oamDmaMapping);
 	}
 
-// Make the coroutine wait till the next clock
-#define clock(num) m_cyclesToSkip = num - 1;  \
-					co_await std::suspend_always()
+	// Run a machine cycle for the DMA component (called every 4 clocks)
+	void DMAController::runCycle() {
+		// OAM DMA
+		// FIXME : There are apparently many obscure shenanigans with OAM DMA, check them out
 
-	// Main coroutine component
-	GBComponent DMAController::run(MemoryMap* memory) {
-		m_memory = memory;
+		// A DMA routine is running and actively copying data
+		// A previous DMA can still be running while a new one is in its startup phase
+		if (m_oamDmaMapping->active) {
+			// Transferring a byte per machine cycle
+			uint16_t source = m_oamDmaMapping->sourceAddress++;
+			uint16_t destination = (source & 0xFF) | 0xFE00;
+			m_memory->set(destination, m_memory->get(source));
 
-		while (true) {
-			// OAM DMA
-			// FIXME : There are apparently many obscure shenanigans with OAM DMA, check them out
-
-			// A DMA routine is running and actively copying data
-			// A previous DMA can still be running while a new one is in its startup phase
-			if (m_oamDmaMapping->active) {
-				// Transferring a byte per machine cycle
-				uint16_t source = m_oamDmaMapping->sourceAddress++;
-				uint16_t destination = (source & 0xFF) | 0xFE00;
-				memory->set(destination, memory->get(source));
-
-				// Source address got over 0x--9F -> transfer to OAM finished
-				if ((m_oamDmaMapping->sourceAddress & 0xFF) >= 0xA0)
-					m_oamDmaMapping->active = false;
-			}
-
-			// A DMA routine has been requested by writing to FF46 but still in the startup cycle
-			if (m_oamDmaMapping->requested) {
-				m_oamDmaMapping->idleCycles -= 1;
-				if (m_oamDmaMapping->idleCycles < 0) {
-					m_oamDmaMapping->requested = false;
-					m_oamDmaMapping->active = true;
-					m_oamDmaMapping->sourceAddress = (m_oamDmaMapping->requestedAddress >= 0xE000 ? m_oamDmaMapping->requestedAddress - 0x2000 : m_oamDmaMapping->requestedAddress);
-				}
-			}
-
-			clock(4);
+			// Source address got over 0x--9F -> transfer to OAM finished
+			if ((m_oamDmaMapping->sourceAddress & 0xFF) >= 0xA0)
+				m_oamDmaMapping->active = false;
 		}
-	}
 
-	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
-	bool DMAController::skip() {
-		if (m_cyclesToSkip > 0) {
-			m_cyclesToSkip -= 1;
-			return true;
+		// A DMA routine has been requested by writing to FF46 but still in the startup cycle
+		if (m_oamDmaMapping->requested) {
+			m_oamDmaMapping->idleCycles -= 1;
+			if (m_oamDmaMapping->idleCycles < 0) {
+				m_oamDmaMapping->requested = false;
+				m_oamDmaMapping->active = true;
+				m_oamDmaMapping->sourceAddress = (m_oamDmaMapping->requestedAddress >= 0xE000 ? m_oamDmaMapping->requestedAddress - 0x2000 : m_oamDmaMapping->requestedAddress);
+			}
 		}
-		// Skip if no DMA operation is active. TODO : HDMA
-		return !(m_oamDmaMapping->active || m_oamDmaMapping->requested);
 	}
 
 	// Tell whether a OAM DMA operation is active

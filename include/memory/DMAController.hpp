@@ -19,11 +19,8 @@ namespace toygb {
 			void configureMemory(MemoryMap* memory);
 			void init(HardwareStatus* hardware);
 
-			/** Main loop of the component, as a coroutine */
-			GBComponent run(MemoryMap* memory);
-
-			/** Tell whether the emulator can skip the component on that cycle, to save a context commutation */
-			bool skip();
+			/** Main component, called every 4 clocks */
+			void runCycle();
 
 			bool isOAMDMAActive() const;                  // Tell whether an OAM DMA operation is active
 			bool isConflicting(uint16_t address) const;   // Tell whether a bus conflict with OAM DMA can occur at the given address

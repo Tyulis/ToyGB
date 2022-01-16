@@ -1,6 +1,8 @@
 #include "Gameboy.hpp"
 #include <iostream>
 
+#define MONITOR_SPEED
+
 namespace toygb {
 	// Wait for the given time (in nanoseconds) from the given start time point
 	// This implements some kind of "semi-busy" wait, where we bruteforce the delay to skip,
@@ -81,15 +83,12 @@ namespace toygb {
 		// Start the clocked components
 		GBComponent cpuComponent = m_cpu.run(&m_memory, &m_dma);
 		GBComponent lcdComponent = m_lcd.run();
-		GBComponent dmaComponent = m_dma.run(&m_memory);
-		GBComponent audioComponent = m_audio.run();
-
-		//clocktime_t startTime = std::chrono::steady_clock::now();
-		//double lastCycle = 0;
 
 		uint64_t cycleCount = 0;
-		/*int cycleDelay = 0;
-		clocktime_t cycleStart = std::chrono::steady_clock::now();*/
+#ifdef MONITOR_SPEED
+		int cycleDelay = 0;
+		clocktime_t cycleStart = std::chrono::steady_clock::now();
+#endif
 
 		clocktime_t blockStart = std::chrono::steady_clock::now();
 		int64_t inaccuracyReserve = 0;
@@ -101,11 +100,10 @@ namespace toygb {
 			m_hardware.update();
 			int sequencer = m_hardware.getSequencer();
 
-			if (!m_hardware.isStopped()) {
-				if (!m_cpu.skip() && (sequencer & 0b11) == 0)
+			if ((sequencer & 0b11) == 0 && !m_hardware.isStopped()) {
+				if (!m_cpu.skip())
 					cpuComponent.onCycle();
-				if (!m_dma.skip())
-					dmaComponent.onCycle();
+				m_dma.runCycle();
 			}
 			// Exit STOP mode when a selected joypad button is pressed (when a bit goes low)
 			else if ((m_memory.get(IO_JOYPAD) & 0x0F) < 0x0F) {
@@ -113,10 +111,10 @@ namespace toygb {
 			}
 
 			// Keep the same timing for the APU and PPU, even in double-speed mode
-			if (!m_lcd.skip() && (!m_hardware.doubleSpeed() || (sequencer & 0b01) == 0))
+			if (!m_lcd.skip() && ((sequencer & 0b01) == 0 || !m_hardware.doubleSpeed()))
 				lcdComponent.onCycle();
-			if (!m_audio.skip() && (sequencer & (m_hardware.doubleSpeed() ? 0b11 : 0b01)) == 0)
-				audioComponent.onCycle();
+			if ((sequencer & (m_hardware.doubleSpeed() ? 0b11 : 0b01)) == 0)
+				m_audio.runCycle();
 
 			m_cart.update();
 
@@ -134,18 +132,22 @@ namespace toygb {
 				if (inaccuracyReserve >= MIN_WAIT_TIME_NS) {
 					int64_t actualDelay = waitFor(blockEnd, inaccuracyReserve);  // Give it blockEnd as a start to account for everything that happened since its measurement
 					blockStart = std::chrono::steady_clock::now();  // Set this as soon as possible
-					/*cycleDelay += actualDelay;*/
+#ifdef MONITOR_SPEED
+					cycleDelay += actualDelay;
+#endif
 					inaccuracyReserve -= actualDelay;  // The actual delay we waited is always a bit more, so the inaccuracyReserve can be negative to account for it
 				}
 			}
 
-			/*if (cycleCount % 0x400000 == 0) {
+#ifdef MONITOR_SPEED
+			if (cycleCount % 0x400000 == 0) {
 				clocktime_t cycleEnd = std::chrono::steady_clock::now();
 				double duration = std::chrono::duration_cast<std::chrono::microseconds>(cycleEnd - cycleStart).count() / 1000000.0;
 				std::cout << 0x400000 << " cycles in " << duration << " seconds : " << 100.0 / duration << "% (" << int(0x400000 / duration) << " Hz), " << cycleDelay / 1000000000.0 << "s of delays (" << cycleDelay / (duration*10000000.0) << "%)" << std::endl;
 				cycleStart = cycleEnd;
 				cycleDelay = 0.0;
-			}*/
+			}
+#endif
 		}
 
 		uiThread.join();

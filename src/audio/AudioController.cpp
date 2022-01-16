@@ -56,30 +56,18 @@ namespace toygb {
 		memory->add(IO_UNDOCUMENTED_FF72, IO_PCM34, m_debug);
 	}
 
-#define cycle() co_await std::suspend_always();
-
-	// Main component loop (implemented as a coroutine)
-	GBComponent AudioController::run() {
-		while (true) {
-			for (int index = 0; index < 4; index++) {  // Update each channel
-				AudioChannelMapping* channel = m_channels[index];
-				if (m_control->audioEnable) {
-					if (!channel->powered)  // Enable set but not powered : audio controller just got powered on
-						channel->powerOn();
-					channel->update();
-				} else if (channel->powered) {  // Enable clear but powered : audio controller just got powered off
-					channel->powerOff();
-				}
+	// Run a single APU cycle (2MHz, regardless of double-speed mode)
+	void AudioController::runCycle() {
+		for (int index = 0; index < 4; index++) {  // Update each channel
+			AudioChannelMapping* channel = m_channels[index];
+			if (m_control->audioEnable) {
+				if (!channel->powered)  // Enable set but not powered : audio controller just got powered on
+					channel->powerOn();
+				channel->update();
+			} else if (channel->powered) {  // Enable clear but powered : audio controller just got powered off
+				channel->powerOff();
 			}
-
-			cycle();
 		}
-	}
-
-	// Tell whether the emulator can skip running this component for the cycle, to save a context commutation if running it is useless
-	bool AudioController::skip() {
-		// Skip if the APU is disabled and the shutdown is already done
-		return !m_control->audioEnable && !m_channels[0]->powered && !m_channels[1]->powered && !m_channels[2]->powered && !m_channels[3]->powered;
 	}
 
 	// Get the mixed samples if available
