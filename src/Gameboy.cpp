@@ -53,7 +53,7 @@ namespace toygb {
 		// Initialize components
 		m_cpu.init(&m_hardware, &m_interrupt);  // Must initialize the CPU first as it checks the bootrom status
 
-		if (m_hardware.hasBootrom() && m_hardware.isCGBCapable())
+		if (!m_hardware.hasBootrom() && m_hardware.isCGBCapable())
 			m_hardware.setOperationMode(OperationMode::CGB);
 
 		m_interrupt.init();

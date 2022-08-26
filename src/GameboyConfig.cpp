@@ -16,12 +16,12 @@ namespace toygb {
 		defaultBootDMG0 = "boot/toyboot_dmg0.bin";
 		defaultBootDMG = "boot/toyboot_dmg.bin";
 		defaultBootMGB = "boot/toyboot_mgb.bin";
-		
+
 		// TODO
-		defaultBootCGB0 = "boot/toyboot_dmg.bin";
-		defaultBootCGB = "boot/toyboot_dmg.bin";
-		defaultBootAGB = "boot/toyboot_dmg.bin";
-		defaultBootSGB = "boot/toyboot_dmg.bin";
-		defaultBootSGB2 = "boot/toyboot_dmg.bin";
+		defaultBootCGB0 = "boot/toyboot_cgb0.bin";
+		defaultBootCGB = "boot/toyboot_cgb.bin";
+		defaultBootAGB = "boot/toyboot_agb.bin";
+		defaultBootSGB = "boot/toyboot_sgb.bin";
+		defaultBootSGB2 = "boot/toyboot_sgb2.bin";
 	}
 }

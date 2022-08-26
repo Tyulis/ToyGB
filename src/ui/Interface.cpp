@@ -57,13 +57,13 @@ namespace toygb {
 
 	void Interface::updateJoypad() {
 		m_joypad->setButton(JoypadButton::Up, sf::Keyboard::isKeyPressed(sf::Keyboard::Z));
-		m_joypad->setButton(JoypadButton::Down, sf::Keyboard::isKeyPressed(sf::Keyboard::S));
-		m_joypad->setButton(JoypadButton::Left, sf::Keyboard::isKeyPressed(sf::Keyboard::Q));
-		m_joypad->setButton(JoypadButton::Right, sf::Keyboard::isKeyPressed(sf::Keyboard::D));
-		m_joypad->setButton(JoypadButton::A, sf::Keyboard::isKeyPressed(sf::Keyboard::K));
-		m_joypad->setButton(JoypadButton::B, sf::Keyboard::isKeyPressed(sf::Keyboard::L));
-		m_joypad->setButton(JoypadButton::Start, sf::Keyboard::isKeyPressed(sf::Keyboard::O));
-		m_joypad->setButton(JoypadButton::Select, sf::Keyboard::isKeyPressed(sf::Keyboard::M));
+		m_joypad->setButton(JoypadButton::Down, sf::Keyboard::isKeyPressed(sf::Keyboard::U));
+		m_joypad->setButton(JoypadButton::Left, sf::Keyboard::isKeyPressed(sf::Keyboard::A));
+		m_joypad->setButton(JoypadButton::Right, sf::Keyboard::isKeyPressed(sf::Keyboard::I));
+		m_joypad->setButton(JoypadButton::A, sf::Keyboard::isKeyPressed(sf::Keyboard::S));
+		m_joypad->setButton(JoypadButton::B, sf::Keyboard::isKeyPressed(sf::Keyboard::R));
+		m_joypad->setButton(JoypadButton::Start, sf::Keyboard::isKeyPressed(sf::Keyboard::L));
+		m_joypad->setButton(JoypadButton::Select, sf::Keyboard::isKeyPressed(sf::Keyboard::N));
 	}
 
 	void Interface::updateGraphics(sf::Uint8* pixels) {

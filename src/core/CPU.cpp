@@ -140,6 +140,7 @@ namespace toygb {
 				m_wramMapping = new ArrayMemoryMapping(m_wram);
 				break;
 			case OperationMode::CGB:
+				m_wramBank = 1;  // According to the bootROM
 				m_systemControlMapping = new SystemControlMapping(m_hardware);
 				m_wramBankMapping = new WRAMBankSelectMapping(&m_wramBank);
 				m_wramMapping = new FixBankedMemoryMapping(&m_wramBank, WRAM_BANK_NUM, WRAM_BANK_SIZE, m_wram, true);

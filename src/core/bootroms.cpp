@@ -176,7 +176,6 @@ namespace toygb {
 			return bootrom;
 		}
 
-		// All this to get the file size
 		bootrom.size = std::filesystem::file_size(filepath);
 		bootrom.bootrom = new uint8_t[bootrom.size];
 		bootromFile.read(reinterpret_cast<char*>(bootrom.bootrom), bootrom.size);
